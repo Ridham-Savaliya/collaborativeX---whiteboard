@@ -1,0 +1,124 @@
+@import "tailwindcss";
+
+/* Define custom CSS variables for a premium look */
+:root {
+  --background: #f6f8fd;       /* Clean, modern white */
+  --foreground: #2d3748;       /* Rich slate for text */
+  --primary: #6366f1;          /* Modern indigo */
+  --primary-dark: #4f46e5;     /* Deep indigo for depth */
+  --primary-light: #818cf8;    /* Bright indigo for accents */
+  --glass-bg: rgba(255, 255, 255, 0.1);
+  --card-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);
+}
+
+@media (prefers-color-scheme: dsark) {
+  :root {
+    --background: #0f172a;      /* Deep navy */
+    --foreground: #e2e8f0;      /* Soft white text */
+    --primary: #818cf8;         /* Bright indigo */
+    --primary-dark: #6366f1;    /* Rich indigo */
+    --primary-light: #a5b4fc;   /* Light indigo */
+    --glass-bg: rgba(255, 255, 255, 0.05);
+    --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* Modern UI Elements */
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: var(--card-shadow);
+}
+
+.hover-lift {
+  transition: transform 0.2s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-4px);
+}
+
+/* 3D Interactive Elements */
+.rotate-3d {
+  perspective: 1000px;
+  transform-style: preserve-3d;
+  transition: transform 0.3s ease;
+}
+
+.rotate-3d:hover {
+  transform: rotateX(10deg) rotateY(10deg);
+}
+
+/* Animated Gradients */
+.gradient-text {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gradient 3s ease infinite;
+}
+
+@keyframes gradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Smooth Transitions */
+.smooth-transition {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Interactive Buttons */
+.interactive-button {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.interactive-button::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  background: linear-gradient(rgba(255, 255, 255, 0.2), transparent);
+  transform: translateY(-100%);
+  transition: transform 0.3s ease;
+}
+
+.interactive-button:hover::after {
+  transform: translateY(0);
+}
+
+/* Auto-scrolling Animation */
+@keyframes scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-scroll {
+  animation: scroll 30s linear infinite;
+}
+
+/* Mobile Responsive Styles */
+@media (max-width: 640px) {
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  .interactive-button {
+    width: 100%;
+    text-align: center;
+  }
+}
