@@ -3,6 +3,7 @@
 import React, { useEffect, useRef } from 'react';
 
 import Navbar from './components/Navbar';
+import Image from 'next/image';
 import WhiteboardDemo from './components/WhiteboardDemo';
 import FounderSection from './components/FounderSection';
 import DemoVideo from './components/DemoVideo';
@@ -272,14 +273,20 @@ const LandingPage = () => {
             <div key={index} className="glass-card hover-lift p-8 rounded-xl transform transition-all duration-300 hover:scale-105 min-w-[320px] mx-3">
               <div className="flex items-center gap-4 mb-6">
                 <div className="w-16 h-16 rounded-full overflow-hidden transform transition-transform duration-500 hover:rotate-12">
-                  <img src={testimonial.image} alt={testimonial.name} className="w-full h-full object-cover" />
+                  <Image 
+                    src={testimonial.image} 
+                    alt={testimonial.name} 
+                    width={64}
+                    height={64}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
                 <div>
                   <p className="font-semibold gradient-text">{testimonial.name}</p>
                   <p className="opacity-70">{testimonial.role}</p>
                 </div>
               </div>
-              <p className="text-xl italic">"{testimonial.content}"</p>
+              <p className="text-xl italic">&quot;{testimonial.content}&quot;</p>
               <div className="mt-4 flex justify-end">
                 <div className="flex items-center space-x-1">
                   {[1, 2, 3, 4, 5].map((star) => (
