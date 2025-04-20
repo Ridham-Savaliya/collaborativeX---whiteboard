@@ -20,8 +20,11 @@ const AIFeatureAnimations = () => {
 
   useEffect(() => {
     // Initialize animations when component mounts
-    const ctx = gsap.context(() => {
+    if (!sectionRef.current) return;
+if (!sectionRef.current) return;
+const ctx = gsap.context(() => {
       // Voice Commands Animation
+      if (!voiceCommandRef.current) return;
       const voiceTimeline = gsap.timeline({
         scrollTrigger: {
           trigger: voiceCommandRef.current,
@@ -53,6 +56,7 @@ const AIFeatureAnimations = () => {
         }, '-=0.8');
 
       // Smart Object Recognition Animation
+      if (!objectRecognitionRef.current) return;
       const objectTimeline = gsap.timeline({
         scrollTrigger: {
           trigger: objectRecognitionRef.current,
@@ -84,6 +88,7 @@ const AIFeatureAnimations = () => {
         }, '-=0.8');
 
       // Smart Drawing Assistance Animation
+      if (!drawingAssistanceRef.current) return;
       const drawingTimeline = gsap.timeline({
         scrollTrigger: {
           trigger: drawingAssistanceRef.current,
@@ -116,6 +121,7 @@ const AIFeatureAnimations = () => {
         }, '-=1.5');
 
       // Video Calling Animation
+      if (!videoCallingRef.current) return;
       const videoTimeline = gsap.timeline({
         scrollTrigger: {
           trigger: videoCallingRef.current,
@@ -148,6 +154,7 @@ const AIFeatureAnimations = () => {
         }, '-=0.6');
 
       // Real-time Collaboration Animation
+      if (!realtimeCollabRef.current) return;
       const collabTimeline = gsap.timeline({
         scrollTrigger: {
           trigger: realtimeCollabRef.current,
@@ -191,7 +198,7 @@ const AIFeatureAnimations = () => {
           toggleActions: 'play none none none'
         }
       });
-    }, sectionRef);
+    }, sectionRef.current);
 
     // Cleanup function
     return () => ctx.revert();
