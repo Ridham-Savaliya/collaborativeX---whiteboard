@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation'; // For App Router
 import DarkModeToggle from './DarkModeToggle';
 import Image from 'next/image';
-import logo from '../../public/logo.png';
+// import logo from '../../public/logo.png';
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -34,7 +34,7 @@ const Navbar = () => {
               <path d="M2 12L12 17L22 12" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg> */}
 
-            <Image src={logo} alt="Logo" width={40} height={40} className="w-8 h-8" />
+            <Image src='/logo.png' alt="Logo" width={40} height={40} className="w-8 h-8" />
             <span className="text-xl font-bold gradient-text">CollaborativeX</span>
           </div>
 
