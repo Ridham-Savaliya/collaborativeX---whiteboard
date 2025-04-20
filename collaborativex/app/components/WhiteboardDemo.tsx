@@ -8,7 +8,7 @@ const WhiteboardDemo = () => {
   const [lastX, setLastX] = useState(0);
   const [lastY, setLastY] = useState(0);
   const [tool, setTool] = useState<'pen' | 'eraser'>('pen');
-  const [color, setColor] = useState('var(--primary)');
+  const [color, setColor] = useState('#6366f1');
   const [lineWidth, setLineWidth] = useState(2);
 
   useEffect(() => {

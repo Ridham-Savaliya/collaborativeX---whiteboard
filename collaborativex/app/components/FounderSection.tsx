@@ -11,7 +11,7 @@ const FounderSection = () => {
           <div className="glass-card hover-lift p-8 rounded-xl flex flex-col md:flex-row items-center gap-8">
             <div className="w-48 h-48 rounded-full overflow-hidden rotate-3d">
               <div className="w-full h-full bg-gradient-to-br from-[var(--primary)] to-[var(--primary-light)] flex items-center justify-center text-4xl font-bold text-white">
-                <Image src='/myimage(blue).jpg' width={100} height={100} alt="" className='h-full w-full object-cover' />
+                <Image src='/logo.png' width={100} height={100} alt="" className='h-full w-full object-cover' />
               </div>
             </div>
             <div className="flex-1 text-center md:text-left">
