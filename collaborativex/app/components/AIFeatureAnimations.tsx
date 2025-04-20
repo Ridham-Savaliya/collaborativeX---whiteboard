@@ -21,7 +21,6 @@ const AIFeatureAnimations = () => {
   useEffect(() => {
     // Initialize animations when component mounts
     if (!sectionRef.current) return;
-if (!sectionRef.current) return;
 const ctx = gsap.context(() => {
       // Voice Commands Animation
       if (!voiceCommandRef.current) return;
@@ -41,7 +40,7 @@ const ctx = gsap.context(() => {
           duration: 0.8,
           ease: 'power3.out'
         })
-        .to(voiceCommandRef.current?.querySelector('.icon-container'), {
+        .to(voiceCommandRef.current?.querySelector<HTMLElement>('.icon-container'), {
           rotation: 360,
           scale: 1.2,
           duration: 1,
@@ -73,7 +72,7 @@ const ctx = gsap.context(() => {
           duration: 0.8,
           ease: 'power3.out'
         })
-        .to(objectRecognitionRef.current?.querySelector('.icon-container'), {
+        .to(objectRecognitionRef.current?.querySelector<HTMLElement>('.icon-container'), {
           boxShadow: '0 0 30px rgba(99, 102, 241, 0.8)',
           duration: 1.2,
           repeat: -1,
@@ -105,7 +104,7 @@ const ctx = gsap.context(() => {
           duration: 0.8,
           ease: 'power3.out'
         })
-        .from(drawingAssistanceRef.current?.querySelector('.drawing-path'), {
+        .from(drawingAssistanceRef.current?.querySelector<SVGPathElement>('.drawing-path'), {
           strokeDashoffset: 1000,
           duration: 2,
           ease: 'power2.out'
@@ -138,7 +137,7 @@ const ctx = gsap.context(() => {
           duration: 0.8,
           ease: 'power3.out'
         })
-        .from(videoCallingRef.current?.querySelector('.video-screen'), {
+        .from(videoCallingRef.current?.querySelector<HTMLElement>('.video-screen'), {
           scale: 0.8,
           opacity: 0,
           duration: 1,
