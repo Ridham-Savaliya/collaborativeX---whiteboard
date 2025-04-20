@@ -1,13 +1,51 @@
-import React from 'react';
+'use client';
+
+import React, { useEffect, useRef } from 'react';
 
 import Navbar from './components/Navbar';
 import WhiteboardDemo from './components/WhiteboardDemo';
 import FounderSection from './components/FounderSection';
 import DemoVideo from './components/DemoVideo';
+import AboutUs from './components/AboutUs';
+import AIFeatureAnimations from './components/AIFeatureAnimations';
+import WhiteboardFeatureDemo from './components/WhiteboardFeatureDemo';
 
 const LandingPage = () => {
+  const pageRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Initialize animations for elements with animate-on-scroll class
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('animate-fade-in');
+          }
+        });
+      },
+      { threshold: 0.1 }
+    );
+
+    const elements = document.querySelectorAll('.animate-on-scroll');
+    elements.forEach((el) => observer.observe(el));
+
+    // Add event listeners for feature cards
+    const featureCards = document.querySelectorAll('.feature-card');
+    featureCards.forEach((card) => {
+      card.addEventListener('mouseenter', () => {
+        card.classList.add('active');
+      });
+      card.addEventListener('mouseleave', () => {
+        card.classList.remove('active');
+      });
+    });
+
+    return () => {
+      elements.forEach((el) => observer.unobserve(el));
+    };
+  }, []);
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[var(--background)] via-[var(--background)] to-[var(--primary-dark)] text-[var(--foreground)]">
+    <div className="min-h-screen bg-gradient-to-b from-[var(--background)] via-[var(--background)] to-[var(--primary-dark)] text-[var(--foreground)]" ref={pageRef}>
       <Navbar />
       {/* Hero Section */}
       <section className="container mx-auto px-4 pt-32 pb-20 flex flex-col lg:flex-row items-center justify-between">
@@ -33,104 +71,95 @@ const LandingPage = () => {
       </section>
 
     <DemoVideo/>
+    
+    {/* About Us Section */}
+    <AboutUs/>
       {/* Features Section */}
       <section className="py-20 bg-[var(--background)] bg-opacity-50">
         <div className="container mx-auto px-4">
-          <h2 className="text-4xl font-bold text-center mb-4">Powerful Features</h2>
-          <p className="text-center text-lg opacity-80 mb-16 max-w-2xl mx-auto">Discover the tools that make CollaborativeX the most powerful whiteboard platform for teams.</p>
+          <h2 className="text-4xl font-bold text-center mb-4 animate-on-scroll opacity-0">Powerful Features</h2>
+          <p className="text-center text-lg opacity-80 mb-16 max-w-2xl mx-auto animate-on-scroll opacity-0">Discover the tools that make CollaborativeX the most powerful whiteboard platform for teams.</p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
               {
                 title: 'Real-time Collaboration',
                 description: 'Work together seamlessly with your team in real-time with integrated video calling',
-                icon: '🤝'
+                icon: '🤝',
+                color: 'from-[#6366f1] to-[#818cf8]'
               },
               {
                 title: 'Video Calling',
                 description: 'Face-to-face collaboration with built-in video chat while working together',
-                icon: '📹'
+                icon: '📹',
+                color: 'from-[#8b5cf6] to-[#a78bfa]'
               },
               {
                 title: 'Infinite Canvas',
                 description: 'Never run out of space with our expandable canvas',
-                icon: '🎨'
+                icon: '🎨',
+                color: 'from-[#ec4899] to-[#f472b6]'
               },
               {
                 title: 'Smart Templates',
                 description: 'Start quickly with pre-designed professional templates',
-                icon: '📋'
+                icon: '📋',
+                color: 'from-[#14b8a6] to-[#5eead4]'
               },
               {
                 title: 'Cloud Sync',
                 description: 'Access your work from anywhere, anytime',
-                icon: '☁️'
+                icon: '☁️',
+                color: 'from-[#3b82f6] to-[#93c5fd]'
               },
               {
                 title: 'Voice Commands',
                 description: 'Control your whiteboard using natural voice instructions',
-                icon: '🎤'
+                icon: '🎤',
+                color: 'from-[#f97316] to-[#fdba74]'
               }
             ].map((feature, index) => (
-              <div key={index} className="glass-card hover-lift p-8 rounded-xl">
-                <div className="text-5xl mb-6 rotate-3d">{feature.icon}</div>
+              <div 
+                key={index} 
+                className="feature-card glass-card hover-lift p-8 rounded-xl cursor-pointer transform transition-all duration-300 hover:scale-105 animate-on-scroll opacity-0"
+                style={{animationDelay: `${index * 100}ms`}}
+              >
+                <div className={`icon-container p-4 rounded-full bg-gradient-to-r ${feature.color} w-16 h-16 flex items-center justify-center mb-6 transform transition-transform duration-500 hover:rotate-12`}>
+                  <span className="text-3xl">{feature.icon}</span>
+                </div>
                 <h3 className="text-2xl font-semibold mb-3 gradient-text">{feature.title}</h3>
                 <p className="opacity-80 smooth-transition">{feature.description}</p>
+                <div className="mt-4 overflow-hidden h-0 feature-details transition-all duration-300 opacity-0">
+                  <p className="text-sm mb-3">Experience the power of {feature.title.toLowerCase()} with our intuitive interface.</p>
+                  <button className="text-sm text-[var(--primary)] hover:text-[var(--primary-dark)] transition-colors flex items-center">
+                    Learn more
+                    <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* AI Features Section */}
+      {/* AI Features Section with GSAP Animations */}
+      <div id='features'>
+
+      <AIFeatureAnimations />
+      </div>
+      
+      {/* Interactive AI Feature Demo */}
       <section className="py-20 bg-[var(--background)] bg-opacity-50">
         <div className="container mx-auto px-4">
-          <h2 className="text-4xl font-bold text-center mb-4 gradient-text">AI-Powered Innovation</h2>
-          <p className="text-center text-lg opacity-80 mb-16 max-w-2xl mx-auto">Experience the future of whiteboarding with our cutting-edge AI features.</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {[
-              {
-                title: 'Smart Drawing Assistance',
-                description: 'AI automatically refines your sketches and shapes in real-time',
-                icon: '✨'
-              },
-              {
-                title: 'Intelligent Suggestions',
-                description: 'Get context-aware suggestions for diagrams and layouts',
-                icon: '💡'
-              },
-              {
-                title: 'Auto-Organization',
-                description: 'AI helps arrange and align elements for cleaner presentations',
-                icon: '🎯'
-              },
-              {
-                title: 'Smart Object Recognition',
-                description: 'Convert hand-drawn shapes into perfect geometric forms',
-                icon: '🔍'
-              },
-              {
-                title: 'Content Generation',
-                description: 'Generate professional content and layouts with AI assistance',
-                icon: '🎭'
-              },
-              {
-                title: 'Real-time Translation',
-                description: 'Break language barriers with instant AI translation',
-                icon: '🌐'
-              }
-            ].map((feature, index) => (
-              <div key={index} className="glass-card hover-lift p-8 rounded-xl">
-                <div className="text-5xl mb-6 rotate-3d">{feature.icon}</div>
-                <h3 className="text-2xl font-semibold mb-3 gradient-text">{feature.title}</h3>
-                <p className="opacity-80 smooth-transition">{feature.description}</p>
-              </div>
-            ))}
-          </div>
+          <h2 className="text-4xl font-bold text-center mb-4 gradient-text">Try Our AI Features</h2>
+          <p className="text-center text-lg opacity-80 mb-16 max-w-2xl mx-auto">Experience our AI-powered features with this interactive demonstration.</p>
+          <WhiteboardFeatureDemo />
         </div>
       </section>
 
       {/* Pricing Section */}
-      <section className="py-20">
+      <section className="py-20" id='pricing'>
         <div className="container mx-auto px-4">
           <h2 className="text-4xl font-bold text-center mb-16">Simple Pricing</h2>
           <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
@@ -147,7 +176,7 @@ const LandingPage = () => {
               },
               {
                 name: 'Pro',
-                price: '12',
+                price: '5',
                 features: [
                   'Advanced features',
                   'Unlimited boards',
@@ -157,7 +186,7 @@ const LandingPage = () => {
               },
               {
                 name: 'Team',
-                price: '49',
+                price: '20',
                 features: [
                   'Everything in Pro',
                   'Team management',
@@ -194,11 +223,13 @@ const LandingPage = () => {
       <FounderSection />
 
       {/* Testimonials Section */}
-      <section className="py-20 overflow-hidden bg-[var(--background)] bg-opacity-50">
+      <section id="testimonials" className="py-20 overflow-hidden bg-[var(--background)] bg-opacity-50">
         <div className="container mx-auto px-4">
-          <h2 className="text-4xl font-bold text-center mb-4">What Our Users Say</h2>
-          <p className="text-center text-lg opacity-80 mb-16 max-w-2xl mx-auto">Join thousands of satisfied teams who trust CollaborativeX for their remote collaboration needs.</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+          <h2 className="text-4xl font-bold text-center mb-4 gradient-text animate-on-scroll opacity-0">What Our Users Say</h2>
+          <p className="text-center text-lg opacity-80 mb-16 max-w-2xl mx-auto animate-on-scroll opacity-0">Join thousands of satisfied teams who trust CollaborativeX for their remote collaboration needs.</p>
+          <div className="relative overflow-hidden">
+            <div className="flex animate-scroll hover:pause-animation transition-transform duration-500 cursor-grab active:cursor-grabbing">
+              <div className="flex gap-6 min-w-full">
           {[
             {
               name: 'Sarah Johnson',
@@ -237,20 +268,36 @@ const LandingPage = () => {
               image: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="40" r="25" fill="%23E6E6FA"/><circle cx="50" cy="100" r="40" fill="%23E6E6FA"/></svg>'
             }
           ].map((testimonial, index) => (
-            <div key={index} className="glass-card hover-lift p-8 rounded-xl">
+            <div key={index} className="glass-card hover-lift p-8 rounded-xl transform transition-all duration-300 hover:scale-105 min-w-[320px] mx-3">
               <div className="flex items-center gap-4 mb-6">
-                <div className="w-16 h-16 rounded-full overflow-hidden">
+                <div className="w-16 h-16 rounded-full overflow-hidden transform transition-transform duration-500 hover:rotate-12">
                   <img src={testimonial.image} alt={testimonial.name} className="w-full h-full object-cover" />
                 </div>
                 <div>
-                  <p className="font-semibold">{testimonial.name}</p>
+                  <p className="font-semibold gradient-text">{testimonial.name}</p>
                   <p className="opacity-70">{testimonial.role}</p>
                 </div>
               </div>
-              <p className="text-xl italic gradient-text">"{testimonial.content}"</p>
+              <p className="text-xl italic">"{testimonial.content}"</p>
+              <div className="mt-4 flex justify-end">
+                <div className="flex items-center space-x-1">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <svg key={star} className="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                  ))}
+                </div>
+              </div>
             </div>
           ))}
           </div>
+          </div>
+          <div className="flex justify-center mt-8 space-x-2">
+            {[1, 2, 3].map((dot) => (
+              <button key={dot} className="w-3 h-3 rounded-full bg-[var(--primary)] opacity-50 hover:opacity-100 transition-opacity cursor-pointer" />
+            ))}
+          </div>
+        </div>
         </div>
       </section>
 

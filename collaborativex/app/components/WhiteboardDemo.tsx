@@ -75,7 +75,7 @@ const WhiteboardDemo = () => {
   };
 
   return (
-    <div className="glass-card p-4 relative w-full aspect-video rounded-xl overflow-hidden md:h-1/2">
+    <div className="glass-card p-4 relative w-full rounded-xl overflow-hidden" style={{ minHeight: '350px', height: '60vh' }}>
       <div className="absolute top-4 left-4 right-4 z-10 flex flex-col md:flex-row justify-between items-center">
         <div className="flex items-center space-x-2 bg-gradient-to-r from-[var(--primary)] to-[var(--primary-light)] text-white px-4 py-2 rounded-full text-sm shadow-md">
           <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
@@ -124,7 +124,7 @@ const WhiteboardDemo = () => {
         onTouchStart={startDrawing}
         onTouchMove={draw}
         onTouchEnd={stopDrawing}
-        style={{ height: '100%' }}
+        style={{ height: 'calc(100% - 20px)' }}
       />
       <div className="absolute bottom-4 left-4 right-4 flex justify-center">
         <div className="bg-gradient-to-r from-[var(--primary)] to-[var(--primary-light)] text-white px-6 py-2.5 rounded-full text-sm font-medium shadow-lg transform transition-transform hover:scale-105 cursor-pointer">

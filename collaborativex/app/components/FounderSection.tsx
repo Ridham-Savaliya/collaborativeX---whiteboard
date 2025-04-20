@@ -1,4 +1,6 @@
 'use client';
+import Image from 'next/image';
+import myimg from '../../public/myimage(blue).jpg'
 
 const FounderSection = () => {
   return (
@@ -9,7 +11,7 @@ const FounderSection = () => {
           <div className="glass-card hover-lift p-8 rounded-xl flex flex-col md:flex-row items-center gap-8">
             <div className="w-48 h-48 rounded-full overflow-hidden rotate-3d">
               <div className="w-full h-full bg-gradient-to-br from-[var(--primary)] to-[var(--primary-light)] flex items-center justify-center text-4xl font-bold text-white">
-                RS
+                <Image src={myimg} alt="" className='h-full w-full object-cover' />
               </div>
             </div>
             <div className="flex-1 text-center md:text-left">
@@ -20,7 +22,7 @@ const FounderSection = () => {
               </p>
               <div className="flex items-center justify-center md:justify-start space-x-4">
                 <a
-                  href="https://linkedin.com"
+                  href="https://www.linkedin.com/in/ridham-savaliya-8984a1241/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="interactive-button bg-[var(--primary)] text-white px-6 py-2 rounded-lg hover:bg-[var(--primary-dark)] transition-colors"
@@ -28,7 +30,7 @@ const FounderSection = () => {
                   Connect on LinkedIn
                 </a>
                 <a
-                  href="https://twitter.com"
+                  href="https://x.com/RidhamSavaliy16"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-[var(--primary)] hover:text-[var(--primary-dark)] transition-colors"

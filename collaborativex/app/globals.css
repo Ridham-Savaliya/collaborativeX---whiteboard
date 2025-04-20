@@ -11,7 +11,7 @@
   --card-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);
 }
 
-@media (prefers-color-scheme: dsark) {
+@media (prefers-color-scheme: dark) {
   :root {
     --background: #0f172a;      /* Deep navy */
     --foreground: #e2e8f0;      /* Soft white text */
@@ -72,9 +72,21 @@ body {
   100% { background-position: 0% 50%; }
 }
 
-/* Smooth Transitions */
+/* Smooth Transitions and Scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
 .smooth-transition {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+button, a, [role="button"] {
+  cursor: pointer;
+}
+
+.pause-animation:hover {
+  animation-play-state: paused;
 }
 
 /* Interactive Buttons */
@@ -110,6 +122,33 @@ body {
   animation: scroll 30s linear infinite;
 }
 
+/* Animation for About Us section */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.8s ease forwards;
+}
+
+/* Feature Card Interactions */
+.feature-card:hover .feature-details {
+  height: auto;
+  opacity: 1;
+  margin-top: 1rem;
+}
+
+.feature-card .icon-container {
+  box-shadow: 0 0 15px rgba(99, 102, 241, 0.3);
+  transition: all 0.5s ease;
+}
+
+.feature-card:hover .icon-container {
+  box-shadow: 0 0 25px rgba(99, 102, 241, 0.5);
+  transform: scale(1.1) rotate(10deg);
+}
+
 /* Mobile Responsive Styles */
 @media (max-width: 640px) {
   .container {
@@ -120,5 +159,52 @@ body {
   .interactive-button {
     width: 100%;
     text-align: center;
+  }
+   
+  /* Mobile navigation hover effects */
+  .md\:hidden a {
+    position: relative;
+    transition: all 0.3s ease;
+  }
+  
+  .md\:hidden a::after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 2px;
+    bottom: 0;
+    left: 0;
+    background-color: var(--primary);
+    transition: width 0.3s ease;
+  }
+  
+  .md\:hidden a:hover {
+    transform: translateX(5px);
+    color: var(--primary);
+  }
+  
+  .md\:hidden a:hover::after {
+    width: 100%;
+  }
+  
+  .mobile-nav-link {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .mobile-nav-link::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(to bottom, var(--primary-light), var(--primary));
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  
+  .mobile-nav-link:hover::before {
+    opacity: 1;
   }
 }
