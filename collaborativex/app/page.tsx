@@ -54,7 +54,8 @@ const LandingPage = () => {
             Collaborate & Create Together
           </h1>
           <p className="text-lg sm:text-xl opacity-90 smooth-transition max-w-2xl mx-auto lg:mx-0">
-            Experience the future of collaborative whiteboarding with AI-powered features and real-time collaboration.
+            Experience the future of collaboration with our &quot;Smart Whiteboard&quot; that
+            understands you better than ever!
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
             <button className="interactive-button bg-[var(--primary)] text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-semibold hover-lift">

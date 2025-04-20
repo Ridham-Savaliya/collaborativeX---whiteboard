@@ -27,7 +27,7 @@ const WhiteboardDemo = () => {
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
     ctx.lineWidth = lineWidth;
-  }, []);
+  }, [color, lineWidth]);
 
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;

@@ -1,6 +1,6 @@
-  'use client';
+'use client';
 
-  import { useEffect, useState } from 'react';
+  import { useState } from 'react';
   import Image from 'next/image';
   import { useRouter, usePathname } from 'next/navigation';
   // import loginImage from '../../public/Ethereal Silhouette in Purple.jpeg'
@@ -9,7 +9,7 @@
   const AuthPage = () => {
     const router = useRouter();
     const pathname = usePathname();
-    const [isLogin, setIsLogin] = useState(pathname === '/login');
+    const isLogin = pathname === '/login';
     const [formData, setFormData] = useState({
       email: '',
       password: '',

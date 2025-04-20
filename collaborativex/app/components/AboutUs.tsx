@@ -33,7 +33,7 @@ const AboutUs = () => {
             Revolutionizing Team Collaboration
           </h2>
           <p className="text-center text-lg opacity-80 mb-16 max-w-3xl mx-auto animate-on-scroll opacity-0">
-            At CollaborativeX, we're transforming how teams work together in the digital age.
+            At CollaborativeX, we&apos;re transforming how teams work together in the digital age.
           </p>
 
           <div className="glass-card p-8 md:p-12 rounded-2xl hover-lift animate-on-scroll opacity-0">
@@ -42,7 +42,7 @@ const AboutUs = () => {
                 <div className="animate-on-scroll opacity-0">
                   <h3 className="text-2xl md:text-3xl font-bold mb-4 gradient-text">Our Mission</h3>
                   <p className="text-lg opacity-90">
-                    We're on a mission to eliminate the barriers of remote collaboration by creating an intuitive, AI-powered whiteboard platform that brings teams together, regardless of their location.
+                    We&apos;re on a mission to eliminate the barriers of remote collaboration by creating an intuitive, AI-powered whiteboard platform that brings teams together, regardless of their location.
                   </p>
                 </div>
                 
