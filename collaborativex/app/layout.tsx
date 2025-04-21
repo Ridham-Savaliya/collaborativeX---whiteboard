@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "CollaborativeX - AI-Powered Real-time Collaborative Whiteboard",
   icons: {
-    icon: '../public/logo.png', // or .ico
+    icon: '/logo.png', // or .ico
   },
   description: "Transform your team collaboration with CollaborativeX's AI-powered whiteboard featuring real-time collaboration, video calling, and smart drawing assistance.",
   keywords: "collaborative whiteboard, AI whiteboard, real-time collaboration, video calling, team collaboration, remote teams, digital whiteboard",
