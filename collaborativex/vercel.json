@@ -1,7 +1,9 @@
 {
+  "version": 2,
+  "framework": "nextjs",
   "rewrites": [
     {
-      "source": "/:path*",
+      "source": "/(.*)",
       "destination": "/"
     }
   ]
