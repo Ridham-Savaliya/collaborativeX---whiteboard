@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 const Canvas = dynamic(() => import("../components/Canvas"), { ssr: false });
 const Sidebar = dynamic(() => import("../components/Sidebar"), { ssr: false });
 
-const Page = () => {
+const page = () => {
   const [color, setColor] = useState("#000000");
   const [strokeWidth, setStrokeWidth] = useState(2);
   const [shapeMode, setShapeMode] = useState<"line" | "rectangle" | "circle">("line");
@@ -37,4 +37,4 @@ const Page = () => {
   );
 };
 
-export default Page;
+export default page;
