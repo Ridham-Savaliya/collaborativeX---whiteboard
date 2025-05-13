@@ -56,7 +56,7 @@ interface SidebarProps {
   setTextFontSize: (size: number) => void;
 }
 
-const availableShapes = [
+const availableShapes: { type: Exclude<SidebarProps['currentShapeType'], null>; label: string }[] = [
   { type: 'rectangle', label: 'Rectangle' },
   { type: 'circle', label: 'Circle' },
   { type: 'line', label: 'Line' },
@@ -72,7 +72,7 @@ const availableShapes = [
   { type: 'cross', label: 'Cross' },
   { type: 'smiley', label: 'Smiley' },
   { type: 'cloud', label: 'Cloud' },
-] as const;
+];
 
 const Sidebar: React.FC<SidebarProps> = ({
   setColor,
@@ -105,230 +105,142 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [showAllShapes, setShowAllShapes] = useState(false);
   const initialShapesCount = 6;
 
-  const handleShapeSelect = (
-    shape:
-      | 'rectangle'
-      | 'circle'
-      | 'line'
-      | 'triangle'
-      | 'diamond'
-      | 'star'
-      | 'arrow'
-      | 'heart'
-      | 'pentagon'
-      | 'hexagon'
-      | 'heptagon'
-      | 'octagon'
-      | 'cross'
-      | 'smiley'
-      | 'cloud'
-  ) => {
+  const handleShapeSelect = (shape: Exclude<SidebarProps['currentShapeType'], null>) => {
     setTool('shape');
     setShapeType(shape);
     setShowShapesDrawer(false);
   };
 
   return (
-    <div className="w-64 bg-gray-800 p-6 space-y-6 rounded-lg shadow-xl h-full flex flex-col relative text-purple-100">
-      <div>
-        <h3 className="text-xl font-semibold text-purple-200 mb-4">Tools</h3>
-        <div className={tooltipContainerClass}>
-          <button
-            onClick={() => {
-              setTool('pen');
-              setShowShapesDrawer(false);
-              setShapeType(null);
-            }}
-            className={`${commonButtonClass} ${currentTool === 'pen' ? activeToolClass : inactiveToolClass}`}
-            aria-pressed={currentTool === 'pen'}
-          >
-            Pen
-          </button>
-          <span className={tooltipClass}>Draw freehand lines</span>
-        </div>
-        <div className={tooltipContainerClass}>
-          <button
-            onClick={() => {
-              setTool('eraser');
-              setShowShapesDrawer(false);
-              setShapeType(null);
-            }}
-            className={`${commonButtonClass} ${currentTool === 'eraser' ? activeToolClass : inactiveToolClass}`}
-            aria-pressed={currentTool === 'eraser'}
-          >
-            Eraser
-          </button>
-          <span className={tooltipClass}>Erase drawings</span>
-        </div>
-        <div className={tooltipContainerClass}>
-          <button
-            onClick={() => {
-              setTool('highlighter');
-              setShowShapesDrawer(false);
-              setShapeType(null);
-            }}
-            className={`${commonButtonClass} ${currentTool === 'highlighter' ? activeToolClass : inactiveToolClass}`}
-            aria-pressed={currentTool === 'highlighter'}
-          >
-            Highlighter
-          </button>
-          <span className={tooltipClass}>Draw translucent lines</span>
-        </div>
-        <div className={tooltipContainerClass}>
-          <button
-            onClick={() => {
-              setTool('shape');
-              setShowShapesDrawer(true);
-            }}
-            className={`${commonButtonClass} ${currentTool === 'shape' ? activeToolClass : inactiveToolClass}`}
-            aria-pressed={currentTool === 'shape'}
-          >
-            Shapes
-          </button>
-          <span className={tooltipClass}>Draw geometric shapes</span>
-        </div>
-        <div className={tooltipContainerClass}>
-          <button
-            onClick={() => {
-              setTool('stickyNote');
-              setShowShapesDrawer(false);
-              setShapeType(null);
-            }}
-            className={`${commonButtonClass} ${currentTool === 'stickyNote' ? activeToolClass : inactiveToolClass}`}
-            aria-pressed={currentTool === 'stickyNote'}
-          >
-            Sticky Note
-          </button>
-          <span className={tooltipClass}>Add a sticky note (draggable)</span>
-        </div>
-        <div className={tooltipContainerClass}>
-          <button
-            onClick={() => {
-              setTool('text');
-              setShowShapesDrawer(false);
-              setShapeType(null);
-            }}
-            className={`${commonButtonClass} ${currentTool === 'text' ? activeToolClass : inactiveToolClass}`}
-            aria-pressed={currentTool === 'text'}
-          >
-            Text
-          </button>
-          <span className={tooltipClass}>Add editable text</span>
-        </div>
-      </div>
-
-      {showShapesDrawer && (
-        <div className="absolute left-full top-0 mt-0 ml-4 bg-gray-700 p-4 rounded-lg shadow-lg z-10 w-48">
-          <h4 className="text-md font-semibold text-purple-200 mb-3">Choose Shape</h4>
-          <div className="grid grid-cols-3 gap-2">
-            {availableShapes
-              .slice(0, showAllShapes ? availableShapes.length : initialShapesCount)
-              .map((shape) => (
-                <button
-                  key={shape.type}
-                  onClick={() => handleShapeSelect(shape.type)}
-                  className={`p-2 text-sm font-medium text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-150 ease-in-out ${
-                    currentShapeType === shape.type ? activeToolClass : inactiveToolClass
-                  }`}
-                  title={shape.label}
-                >
-                  {shape.label.charAt(0)}
-                </button>
-              ))}
-          </div>
-          {availableShapes.length > initialShapesCount && (
-            <button
-              onClick={() => setShowAllShapes(!showAllShapes)}
-              className="w-full mt-3 p-2 text-sm font-medium text-white bg-gray-600 hover:bg-gray-700 rounded-lg"
-            >
-              {showAllShapes ? 'Show Less' : 'Show More'}
-            </button>
-          )}
-          <button
-            onClick={() => setShowShapesDrawer(false)}
-            className="w-full mt-3 p-2 text-sm font-medium text-white bg-gray-600 hover:bg-gray-700 rounded-lg"
-          >
-            Close Drawer
-          </button>
-        </div>
-      )}
-
-      <div>
-        <label htmlFor="colorPicker" className="block text-sm font-medium text-purple-300 mb-1">
-          Stroke Color
-        </label>
-        <input
-          type="color"
-          id="colorPicker"
-          value={currentColor}
-          onChange={(e) => setColor(e.target.value)}
-          className="w-full h-10 p-1 border-gray-600 rounded-md cursor-pointer focus:ring-purple-500 focus:border-purple-500"
-        />
-      </div>
-
-      <div>
-        <label htmlFor="lineWidth" className="block text-sm font-medium text-purple-300 mb-1">
-          Line Width ({currentLineWidth}px)
-        </label>
-        <input
-          type="range"
-          id="lineWidth"
-          min="1"
-          max="50"
-          value={currentLineWidth}
-          onChange={(e) => setLineWidth(parseInt(e.target.value, 10))}
-          className="w-full h-3 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-purple-500"
-        />
-      </div>
-
-      <div>
-        <label htmlFor="textSize" className="block text-sm font-medium text-purple-300 mb-1">
-          Text Size ({textFontSize}px)
-        </label>
-        <input
-          type="range"
-          id="textSize"
-          min="10"
-          max="60"
-          value={textFontSize}
-          onChange={(e) => setTextFontSize(parseInt(e.target.value, 10))}
-          className="w-full h-3 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-purple-500"
-        />
-      </div>
-
-      <div>
-        <h3 className="text-xl font-semibold text-purple-200 mb-4">History</h3>
-        <div className={tooltipContainerClass}>
-          <button
-            onClick={undo}
-            disabled={!canUndo}
-            className={`${commonButtonClass} ${canUndo ? inactiveToolClass : disabledButtonClass}`}
-          >
-            Undo
-          </button>
-          <span className={tooltipClass}>Undo last action</span>
-        </div>
-        <div className={tooltipContainerClass}>
-          <button
-            onClick={redo}
-            disabled={!canRedo}
-            className={`${commonButtonClass} ${canRedo ? inactiveToolClass : disabledButtonClass}`}
-          >
-            Redo
-          </button>
-          <span className={tooltipClass}>Redo last undone action</span>
-        </div>
-      </div>
-
-      <div className="mt-auto">
+   <div className="w-48 bg-gray-900  p-4 space-y-4 rounded-lg shadow-xl  flex flex-col text-purple-100">
+  {/* Tools */}
+  <div className="space-y-2">
+    <h3 className="text-sm font-semibold text-purple-300">Tools</h3>
+    {[
+      { label: 'Pen', key: 'pen', tooltip: 'Draw freehand lines' },
+      { label: 'Eraser', key: 'eraser', tooltip: 'Erase drawings' },
+      { label: 'Highlighter', key: 'highlighter', tooltip: 'Draw translucent lines' },
+      { label: 'Shapes', key: 'shape', tooltip: 'Draw geometric shapes' },
+      { label: 'Sticky Note', key: 'stickyNote', tooltip: 'Add a sticky note (draggable)' },
+      { label: 'Text', key: 'text', tooltip: 'Add editable text' },
+    ].map((tool) => (
+      <div key={tool.key} className="group relative">
         <button
-          onClick={clearCanvas}
-          className="w-full p-3 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-all duration-150 ease-in-out"
+          onClick={() => {
+            setTool(tool.key);
+            setShowShapesDrawer(tool.key === 'shape');
+            if (tool.key !== 'shape') setShapeType(null);
+          }}
+          className={`${commonButtonClass} w-full py-2 text-sm ${
+            currentTool === tool.key ? activeToolClass : inactiveToolClass
+          }`}
+          aria-pressed={currentTool === tool.key}
         >
-          Clear Canvas
+          {tool.label}
         </button>
+        <span className="absolute left-full top-1/2 transform -translate-y-1/2 ml-2 w-max whitespace-nowrap px-2 py-1 bg-black text-xs rounded opacity-0 group-hover:opacity-100 transition">
+          {tool.tooltip}
+        </span>
       </div>
+    ))}
+  </div>
+
+  {/* Shapes Drawer */}
+  {showShapesDrawer && (
+    <div className="bg-gray-800 p-3 rounded shadow-lg space-y-2 z-50">
+      <h4 className="text-sm font-semibold text-purple-300">Shapes</h4>
+      <div className="grid grid-cols-3 gap-1">
+        {availableShapes
+          .slice(0, showAllShapes ? availableShapes.length : initialShapesCount)
+          .map((shape) => (
+            <button
+              key={shape.type}
+              onClick={() => handleShapeSelect(shape.type)}
+              className={`p-1 text-xs font-medium rounded ${
+                currentShapeType === shape.type ? activeToolClass : inactiveToolClass
+              }`}
+              title={shape.label}
+            >
+              {shape.label.charAt(0)}
+            </button>
+          ))}
+      </div>
+      {availableShapes.length > initialShapesCount && (
+        <button
+          onClick={() => setShowAllShapes(!showAllShapes)}
+          className="w-full text-xs mt-2 bg-gray-700 hover:bg-gray-600 rounded px-2 py-1"
+        >
+          {showAllShapes ? 'Less' : 'More'}
+        </button>
+      )}
     </div>
+  )}
+
+  {/* Color Picker */}
+  <div>
+    <label className="text-xs block mb-1 text-purple-300">Stroke Color</label>
+    <input
+      type="color"
+      value={currentColor}
+      onChange={(e) => setColor(e.target.value)}
+      className="w-full h-8 rounded"
+    />
+  </div>
+
+  {/* Sliders */}
+  <div>
+    <label className="text-xs text-purple-300">Line Width ({currentLineWidth}px)</label>
+    <input
+      type="range"
+      min="1"
+      max="50"
+      value={currentLineWidth}
+      onChange={(e) => setLineWidth(parseInt(e.target.value))}
+      className="w-full"
+    />
+  </div>
+  <div>
+    <label className="text-xs text-purple-300">Text Size ({textFontSize}px)</label>
+    <input
+      type="range"
+      min="10"
+      max="60"
+      value={textFontSize}
+      onChange={(e) => setTextFontSize(parseInt(e.target.value))}
+      className="w-full"
+    />
+  </div>
+
+  {/* History */}
+  <div>
+    <h3 className="text-sm font-semibold text-purple-300 mb-2">History</h3>
+    <div className="flex flex-col space-y-2">
+      <button
+        onClick={undo}
+        disabled={!canUndo}
+        className={`${commonButtonClass} ${canUndo ? inactiveToolClass : disabledButtonClass}`}
+      >
+        Undo
+      </button>
+      <button
+        onClick={redo}
+        disabled={!canRedo}
+        className={`${commonButtonClass} ${canRedo ? inactiveToolClass : disabledButtonClass}`}
+      >
+        Redo
+      </button>
+    </div>
+  </div>
+
+  {/* Clear */}
+  <button
+    onClick={clearCanvas}
+    className="mt-auto w-full p-2 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded"
+  >
+    Clear Canvas
+  </button>
+</div>
+
   );
 };
 

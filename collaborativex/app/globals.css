@@ -23,6 +23,17 @@
   }
 }
 
+/* index.css or globals.css */
+.custom-scroll {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+.custom-scroll::-webkit-scrollbar {
+  display: none; /* Chrome, Safari */
+}
+
+
 body {
   background: var(--background);
   color: var(--foreground);
