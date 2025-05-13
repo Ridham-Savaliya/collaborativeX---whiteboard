@@ -446,42 +446,43 @@ const Canvas: React.FC<CanvasProps> = ({
   };
 
   return (
-  <div
-    className="relative rounded-lg shadow-lg"
+ <div
+  className="relative rounded-lg shadow-lg w-full"
+  style={{
+    width: `${width}px`,
+    height: `${height}px`,
+    backgroundColor: '#f3e8ff', // Container background
+  }}
+>
+<div className='absolute z-50 bg-transparent'>
+    {/* Canvas - MUST have a HIGHER zIndex than the grid div */}
+  <canvas
+    ref={canvasRef}
+    onMouseDown={startDrawing}
+    onMouseMove={draw}
+    onMouseUp={endDrawing}
+    onMouseLeave={endDrawing}
+    className="rounded-lg shadow-md"
     style={{
       width: `${width}px`,
       height: `${height}px`,
-      backgroundColor: '#f3e8ff', // Container background
+      zIndex: 50,
+      
     }}
-  >
-    {/* Canvas - MUST have a HIGHER zIndex than the grid div */}
-    <canvas
-      ref={canvasRef}
-      onMouseDown={startDrawing}
-      onMouseMove={draw}
-      onMouseUp={endDrawing}
-      onMouseLeave={endDrawing}
-      className="rounded-lg shadow-md"
-      style={{
-        width: `${width}px`,
-        height: `${height}px`,
-        zIndex: 40, // <<< Set canvas zIndex to a higher value (e.g., 40)
-        // You can add a background color here if you want the canvas itself
-        // to have a solid background that covers the grid everywhere.
-        // backgroundColor: 'white',
-      }}
-    />
+  />
+</div>
 
-    {/* Grid div - MUST have a LOWER zIndex than the canvas */}
-    <div
-      className="pointer-events-none absolute top-0 left-0 right-0 bottom-0 z-[10]" // <<< Keep grid zIndex lower (e.g., z-[10] or zIndex: 10)
-      style={{
-        backgroundImage:
-          'linear-gradient(to right, rgba(255, 255, 255, 0.5) 1px, transparent 1px), linear-gradient(to bottom, rgba(255, 255, 255, 0.5) 2px, transparent 2px)',
-        backgroundSize: '40px 40px',
-      }}
-    />
-  </div>
+  {/* Grid div - MUST have a LOWER zIndex than the canvas */}
+  <div
+    className="pointer-events-none absolute top-0 left-0 right-0 bottom-0 z-10"
+    style={{
+      backgroundImage:
+        'linear-gradient(to right, rgba(255, 255, 255, 0.5) 1px, transparent 1px), linear-gradient(to bottom, rgba(255, 255, 255, 0.5) 2px, transparent 2px)',
+      backgroundSize: '40px 40px',
+      zIndex: 10,
+    }}
+  />
+</div>
   );
 };
 

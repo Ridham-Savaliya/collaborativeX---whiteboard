@@ -112,7 +112,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   };
 
   return (
-   <div className="w-48 bg-gray-900  p-4 space-y-4 rounded-lg shadow-xl  flex flex-col text-purple-100">
+   <div className="w-48 bg-gray-900  p-4 space-y-2 rounded-lg shadow-xl  flex flex-col text-purple-100">
   {/* Tools */}
   <div className="space-y-2">
     <h3 className="text-sm font-semibold text-purple-300">Tools</h3>

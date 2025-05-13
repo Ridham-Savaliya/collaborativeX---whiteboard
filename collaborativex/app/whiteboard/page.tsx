@@ -788,7 +788,7 @@ const WhiteboardPage: React.FC = () => {
 
       <main
         ref={canvasContainerRef}
-        className="flex-1 flex items-center justify-center p-4 overflow-hidden relative"
+        className="flex-1 flex items-center justify-center overflow-hidden relative"
         onMouseDown={handleCanvasMouseDown}
         onMouseMove={handleCanvasMouseMove}
         onMouseUp={handleCanvasMouseUp}
