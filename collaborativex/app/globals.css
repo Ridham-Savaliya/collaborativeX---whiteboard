@@ -23,6 +23,21 @@
   }
 }
 
+ .scrollbar-custom::-webkit-scrollbar {
+          width: 8px;
+        }
+        .scrollbar-custom::-webkit-scrollbar-track {
+          background: rgba(255, 255, 255, 0.05);
+          border-radius: 4px;
+        }
+        .scrollbar-custom::-webkit-scrollbar-thumb {
+          background: linear-gradient(to bottom, #9333ea, #c084fc);
+          border-radius: 4px;
+        }
+        .scrollbar-custom::-webkit-scrollbar-thumb:hover {
+          background: linear-gradient(to bottom, #a855f7, #d8b4fe);
+        }
+
 /* index.css or globals.css */
 .custom-scroll {
   scrollbar-width: none; /* Firefox */

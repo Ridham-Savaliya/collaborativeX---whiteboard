@@ -155,6 +155,8 @@ const WhiteboardPage: React.FC = () => {
     height: number;
   } | null>(null);
   const [textFontSize, setTextFontSize] = useState<number>(24);
+  // Added state for sidebar collapse
+  const [isCollapsed, setIsCollapsed] = useState(true);
 
   const isShapeElement = (
     element: WhiteboardElement | null
@@ -762,33 +764,35 @@ const WhiteboardPage: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-purple-900 font-sans">
-<aside className="w-[15vw] h-screen">
-  <div className="overflow-y-auto h-full pr-2 custom-scroll">
-         <Sidebar
-        setColor={setStrokeColor}
-        setLineWidth={setLineWidth}
-        setTool={setTool}
-        currentColor={strokeColor}
-        currentLineWidth={lineWidth}
-        currentTool={tool}
-        clearCanvas={clearCanvas}
-        setShowShapesDrawer={setShowShapesDrawer}
-        showShapesDrawer={showShapesDrawer}
-        setShapeType={setSelectedShapeType}
-        currentShapeType={selectedShapeType}
-        undo={undo}
-        redo={redo}
-        canUndo={historyIndex > 0}
-        canRedo={historyIndex < history.length - 1}
-        textFontSize={textFontSize}
-        setTextFontSize={setTextFontSize}
-      />
-  </div>
-</aside>
+      <aside className="w-[4vw] h-screen">
+        <div className="overflow-y-auto h-full pr-2 custom-scroll">
+          <Sidebar
+            setColor={setStrokeColor}
+            setLineWidth={setLineWidth}
+            setTool={setTool}
+            currentColor={strokeColor}
+            currentLineWidth={lineWidth}
+            currentTool={tool}
+            clearCanvas={clearCanvas}
+            setShowShapesDrawer={setShowShapesDrawer}
+            showShapesDrawer={showShapesDrawer}
+            setShapeType={setSelectedShapeType}
+            currentShapeType={selectedShapeType}
+            undo={undo}
+            redo={redo}
+            canUndo={historyIndex > 0}
+            canRedo={historyIndex < history.length - 1}
+            textFontSize={textFontSize}
+            setTextFontSize={setTextFontSize}
+            isCollapsed={isCollapsed}
+            setIsCollapsed={setIsCollapsed}
+          />
+        </div>
+      </aside>
 
       <main
         ref={canvasContainerRef}
-        className="flex-1 flex items-center justify-center overflow-hidden relative"
+        className="flex-1  flex items-center justify-center overflow-hidden relative"
         onMouseDown={handleCanvasMouseDown}
         onMouseMove={handleCanvasMouseMove}
         onMouseUp={handleCanvasMouseUp}
@@ -975,4 +979,3 @@ const WhiteboardPage: React.FC = () => {
 };
 
 export default WhiteboardPage;
-
