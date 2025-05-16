@@ -1,0 +1,86 @@
+.sticky-note {
+  position: absolute;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2), 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Folded paper effect */
+.sticky-note::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(
+    135deg,
+    rgba(0, 0, 0, 0.2) 0%,
+    rgba(0, 0, 0, 0.1) 50%,
+    transparent 50%
+  );
+  transform: translate(50%, -50%) rotate(45deg);
+  z-index: 1;
+}
+
+.sticky-note:hover {
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3), 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.sticky-note-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 32px;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.7));
+  backdrop-filter: blur(4px);
+  padding: 0 8px;
+  border-radius: 8px 8px 0 0;
+  z-index: 2;
+}
+
+.sticky-note textarea {
+  width: 100%;
+  height: calc(100% - 32px);
+  margin-top: 32px;
+  padding: 12px;
+  background: transparent;
+  border: none;
+  resize: none;
+  outline: none;
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  color: inherit;
+  transition: background-color 0.2s ease;
+}
+
+.sticky-note textarea:focus {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.sticky-note textarea::placeholder {
+  color: rgba(0, 0, 0, 0.5);
+  opacity: 0.8;
+}
+
+.sticky-note-handle {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  background: #06b6d4;
+  border: 2px solid white;
+  border-radius: 50%;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+  z-index: 3;
+}
+
+.sticky-note-handle:hover {
+  background: #0891b2;
+  transform: scale(1.2);
+}
+
+.sticky-note-handle:active {
+  background: #0e7490;
+}

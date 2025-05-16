@@ -50,8 +50,6 @@ interface TextElement {
   isEditing: boolean;
 }
 
-type WhiteboardElement = PathElement | ShapeElement;
-
 interface StickyNote {
   id: string;
   type: 'stickyNote';
@@ -63,6 +61,8 @@ interface StickyNote {
   textColor: string;
   bgColor: string;
 }
+
+type WhiteboardElement = PathElement | ShapeElement;
 
 interface WhiteboardState {
   elements: WhiteboardElement[];
@@ -155,7 +155,6 @@ const WhiteboardPage: React.FC = () => {
     height: number;
   } | null>(null);
   const [textFontSize, setTextFontSize] = useState<number>(24);
-  // Added state for sidebar collapse
   const [isCollapsed, setIsCollapsed] = useState(true);
 
   const isShapeElement = (
@@ -186,6 +185,13 @@ const WhiteboardPage: React.FC = () => {
 
   const handleElementComplete = useCallback((element: WhiteboardElement) => {
     setElements((prevElements) => [...prevElements, element]);
+    saveStateToHistory();
+  }, [saveStateToHistory]);
+
+  const addStickyNote = useCallback((note: StickyNote) => {
+    setStickyNotes((prevNotes) => [...prevNotes, note]);
+    setSelectedStickyNoteId(note.id);
+    setSelectedCanvasElementId(null);
     saveStateToHistory();
   }, [saveStateToHistory]);
 
@@ -453,46 +459,6 @@ const WhiteboardPage: React.FC = () => {
         setSelectedStickyNoteId(null);
       }
     }
-
-    // Add New Elements
-    if (canvasContainerRef.current && !draggableHtmlElement) {
-      const rect = canvasContainerRef.current.getBoundingClientRect();
-      const clickX = event.clientX - rect.left;
-      const clickY = event.clientY - rect.top;
-      if (tool === 'stickyNote') {
-        const newNote: StickyNote = {
-          id: `sticky-${Date.now()}`,
-          type: 'stickyNote',
-          x: clickX,
-          y: clickY,
-          width: 180,
-          height: 120,
-          text: 'New Sticky Note',
-          textColor: '#000000',
-          bgColor: '#FFFF88',
-        };
-        setStickyNotes((prevNotes) => [...prevNotes, newNote]);
-        setSelectedStickyNoteId(newNote.id);
-        setSelectedCanvasElementId(null);
-        saveStateToHistory();
-      } else if (tool === 'text') {
-        const newTextElement: TextElement = {
-          id: `text-${Date.now()}`,
-          type: 'text',
-          x: clickX,
-          y: clickY,
-          text: '',
-          color: strokeColor,
-          fontSize: textFontSize,
-          isEditing: true,
-        };
-        setTextElements((prevTexts) => [
-          ...prevTexts.map((text) => ({ ...text, isEditing: false })),
-          newTextElement,
-        ]);
-        saveStateToHistory();
-      }
-    }
   };
 
   const handleCanvasMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
@@ -620,7 +586,7 @@ const WhiteboardPage: React.FC = () => {
             break;
           case 'br':
             newWidth = x - canvasResizeStartData.x;
-            newHeight = y - canvasResizeStartData.y;
+            newHeight = y - htmlResizeStartData.y;
             break;
         }
 
@@ -786,13 +752,14 @@ const WhiteboardPage: React.FC = () => {
             setTextFontSize={setTextFontSize}
             isCollapsed={isCollapsed}
             setIsCollapsed={setIsCollapsed}
+            addStickyNote={addStickyNote}
           />
         </div>
       </aside>
 
       <main
         ref={canvasContainerRef}
-        className="flex-1  flex items-center justify-center overflow-hidden relative"
+        className="flex-1 flex items-center justify-center overflow-hidden relative"
         onMouseDown={handleCanvasMouseDown}
         onMouseMove={handleCanvasMouseMove}
         onMouseUp={handleCanvasMouseUp}
