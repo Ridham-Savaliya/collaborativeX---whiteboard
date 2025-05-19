@@ -1,27 +1,14 @@
-
 'use client';
-
-import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Pencil, Eraser, Highlighter, Square, StickyNote, Type, 
-  ChevronLeft, ChevronRight, UndoIcon, RedoIcon, Trash2, 
-  Circle, Triangle, Diamond, Star, ArrowRight, 
+import React, { useState, useEffect } from 'react';
+import {
+  Pencil, Eraser, Highlighter, Square, StickyNote, Type,
+  ChevronLeft, ChevronRight, UndoIcon, RedoIcon, Trash2,
+  Circle, Triangle, Diamond, Star, ArrowRight,
   Heart, Pentagon, Hexagon, Octagon, CrossIcon, SmilePlus, Cloud
 } from 'lucide-react';
+import { StickyNote as StickyNoteType } from '../components/Types';
 
-interface StickyNote {
-  id: string;
-  type: 'stickyNote';
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  text: string;
-  textColor: string;
-  bgColor: string;
-}
-
-interface SidebarProps { 
+interface SidebarProps {
   setColor: (color: string) => void;
   setLineWidth: (width: number) => void;
   setTool: (tool: 'pen' | 'eraser' | 'highlighter' | 'shape' | 'stickyNote' | 'text' | null) => void;
@@ -75,7 +62,7 @@ interface SidebarProps {
   setTextFontSize: (size: number) => void;
   isCollapsed: boolean;
   setIsCollapsed: (collapsed: boolean) => void;
-  addStickyNote: (note: StickyNote) => void;
+  addStickyNote: (note: StickyNoteType) => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -106,9 +93,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [showAllShapes, setShowAllShapes] = useState(false);
   const [selectedColorPreset, setSelectedColorPreset] = useState<string | null>(null);
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
-  const [isPlacingStickyNote, setIsPlacingStickyNote] = useState(false);
   const initialShapesCount = 6;
-  const canvasRef = useRef<HTMLDivElement | null>(null);
 
   const colorPresets = [
     { color: '#000000', name: 'Black' },
@@ -148,10 +133,13 @@ const Sidebar: React.FC<SidebarProps> = ({
     { key: 'text', label: 'Text', icon: <Type size={16} />, tooltip: 'Add editable text' },
   ];
 
-  const handleShapeSelect = (shape: Exclude<SidebarProps['currentShapeType'], null>) => {
+  const handleShapeSelect = (shape: typeof currentShapeType) => {
     setTool('shape');
     setShapeType(shape);
-    setShowShapesDrawer(false);
+    // Don't automatically close the shapes drawer on mobile
+    if (window.innerWidth >= 768) {
+      setShowShapesDrawer(false);
+    }
   };
 
   const handleToggleCollapse = () => {
@@ -165,66 +153,26 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   const handleStickyNoteSelect = () => {
     setTool('stickyNote');
-    setIsPlacingStickyNote(true);
     setShowShapesDrawer(false);
     setShapeType(null);
   };
 
   useEffect(() => {
-    setIsCollapsed(true);
-  }, [setIsCollapsed]);
-
-  useEffect(() => {
-    const resizeObserver = new ResizeObserver(() => {
+    const handleWindowResize = () => {
       if (window.innerWidth < 640 && !isCollapsed) {
         setIsCollapsed(true);
       }
-    });
+    };
 
-    resizeObserver.observe(document.body);
-
+    window.addEventListener('resize', handleWindowResize);
     return () => {
-      resizeObserver.disconnect();
+      window.removeEventListener('resize', handleWindowResize);
     };
   }, [isCollapsed, setIsCollapsed]);
 
-  useEffect(() => {
-    if (!isPlacingStickyNote || currentTool !== 'stickyNote') {
-      return;
-    }
-
-    const handleCanvasClick = (e: MouseEvent) => {
-      if (currentTool === 'stickyNote' && isPlacingStickyNote) {
-        e.preventDefault();
-        
-        const id = `sticky-note-${Date.now()}`;
-        const newNote: StickyNote = {
-          id,
-          type: 'stickyNote',
-          x: e.clientX,
-          y: e.clientY,
-          width: 200,
-          height: 150,
-          text: '',
-          textColor: '#e2e8f0',
-          bgColor: '#972cf0',
-        };
-        
-        addStickyNote(newNote);
-        setIsPlacingStickyNote(false);
-        setTool(null);
-      }
-    };
-
-    document.addEventListener('click', handleCanvasClick);
-    return () => {
-      document.removeEventListener('click', handleCanvasClick);
-    };
-  }, [currentTool, isPlacingStickyNote, currentColor, addStickyNote, setTool]);
-
   return (
     <div className="fixed top-0 left-0 h-full z-10 overflow-hidden">
-      <div 
+      <div
         className={`
           h-full bg-gray-800/90 backdrop-blur-xl text-white
           transition-all duration-300 ease-in-out
@@ -246,8 +194,8 @@ const Sidebar: React.FC<SidebarProps> = ({
 
             <div className="flex flex-col space-y-3 items-center py-3">
               {tools.map((tool) => (
-                <div 
-                  key={tool.key} 
+                <div
+                  key={tool.key}
                   className="relative"
                   onMouseEnter={() => setActiveTooltip(tool.key)}
                   onMouseLeave={() => setActiveTooltip(null)}
@@ -256,18 +204,21 @@ const Sidebar: React.FC<SidebarProps> = ({
                     onClick={() => {
                       if (tool.key === 'stickyNote') {
                         handleStickyNoteSelect();
+                      } else if (tool.key === 'shape') {
+                        setTool('shape' as any);
+                        setIsCollapsed(false);
+                        setShowShapesDrawer(true);
                       } else {
                         setTool(tool.key as any);
-                        if (tool.key === 'shape') {
-                          setIsCollapsed(false);
-                        }
+                        setShowShapesDrawer(false);
                       }
                     }}
                     className={`p-2 rounded-full transition-all duration-300 transform hover:scale-110 ${
-                      currentTool === tool.key 
-                        ? 'bg-gradient-to-br from-purple-500 to-purple-700 text-white shadow-lg shadow-purple-500/30' 
+                      currentTool === tool.key
+                        ? 'bg-gradient-to-br from-purple-500 to-purple-700 text-white shadow-lg shadow-purple-500/30'
                         : 'bg-gray-700/90 hover:bg-gray-600 text-gray-200'
                     }`}
+                    style={{ minHeight: '40px', minWidth: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                     title={tool.tooltip}
                     aria-label={tool.label}
                   >
@@ -287,35 +238,38 @@ const Sidebar: React.FC<SidebarProps> = ({
                 onClick={undo}
                 disabled={!canUndo}
                 className={`p-2 rounded-full transition-all duration-300 ${
-                  canUndo 
-                    ? 'bg-gray-700/90 hover:bg-gray-600 text-gray-200 hover:scale-110' 
+                  canUndo
+                    ? 'bg-gray-700/90 hover:bg-gray-600 text-gray-200 hover:scale-110'
                     : 'bg-gray-800/60 text-gray-500 cursor-not-allowed opacity-50'
                 }`}
                 title="Undo"
                 aria-label="Undo"
+                style={{ minHeight: '40px', minWidth: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
                 <UndoIcon size={16} />
               </button>
-              
+
               <button
                 onClick={redo}
                 disabled={!canRedo}
                 className={`p-2 rounded-full transition-all duration-300 ${
-                  canRedo 
-                    ? 'bg-gray-700/90 hover:bg-gray-600 text-gray-200 hover:scale-110' 
+                  canRedo
+                    ? 'bg-gray-700/90 hover:bg-gray-600 text-gray-200 hover:scale-110'
                     : 'bg-gray-800/60 text-gray-500 cursor-not-allowed opacity-50'
                 }`}
                 title="Redo"
                 aria-label="Redo"
+                style={{ minHeight: '40px', minWidth: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
                 <RedoIcon size={16} />
               </button>
-              
+
               <button
                 onClick={clearCanvas}
                 className="p-2 rounded-full bg-gradient-to-br from-red-500 to-red-700 hover:from-red-400 hover:to-red-600 transition-all duration-300 transform hover:scale-110 shadow-lg hover:shadow-red-500/30"
                 title="Clear Canvas"
                 aria-label="Clear Canvas"
+                style={{ minHeight: '40px', minWidth: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
                 <Trash2 size={16} />
               </button>
@@ -336,20 +290,20 @@ const Sidebar: React.FC<SidebarProps> = ({
             </div>
 
             <div className="mb-4 bg-gray-700/50 backdrop-blur-sm rounded-xl p-3 shadow-inner border border-white/5">
-              <div 
-                className="flex items-center justify-between cursor-pointer mb-2" 
+              <div
+                className="flex items-center justify-between cursor-pointer mb-2"
                 onClick={() => setShowToolsSection(!showToolsSection)}
               >
                 <h3 className="text-xs font-semibold text-purple-300 flex items-center">
                   <span className="w-1 h-5 bg-gradient-to-b from-purple-400 to-purple-600 rounded-sm mr-1"></span>
                   Tools
                 </h3>
-                <ChevronRight 
-                  size={16} 
-                  className={`transform transition-transform duration-300 ${showToolsSection ? 'rotate-90' : ''}`} 
+                <ChevronRight
+                  size={16}
+                  className={`transform transition-transform duration-300 ${showToolsSection ? 'rotate-90' : ''}`}
                 />
               </div>
-              
+
               {showToolsSection && (
                 <div className="space-y-2 transition-all duration-300">
                   <div className="grid grid-cols-2 gap-2">
@@ -359,21 +313,21 @@ const Sidebar: React.FC<SidebarProps> = ({
                           onClick={() => {
                             if (tool.key === 'stickyNote') {
                               handleStickyNoteSelect();
+                            } else if (tool.key === 'shape') {
+                              setTool('shape' as any);
+                              setShowShapesDrawer(!showShapesDrawer);
                             } else {
                               setTool(tool.key as any);
-                              if (tool.key === 'shape') {
-                                setShowShapesDrawer(!showShapesDrawer);
-                              } else {
-                                setShowShapesDrawer(false);
-                                setShapeType(null);
-                              }
+                              setShowShapesDrawer(false);
+                              setShapeType(null);
                             }
                           }}
                           className={`w-full py-2 px-2 text-xs font-medium rounded-lg flex items-center transition-all duration-300
-                          ${currentTool === tool.key 
-                            ? 'bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white shadow-lg shadow-purple-600/20' 
+                          ${currentTool === tool.key
+                            ? 'bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white shadow-lg shadow-purple-600/20'
                             : 'bg-gray-700/80 hover:bg-gray-600/80 text-gray-300'
                           }`}
+                          style={{ minHeight: '44px' }}
                           aria-pressed={currentTool === tool.key}
                         >
                           <span className="mr-1">{tool.icon}</span>
@@ -403,10 +357,11 @@ const Sidebar: React.FC<SidebarProps> = ({
                         key={shape.type as string}
                         onClick={() => handleShapeSelect(shape.type as any)}
                         className={`p-2 flex flex-col items-center justify-center rounded-lg transition-all duration-300
-                          ${currentShapeType === shape.type 
-                            ? 'bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white shadow-lg shadow-purple-600/20' 
+                          ${currentShapeType === shape.type
+                            ? 'bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white shadow-lg shadow-purple-600/20'
                             : 'bg-gray-600/80 hover:bg-gray-500/80 text-gray-300'
                           }`}
+                        style={{ minHeight: '44px' }}
                         title={shape.label}
                         aria-label={shape.label}
                       >
@@ -418,6 +373,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   <button
                     onClick={() => setShowAllShapes(!showAllShapes)}
                     className="w-full text-xs py-1 bg-gray-600/80 hover:bg-gray-500/80 rounded-lg transition-all duration-300 font-medium"
+                    style={{ minHeight: '36px' }}
                   >
                     {showAllShapes ? 'Show Less' : 'Show All Shapes'}
                   </button>
@@ -426,20 +382,20 @@ const Sidebar: React.FC<SidebarProps> = ({
             )}
 
             <div className="mb-4 bg-gray-700/50 backdrop-blur-sm rounded-xl p-3 shadow-inner border border-white/5">
-              <div 
-                className="flex items-center justify-between cursor-pointer mb-2" 
+              <div
+                className="flex items-center justify-between cursor-pointer mb-2"
                 onClick={() => setShowStylesSection(!showStylesSection)}
               >
                 <h3 className="text-xs font-semibold text-purple-300 flex items-center">
                   <span className="w-1 h-5 bg-gradient-to-b from-purple-400 to-purple-600 rounded-sm mr-1"></span>
                   Styles
                 </h3>
-                <ChevronRight 
-                  size={16} 
-                  className={`transform transition-transform duration-300 ${showStylesSection ? 'rotate-90' : ''}`} 
+                <ChevronRight
+                  size={16}
+                  className={`transform transition-transform duration-300 ${showStylesSection ? 'rotate-90' : ''}`}
                 />
               </div>
-              
+
               {showStylesSection && (
                 <div className="space-y-3 transition-all duration-300">
                   <div className="space-y-1">
@@ -449,9 +405,9 @@ const Sidebar: React.FC<SidebarProps> = ({
                         <button
                           key={preset.color}
                           onClick={() => handleColorPresetSelect(preset.color)}
-                          className={`w-5 h-5 rounded-full transition-all duration-300 hover:scale-110 ${
-                            selectedColorPreset === preset.color 
-                              ? 'ring-2 ring-white ring-offset-1 ring-offset-gray-800 shadow-lg' 
+                          className={`w-8 h-8 rounded-full transition-all duration-300 hover:scale-110 ${
+                            selectedColorPreset === preset.color
+                              ? 'ring-2 ring-white ring-offset-1 ring-offset-gray-800 shadow-lg'
                               : ''
                           }`}
                           title={preset.name}
@@ -467,11 +423,11 @@ const Sidebar: React.FC<SidebarProps> = ({
                           setColor(e.target.value);
                           setSelectedColorPreset(null);
                         }}
-                        className="w-full h-8 rounded-lg cursor-pointer opacity-0 absolute inset-0 z-10"
+                        className="w-full h-10 rounded-lg cursor-pointer opacity-0 absolute inset-0 z-10"
                       />
-                      <div className="flex justify-between items-center bg-gray-600/80 p-1 rounded-lg border border-white/5">
-                        <div 
-                          className="w-6 h-6 rounded-md border border-gray-500 shadow-inner"
+                      <div className="flex justify-between items-center bg-gray-600/80 p-2 rounded-lg border border-white/5" style={{ minHeight: '44px' }}>
+                        <div
+                          className="w-8 h-8 rounded-md border border-gray-500 shadow-inner"
                           style={{ backgroundColor: currentColor }}
                         ></div>
                         <div className="text-xs font-mono">{currentColor.toUpperCase()}</div>
@@ -484,11 +440,11 @@ const Sidebar: React.FC<SidebarProps> = ({
                       <label className="text-xs text-purple-300 font-medium">Line Width</label>
                       <span className="text-xs bg-gray-600/80 px-1 py-0.5 rounded-md">{currentLineWidth}px</span>
                     </div>
-                    <div className="relative h-7 flex items-center">
-                      <div className="absolute inset-0 flex items-center">
-                        <div className="h-1 w-full bg-gray-600/80 rounded-full">
-                          <div 
-                            className="h-full bg-gradient-to-r from-purple-600 to-purple-400 rounded-full" 
+                    <div className="relative h-10 flex items-center px-3">
+                      <div className="absolute inset-0 flex items-center px-3">
+                        <div className="h-2 w-full bg-gray-600/80 rounded-full">
+                          <div
+                            className="h-full bg-gradient-to-r from-purple-600 to-purple-400 rounded-full"
                             style={{ width: `${(currentLineWidth / 50) * 100}%` }}
                           ></div>
                         </div>
@@ -499,14 +455,16 @@ const Sidebar: React.FC<SidebarProps> = ({
                         max="50"
                         value={currentLineWidth}
                         onChange={(e) => setLineWidth(parseInt(e.target.value))}
-                        className="w-full h-7 absolute inset-0 opacity-0 cursor-pointer"
+                        className="w-full h-10 absolute inset-0 opacity-0 cursor-pointer"
                       />
-                      <div 
+                      <div
                         className="absolute rounded-full bg-gradient-to-br from-purple-500 to-purple-700 shadow-md shadow-purple-500/20 cursor-grab"
-                        style={{ 
-                          left: `calc(${(currentLineWidth / 50) * 100}% - ${6 + currentLineWidth / 15}px)`, 
-                          width: `${12 + currentLineWidth / 5}px`, 
-                          height: `${12 + currentLineWidth / 5}px` 
+                        style={{
+                          left: `calc(${(currentLineWidth / 50) * 100}% - ${6 + currentLineWidth / 15}px)`,
+                          width: `${16 + currentLineWidth / 5}px`,
+                          height: `${16 + currentLineWidth / 5}px`,
+                          transform: 'translateY(-50%)',
+                          top: '50%'
                         }}
                       ></div>
                     </div>
@@ -521,11 +479,11 @@ const Sidebar: React.FC<SidebarProps> = ({
                       <label className="text-xs text-purple-300 font-medium">Text Size</label>
                       <span className="text-xs bg-gray-600/80 px-1 py-0.5 rounded-md">{textFontSize}px</span>
                     </div>
-                    <div className="relative h-7 flex items-center">
-                      <div className="absolute inset-0 flex items-center">
-                        <div className="h-1 w-full bg-gray-600/80 rounded-full">
-                          <div 
-                            className="h-full bg-gradient-to-r from-purple-600 to-purple-400 rounded-full" 
+                    <div className="relative h-10 flex items-center px-3">
+                      <div className="absolute inset-0 flex items-center px-3">
+                        <div className="h-2 w-full bg-gray-600/80 rounded-full">
+                          <div
+                            className="h-full bg-gradient-to-r from-purple-600 to-purple-400 rounded-full"
                             style={{ width: `${((textFontSize - 10) / 50) * 100}%` }}
                           ></div>
                         </div>
@@ -536,14 +494,16 @@ const Sidebar: React.FC<SidebarProps> = ({
                         max="60"
                         value={textFontSize}
                         onChange={(e) => setTextFontSize(parseInt(e.target.value))}
-                        className="w-full h-7 absolute inset-0 opacity-0 cursor-pointer"
+                        className="w-full h-10 absolute inset-0 opacity-0 cursor-pointer"
                       />
-                      <div 
+                      <div
                         className="absolute rounded-full bg-gradient-to-br from-purple-500 to-purple-700 shadow-md shadow-purple-500/20 cursor-grab"
-                        style={{ 
-                          left: `calc(${((textFontSize - 10) / 50) * 100}% - 6px)`, 
-                          width: `12px`, 
-                          height: `12px` 
+                        style={{
+                          left: `calc(${((textFontSize - 10) / 50) * 100}% - 8px)`,
+                          width: `16px`,
+                          height: `16px`,
+                          transform: 'translateY(-50%)',
+                          top: '50%'
                         }}
                       ></div>
                     </div>
@@ -557,30 +517,31 @@ const Sidebar: React.FC<SidebarProps> = ({
             </div>
 
             <div className="mb-4 bg-gray-700/50 backdrop-blur-sm rounded-xl p-3 shadow-inner border border-white/5">
-              <div 
-                className="flex items-center justify-between cursor-pointer mb-2" 
+              <div
+                className="flex items-center justify-between cursor-pointer mb-2"
                 onClick={() => setShowHistorySection(!showHistorySection)}
               >
                 <h3 className="text-xs font-semibold text-purple-300 flex items-center">
                   <span className="w-1 h-5 bg-gradient-to-b from-purple-400 to-purple-600 rounded-sm mr-1"></span>
                   History
                 </h3>
-                <ChevronRight 
-                  size={16} 
-                  className={`transform transition-transform duration-300 ${showHistorySection ? 'rotate-90' : ''}`} 
+                <ChevronRight
+                  size={16}
+                  className={`transform transition-transform duration-300 ${showHistorySection ? 'rotate-90' : ''}`}
                 />
               </div>
-              
+
               {showHistorySection && (
                 <div className="flex space-x-2 transition-all duration-300">
                   <button
                     onClick={undo}
                     disabled={!canUndo}
                     className={`flex-1 py-2 px-2 text-xs font-medium rounded-lg flex items-center justify-center transition-all duration-300
-                      ${canUndo 
-                        ? 'bg-gray-600/80 hover:bg-gray-500/80 text-white' 
+                      ${canUndo
+                        ? 'bg-gray-600/80 hover:bg-gray-500/80 text-white'
                         : 'bg-gray-700/50 text-gray-500 cursor-not-allowed'
                       }`}
+                    style={{ minHeight: '44px' }}
                     aria-disabled={!canUndo}
                   >
                     <UndoIcon size={14} className="mr-1" />
@@ -590,10 +551,11 @@ const Sidebar: React.FC<SidebarProps> = ({
                     onClick={redo}
                     disabled={!canRedo}
                     className={`flex-1 py-2 px-2 text-xs font-medium rounded-lg flex items-center justify-center transition-all duration-300
-                      ${canRedo 
-                        ? 'bg-gray-600/80 hover:bg-gray-500/80 text-white' 
+                      ${canRedo
+                        ? 'bg-gray-600/80 hover:bg-gray-500/80 text-white'
                         : 'bg-gray-700/50 text-gray-500 cursor-not-allowed'
                       }`}
+                    style={{ minHeight: '44px' }}
                     aria-disabled={!canRedo}
                   >
                     <RedoIcon size={14} className="mr-1" />
@@ -606,6 +568,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             <button
               onClick={clearCanvas}
               className="mt-auto w-full py-2 px-3 text-xs font-medium rounded-lg flex items-center justify-center bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white transition-all duration-300 shadow-lg hover:shadow-red-500/25"
+              style={{ minHeight: '44px' }}
             >
               <Trash2 size={14} className="mr-1" />
               Clear Canvas
@@ -613,7 +576,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           </div>
         )}
 
-        <div 
+        <div
           className={`absolute left-14 top-4 bg-black/80 backdrop-blur-sm text-white text-xs font-medium px-2 py-1 rounded-md pointer-events-none transition-opacity duration-300 ${currentTool && isCollapsed ? 'opacity-100' : 'opacity-0'}`}
         >
           {tools.find(t => t.key === currentTool)?.label}
