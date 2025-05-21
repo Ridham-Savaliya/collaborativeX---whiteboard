@@ -1,10 +1,18 @@
 'use client';
+
 import React, { useState, useEffect, useCallback } from 'react';
 import Canvas from '../../components/Canvas';
 import Sidebar from '../../components/Sidebar';
 import { StickyNote, WhiteboardElement } from '../../components/Types';
 
-const Whiteboard: React.FC = () => {
+interface PageProps {
+  params: { slug: string };
+}
+
+const WhiteboardPage: React.FC<PageProps> = ({ params }) => {
+  const { slug } = params; // You get the dynamic slug here if needed
+
+  // Your existing state and logic here
   const [strokeColor, setStrokeColor] = useState<string>('#000000');
   const [lineWidth, setLineWidth] = useState<number>(5);
   const [tool, setTool] = useState<'pen' | 'eraser' | 'highlighter' | 'shape' | 'stickyNote' | 'text' | null>('pen');
@@ -31,15 +39,12 @@ const Whiteboard: React.FC = () => {
   const [textFontSize, setTextFontSize] = useState<number>(24);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [canvasKey, setCanvasKey] = useState<number>(0);
-  // Add textStyles state
   const [textStyles, setTextStyles] = useState({
     bold: false,
     italic: false,
     underline: false,
     fontFamily: 'Arial',
   });
-
-  // History states for undo/redo
   const [history, setHistory] = useState<{ elements: WhiteboardElement[]; stickyNotes: StickyNote[] }[]>([{ elements: [], stickyNotes: [] }]);
   const [historyIndex, setHistoryIndex] = useState(0);
 
@@ -139,4 +144,4 @@ const Whiteboard: React.FC = () => {
   );
 };
 
-export default Whiteboard;
+export default WhiteboardPage;
