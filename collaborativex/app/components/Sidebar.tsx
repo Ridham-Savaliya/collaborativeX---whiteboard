@@ -4,7 +4,8 @@ import {
   Pencil, Eraser, Highlighter, Square, StickyNote, Type,
   ChevronLeft, ChevronRight, UndoIcon, RedoIcon, Trash2,
   Circle, Triangle, Diamond, Star, ArrowRight,
-  Heart, Pentagon, Hexagon, Octagon, CrossIcon, SmilePlus, Cloud
+  Heart, Pentagon, Hexagon, Octagon, CrossIcon, SmilePlus, Cloud,
+  Bold, Italic, Underline
 } from 'lucide-react';
 import { StickyNote as StickyNoteType } from '../components/Types';
 
@@ -18,42 +19,8 @@ interface SidebarProps {
   clearCanvas: () => void;
   setShowShapesDrawer: (show: boolean) => void;
   showShapesDrawer: boolean;
-  setShapeType: (
-    type:
-      | 'rectangle'
-      | 'circle'
-      | 'line'
-      | 'triangle'
-      | 'diamond'
-      | 'star'
-      | 'arrow'
-      | 'heart'
-      | 'pentagon'
-      | 'hexagon'
-      | 'heptagon'
-      | 'octagon'
-      | 'cross'
-      | 'smiley'
-      | 'cloud'
-      | null
-  ) => void;
-  currentShapeType:
-    | 'rectangle'
-    | 'circle'
-    | 'line'
-    | 'triangle'
-    | 'diamond'
-    | 'star'
-    | 'arrow'
-    | 'heart'
-    | 'pentagon'
-    | 'hexagon'
-    | 'heptagon'
-    | 'octagon'
-    | 'cross'
-    | 'smiley'
-    | 'cloud'
-    | null;
+  setShapeType: (type: string | null) => void;
+  currentShapeType: string | null;
   undo: () => void;
   redo: () => void;
   canUndo: boolean;
@@ -63,6 +30,8 @@ interface SidebarProps {
   isCollapsed: boolean;
   setIsCollapsed: (collapsed: boolean) => void;
   addStickyNote: (note: StickyNoteType) => void;
+  setTextStyles: (styles: { bold: boolean; italic: boolean; underline: boolean; fontFamily: string }) => void;
+  textStyles: { bold: boolean; italic: boolean; underline: boolean; fontFamily: string };
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -86,9 +55,12 @@ const Sidebar: React.FC<SidebarProps> = ({
   isCollapsed,
   setIsCollapsed,
   addStickyNote,
+  setTextStyles,
+  textStyles,
 }) => {
   const [showToolsSection, setShowToolsSection] = useState(true);
   const [showStylesSection, setShowStylesSection] = useState(true);
+  const [showTextStylesSection, setShowTextStylesSection] = useState(true);
   const [showHistorySection, setShowHistorySection] = useState(true);
   const [showAllShapes, setShowAllShapes] = useState(false);
   const [selectedColorPreset, setSelectedColorPreset] = useState<string | null>(null);
@@ -124,27 +96,28 @@ const Sidebar: React.FC<SidebarProps> = ({
     { type: 'cloud', label: 'Cloud', icon: <Cloud size={16} /> },
   ];
 
+  const fontFamilies = [
+    'Arial', 'Helvetica', 'Times New Roman', 'Courier New', 'Verdana',
+    'Georgia', 'Palatino', 'Garamond', 'Bookman', 'Comic Sans MS',
+    'Trebuchet MS', 'Arial Black', 'Impact'
+  ];
+
   const tools = [
     { key: 'pen', label: 'Pen', icon: <Pencil size={16} />, tooltip: 'Draw freehand lines' },
     { key: 'eraser', label: 'Eraser', icon: <Eraser size={16} />, tooltip: 'Erase drawings' },
     { key: 'highlighter', label: 'Highlighter', icon: <Highlighter size={16} />, tooltip: 'Draw translucent lines' },
     { key: 'shape', label: 'Shapes', icon: <Square size={16} />, tooltip: 'Draw geometric shapes' },
-    { key: 'stickyNote', label: 'Sticky Note', icon: <StickyNote size={16} />, tooltip: 'Add a sticky note (draggable & resizable)' },
+    { key: 'stickyNote', label: 'Sticky Note', icon: <StickyNote size={16} />, tooltip: 'Add a sticky note' },
     { key: 'text', label: 'Text', icon: <Type size={16} />, tooltip: 'Add editable text' },
   ];
 
-  const handleShapeSelect = (shape: typeof currentShapeType) => {
+  const handleShapeSelect = (shape: string | null) => {
     setTool('shape');
     setShapeType(shape);
-    // Don't automatically close the shapes drawer on mobile
-    if (window.innerWidth >= 768) {
-      setShowShapesDrawer(false);
-    }
+    if (window.innerWidth >= 768) setShowShapesDrawer(false);
   };
 
-  const handleToggleCollapse = () => {
-    setIsCollapsed(!isCollapsed);
-  };
+  const handleToggleCollapse = () => setIsCollapsed(!isCollapsed);
 
   const handleColorPresetSelect = (color: string) => {
     setColor(color);
@@ -159,15 +132,10 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   useEffect(() => {
     const handleWindowResize = () => {
-      if (window.innerWidth < 640 && !isCollapsed) {
-        setIsCollapsed(true);
-      }
+      if (window.innerWidth < 640 && !isCollapsed) setIsCollapsed(true);
     };
-
     window.addEventListener('resize', handleWindowResize);
-    return () => {
-      window.removeEventListener('resize', handleWindowResize);
-    };
+    return () => window.removeEventListener('resize', handleWindowResize);
   }, [isCollapsed, setIsCollapsed]);
 
   return (
@@ -178,7 +146,6 @@ const Sidebar: React.FC<SidebarProps> = ({
           transition-all duration-300 ease-in-out
           ${isCollapsed ? 'w-14' : 'w-64 sm:w-72'}
           flex flex-col rounded-r-xl shadow-2xl border-r border-purple-500/20
-          translate-x-0
         `}
       >
         {isCollapsed ? (
@@ -191,9 +158,8 @@ const Sidebar: React.FC<SidebarProps> = ({
             >
               <ChevronRight size={18} className="text-white" />
             </button>
-
             <div className="flex flex-col space-y-3 items-center py-3">
-              {tools.map((tool) => (
+              {tools.map(tool => (
                 <div
                   key={tool.key}
                   className="relative"
@@ -202,14 +168,13 @@ const Sidebar: React.FC<SidebarProps> = ({
                 >
                   <button
                     onClick={() => {
-                      if (tool.key === 'stickyNote') {
-                        handleStickyNoteSelect();
-                      } else if (tool.key === 'shape') {
-                        setTool('shape' as any);
+                      if (tool.key === 'stickyNote') handleStickyNoteSelect();
+                      else if (tool.key === 'shape') {
+                        setTool('shape');
                         setIsCollapsed(false);
                         setShowShapesDrawer(true);
                       } else {
-                        setTool(tool.key as any);
+                        setTool(tool.key);
                         setShowShapesDrawer(false);
                       }
                     }}
@@ -232,7 +197,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                 </div>
               ))}
             </div>
-
             <div className="flex flex-col space-y-3 items-center mt-3">
               <button
                 onClick={undo}
@@ -248,7 +212,6 @@ const Sidebar: React.FC<SidebarProps> = ({
               >
                 <UndoIcon size={16} />
               </button>
-
               <button
                 onClick={redo}
                 disabled={!canRedo}
@@ -263,7 +226,6 @@ const Sidebar: React.FC<SidebarProps> = ({
               >
                 <RedoIcon size={16} />
               </button>
-
               <button
                 onClick={clearCanvas}
                 className="p-2 rounded-full bg-gradient-to-br from-red-500 to-red-700 hover:from-red-400 hover:to-red-600 transition-all duration-300 transform hover:scale-110 shadow-lg hover:shadow-red-500/30"
@@ -288,7 +250,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <ChevronLeft size={16} />
               </button>
             </div>
-
             <div className="mb-4 bg-gray-700/50 backdrop-blur-sm rounded-xl p-3 shadow-inner border border-white/5">
               <div
                 className="flex items-center justify-between cursor-pointer mb-2"
@@ -303,30 +264,28 @@ const Sidebar: React.FC<SidebarProps> = ({
                   className={`transform transition-transform duration-300 ${showToolsSection ? 'rotate-90' : ''}`}
                 />
               </div>
-
               {showToolsSection && (
                 <div className="space-y-2 transition-all duration-300">
                   <div className="grid grid-cols-2 gap-2">
-                    {tools.map((tool) => (
+                    {tools.map(tool => (
                       <div key={tool.key} className="group relative">
                         <button
                           onClick={() => {
-                            if (tool.key === 'stickyNote') {
-                              handleStickyNoteSelect();
-                            } else if (tool.key === 'shape') {
-                              setTool('shape' as any);
+                            if (tool.key === 'stickyNote') handleStickyNoteSelect();
+                            else if (tool.key === 'shape') {
+                              setTool('shape');
                               setShowShapesDrawer(!showShapesDrawer);
                             } else {
-                              setTool(tool.key as any);
+                              setTool(tool.key);
                               setShowShapesDrawer(false);
                               setShapeType(null);
                             }
                           }}
                           className={`w-full py-2 px-2 text-xs font-medium rounded-lg flex items-center transition-all duration-300
-                          ${currentTool === tool.key
-                            ? 'bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white shadow-lg shadow-purple-600/20'
-                            : 'bg-gray-700/80 hover:bg-gray-600/80 text-gray-300'
-                          }`}
+                            ${currentTool === tool.key
+                              ? 'bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white shadow-lg shadow-purple-600/20'
+                              : 'bg-gray-700/80 hover:bg-gray-600/80 text-gray-300'
+                            }`}
                           style={{ minHeight: '44px' }}
                           aria-pressed={currentTool === tool.key}
                         >
@@ -342,7 +301,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                 </div>
               )}
             </div>
-
             {showShapesDrawer && (
               <div className="mb-4 bg-gray-700/80 backdrop-blur-sm p-3 rounded-xl shadow-lg border border-white/5 space-y-2 animate-slide-down">
                 <h4 className="text-xs font-semibold text-purple-300 flex items-center">
@@ -352,10 +310,10 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <div className="grid grid-cols-3 gap-1">
                   {availableShapes
                     .slice(0, showAllShapes ? availableShapes.length : initialShapesCount)
-                    .map((shape) => (
+                    .map(shape => (
                       <button
-                        key={shape.type as string}
-                        onClick={() => handleShapeSelect(shape.type as any)}
+                        key={shape.type}
+                        onClick={() => handleShapeSelect(shape.type)}
                         className={`p-2 flex flex-col items-center justify-center rounded-lg transition-all duration-300
                           ${currentShapeType === shape.type
                             ? 'bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white shadow-lg shadow-purple-600/20'
@@ -380,7 +338,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                 )}
               </div>
             )}
-
             <div className="mb-4 bg-gray-700/50 backdrop-blur-sm rounded-xl p-3 shadow-inner border border-white/5">
               <div
                 className="flex items-center justify-between cursor-pointer mb-2"
@@ -395,7 +352,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                   className={`transform transition-transform duration-300 ${showStylesSection ? 'rotate-90' : ''}`}
                 />
               </div>
-
               {showStylesSection && (
                 <div className="space-y-3 transition-all duration-300">
                   <div className="space-y-1">
@@ -419,7 +375,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                       <input
                         type="color"
                         value={currentColor}
-                        onChange={(e) => {
+                        onChange={e => {
                           setColor(e.target.value);
                           setSelectedColorPreset(null);
                         }}
@@ -434,7 +390,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                       </div>
                     </div>
                   </div>
-
                   <div className="space-y-1">
                     <div className="flex justify-between items-center">
                       <label className="text-xs text-purple-300 font-medium">Line Width</label>
@@ -454,7 +409,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                         min="1"
                         max="50"
                         value={currentLineWidth}
-                        onChange={(e) => setLineWidth(parseInt(e.target.value))}
+                        onChange={e => setLineWidth(parseInt(e.target.value))}
                         className="w-full h-10 absolute inset-0 opacity-0 cursor-pointer"
                       />
                       <div
@@ -473,7 +428,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                       <span>Thick</span>
                     </div>
                   </div>
-
                   <div className="space-y-1">
                     <div className="flex justify-between items-center">
                       <label className="text-xs text-purple-300 font-medium">Text Size</label>
@@ -493,7 +447,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                         min="10"
                         max="60"
                         value={textFontSize}
-                        onChange={(e) => setTextFontSize(parseInt(e.target.value))}
+                        onChange={e => setTextFontSize(parseInt(e.target.value))}
                         className="w-full h-10 absolute inset-0 opacity-0 cursor-pointer"
                       />
                       <div
@@ -515,7 +469,76 @@ const Sidebar: React.FC<SidebarProps> = ({
                 </div>
               )}
             </div>
-
+            <div className="mb-4 bg-gray-700/50 backdrop-blur-sm rounded-xl p-3 shadow-inner border border-white/5">
+              <div
+                className="flex items-center justify-between cursor-pointer mb-2"
+                onClick={() => setShowTextStylesSection(!showTextStylesSection)}
+              >
+                <h3 className="text-xs font-semibold text-purple-300 flex items-center">
+                  <span className="w-1 h-5 bg-gradient-to-b from-purple-400 to-purple-600 rounded-sm mr-1"></span>
+                  Text Styles
+                </h3>
+                <ChevronRight
+                  size={16}
+                  className={`transform transition-transform duration-300 ${showTextStylesSection ? 'rotate-90' : ''}`}
+                />
+              </div>
+              {showTextStylesSection && (
+                <div className="space-y-3 transition-all duration-300">
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => setTextStyles({ ...textStyles, bold: !textStyles.bold })}
+                      className={`p-2 rounded-lg flex items-center justify-center transition-all duration-300 ${
+                        textStyles.bold
+                          ? 'bg-gradient-to-r from-purple-600 to-purple-500 text-white'
+                          : 'bg-gray-600/80 hover:bg-gray-500/80 text-gray-300'
+                      }`}
+                      title="Bold"
+                      aria-label="Bold"
+                    >
+                      <Bold size={16} />
+                    </button>
+                    <button
+                      onClick={() => setTextStyles({ ...textStyles, italic: !textStyles.italic })}
+                      className={`p-2 rounded-lg flex items-center justify-center transition-all duration-300 ${
+                        textStyles.italic
+                          ? 'bg-gradient-to-r from-purple-600 to-purple-500 text-white'
+                          : 'bg-gray-600/80 hover:bg-gray-500/80 text-gray-300'
+                      }`}
+                      title="Italic"
+                      aria-label="Italic"
+                    >
+                      <Italic size={16} />
+                    </button>
+                    <button
+                      onClick={() => setTextStyles({ ...textStyles, underline: !textStyles.underline })}
+                      className={`p-2 rounded-lg flex items-center justify-center transition-all duration-300 ${
+                        textStyles.underline
+                          ? 'bg-gradient-to-r from-purple-600 to-purple-500 text-white'
+                          : 'bg-gray-600/80 hover:bg-gray-500/80 text-gray-300'
+                      }`}
+                      title="Underline"
+                      aria-label="Underline"
+                    >
+                      <Underline size={16} />
+                    </button>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-purple-300 font-medium block">Font Family</label>
+                    <select
+                      value={textStyles.fontFamily}
+                      onChange={e => setTextStyles({ ...textStyles, fontFamily: e.target.value })}
+                      className="w-full bg-gray-600/80 text-white text-xs rounded-lg p-2 border border-white/5 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      style={{ minHeight: '44px' }}
+                    >
+                      {fontFamilies.map(font => (
+                        <option key={font} value={font}>{font}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
+            </div>
             <div className="mb-4 bg-gray-700/50 backdrop-blur-sm rounded-xl p-3 shadow-inner border border-white/5">
               <div
                 className="flex items-center justify-between cursor-pointer mb-2"
@@ -530,7 +553,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                   className={`transform transition-transform duration-300 ${showHistorySection ? 'rotate-90' : ''}`}
                 />
               </div>
-
               {showHistorySection && (
                 <div className="flex space-x-2 transition-all duration-300">
                   <button
@@ -564,7 +586,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                 </div>
               )}
             </div>
-
             <button
               onClick={clearCanvas}
               className="mt-auto w-full py-2 px-3 text-xs font-medium rounded-lg flex items-center justify-center bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white transition-all duration-300 shadow-lg hover:shadow-red-500/25"
@@ -575,14 +596,12 @@ const Sidebar: React.FC<SidebarProps> = ({
             </button>
           </div>
         )}
-
         <div
           className={`absolute left-14 top-4 bg-black/80 backdrop-blur-sm text-white text-xs font-medium px-2 py-1 rounded-md pointer-events-none transition-opacity duration-300 ${currentTool && isCollapsed ? 'opacity-100' : 'opacity-0'}`}
         >
           {tools.find(t => t.key === currentTool)?.label}
         </div>
       </div>
-
       <style jsx>{`
         .scrollbar-custom {
           scrollbar-width: thin;

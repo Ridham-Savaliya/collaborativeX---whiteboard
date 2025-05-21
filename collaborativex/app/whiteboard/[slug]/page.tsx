@@ -1,8 +1,8 @@
 'use client';
 import React, { useState, useEffect, useCallback } from 'react';
-import Canvas from '../components/Canvas';
-import Sidebar from '../components/Sidebar';
-import { StickyNote } from '../components/Types';
+import Canvas from '../../components/Canvas';
+import Sidebar from '../../components/Sidebar';
+import { StickyNote, WhiteboardElement } from '../../components/Types';
 
 const Whiteboard: React.FC = () => {
   const [strokeColor, setStrokeColor] = useState<string>('#000000');
@@ -31,19 +31,26 @@ const Whiteboard: React.FC = () => {
   const [textFontSize, setTextFontSize] = useState<number>(24);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [canvasKey, setCanvasKey] = useState<number>(0);
-  
+  // Add textStyles state
+  const [textStyles, setTextStyles] = useState({
+    bold: false,
+    italic: false,
+    underline: false,
+    fontFamily: 'Arial',
+  });
+
+  // History states for undo/redo
+  const [history, setHistory] = useState<{ elements: WhiteboardElement[]; stickyNotes: StickyNote[] }[]>([{ elements: [], stickyNotes: [] }]);
+  const [historyIndex, setHistoryIndex] = useState(0);
+
+  const canUndo = historyIndex > 0;
+  const canRedo = historyIndex < history.length - 1;
+
   useEffect(() => {
     if (window.innerWidth < 768) {
       setIsCollapsed(true);
     }
   }, []);
-
-  // History states for undo/redo
-  const [history, setHistory] = useState<any[]>([]);
-  const [historyIndex, setHistoryIndex] = useState(-1);
-  
-  const canUndo = historyIndex > 0;
-  const canRedo = historyIndex < history.length - 1;
 
   useEffect(() => {
     const handleResize = () => {
@@ -51,55 +58,39 @@ const Whiteboard: React.FC = () => {
         setIsCollapsed(true);
       }
     };
-    
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, [isCollapsed]);
 
-  const clearCanvas = () => {
-    // setElements([]); // Clear drawing elements
-    setStickyNotes([]); // Clear sticky notes
-    setHistory([[]]); // Reset history to a single empty state
-    setHistoryIndex(0); // Reset history index
-  };
+  const clearCanvas = useCallback(() => {
+    setStickyNotes([]);
+    setHistory([{ elements: [], stickyNotes: [] }]);
+    setHistoryIndex(0);
+  }, []);
 
-  const saveToHistory = useCallback((elements: any[]) => {
+  const saveToHistory = useCallback((state: { elements: WhiteboardElement[]; stickyNotes: StickyNote[] }) => {
     setHistory(prev => {
-      const newHistory = prev.slice(0, historyIndex + 1);
-      return [...newHistory, elements];
+      const newHistory = [...prev.slice(0, historyIndex + 1), state];
+      setHistoryIndex(newHistory.length - 1);
+      return newHistory;
     });
-    setHistoryIndex(prev => prev + 1);
   }, [historyIndex]);
 
   const undo = useCallback(() => {
     if (canUndo) {
       setHistoryIndex(prev => prev - 1);
-      // Apply the previous state
-      // This will be handled by the Canvas component
     }
   }, [canUndo]);
 
   const redo = useCallback(() => {
     if (canRedo) {
       setHistoryIndex(prev => prev + 1);
-      // Apply the next state
-      // This will be handled by the Canvas component
     }
   }, [canRedo]);
 
   const handleToolChange = useCallback((newTool: 'pen' | 'eraser' | 'highlighter' | 'shape' | 'stickyNote' | 'text' | null) => {
     setTool(newTool);
-    
-    // If shape tool selected, we need to show the shapes drawer
-    if (newTool === 'shape') {
-      setShowShapesDrawer(true);
-    } else {
-      setShowShapesDrawer(false);
-    }
-  }, []);
-
-  const addStickyNote = useCallback((note: StickyNote) => {
-    setStickyNotes(prev => [...prev, note]);
+    setShowShapesDrawer(newTool === 'shape');
   }, []);
 
   return (
@@ -124,9 +115,10 @@ const Whiteboard: React.FC = () => {
         setTextFontSize={setTextFontSize}
         isCollapsed={isCollapsed}
         setIsCollapsed={setIsCollapsed}
-        addStickyNote={addStickyNote}
+        textStyles={textStyles}
+        setTextStyles={setTextStyles}
+        addStickyNote={(note: StickyNote) => setStickyNotes(prev => [...prev, note])}
       />
-
       <main className="flex-1 overflow-hidden relative">
         <Canvas
           key={canvasKey}
@@ -140,6 +132,7 @@ const Whiteboard: React.FC = () => {
           saveToHistory={saveToHistory}
           historyIndex={historyIndex}
           history={history}
+          textStyles={textStyles}
         />
       </main>
     </div>
