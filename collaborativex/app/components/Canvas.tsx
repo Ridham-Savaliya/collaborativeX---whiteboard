@@ -854,6 +854,7 @@ const Canvas: React.FC<CanvasProps> = ({
         text: '',
         color: strokeColor,
         fontSize: textFontSize,
+        isEditing: true,  
       };
       setElements((prev) => {
         const newElements = [...prev, newElement];
