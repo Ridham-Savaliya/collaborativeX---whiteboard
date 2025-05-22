@@ -6,13 +6,16 @@ import Sidebar from '../../components/Sidebar';
 import { StickyNote, WhiteboardElement } from '../../components/Types';
 
 interface PageProps {
-  params: { slug: string };
+  params: Promise<{ id: string }>;
 }
 
 const WhiteboardPage: React.FC<PageProps> = ({ params }) => {
-  const { slug } = params; // You get the dynamic slug here if needed
+  // Unwrap the params promise using React.use()
+  const { id } = React.use(params);
 
-  // Your existing state and logic here
+  console.log('Whiteboard ID:', id);
+
+  // Rest of your existing code...
   const [strokeColor, setStrokeColor] = useState<string>('#000000');
   const [lineWidth, setLineWidth] = useState<number>(5);
   const [tool, setTool] = useState<'pen' | 'eraser' | 'highlighter' | 'shape' | 'stickyNote' | 'text' | null>('pen');
