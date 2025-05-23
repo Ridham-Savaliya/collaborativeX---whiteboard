@@ -34,7 +34,7 @@ const RightNavBar: React.FC = () => {
         <Download size={20} />
       </button>
       <a
-        href="/dashboard"
+        href="/onboarding"
         className="p-2 bg-gray-700/90 text-white rounded-full hover:bg-gray-600 transition-all duration-300"
         title="Go to Dashboard"
         aria-label="Go to Dashboard"
