@@ -40,7 +40,7 @@ const WhiteboardPage: React.FC<PageProps> = ({ params }) => {
   >(null);
   const [stickyNotes, setStickyNotes] = useState<StickyNote[]>([]);
   const [textFontSize, setTextFontSize] = useState<number>(24);
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
   const [canvasKey, setCanvasKey] = useState<number>(0);
   const [textStyles, setTextStyles] = useState({
     bold: false,
@@ -55,7 +55,7 @@ const WhiteboardPage: React.FC<PageProps> = ({ params }) => {
   const canRedo = historyIndex < history.length - 1;
 
   useEffect(() => {
-    if (window.innerWidth < 768) {
+    if (window.innerWidth < 768) { 
       setIsCollapsed(true);
     }
   }, []);

@@ -150,6 +150,14 @@ const Sidebar: React.FC<SidebarProps> = ({
       >
         {isCollapsed ? (
           <div className="h-full px-2 py-5 flex flex-col items-center justify-start">
+            {/* Logo in collapsed state */}
+            <div className="mb-4">
+              <img
+                src="/logo2.png" // Adjust the path based on your project structure
+                alt="Logo"
+                className="w-10 h-10 rounded-full object-contain transition-all duration-300 transform hover:scale-110 shadow-lg hover:shadow-purple-500/30"
+              />
+            </div>
             <button
               onClick={handleToggleCollapse}
               className="p-2 rounded-full bg-gradient-to-br from-purple-500 to-purple-700 hover:from-purple-400 hover:to-purple-600 transition-all duration-300 transform hover:scale-110 shadow-lg hover:shadow-purple-500/30"
@@ -239,6 +247,14 @@ const Sidebar: React.FC<SidebarProps> = ({
           </div>
         ) : (
           <div className="h-full py-4 px-4 flex flex-col overflow-y-auto scrollbar-custom">
+            {/* Logo in expanded state */}
+            <div className="mb-5 flex items-center justify-center">
+              <img
+                src="/logo2.png" // Adjust the path based on your project structure
+                alt="Logo"
+                className="w-16 h-16 rounded-full object-contain transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-purple-500/40 border border-purple-500/20 bg-gradient-to-br from-purple-600/20 to-purple-800/20 p-1"
+              />
+            </div>
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-lg font-bold bg-gradient-to-r from-purple-300 to-purple-400 bg-clip-text text-transparent">Drawing Tools</h2>
               <button

@@ -8,6 +8,9 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+    images: {
+    domains: ["via.placeholder.com"], // Add the hostname here
+  },
 };
 
 export default nextConfig;

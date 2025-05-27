@@ -57,12 +57,22 @@ const RightNavBar: React.FC = () => {
               <p className="text-xs text-gray-300">user@example.com</p>
             </div>
             <div className="border-t border-purple-500/20">
+              
+            <a href="/profile">
+              <button
+               
+                className="w-full text-left px-4 py-2 text-sm tracking-wider hover:bg-gray-700/80 transition-all duration-300"
+              >
+                Profile
+              </button></a>
+             <a href="/">
               <button
                 onClick={() => alert('Logging out...')}
                 className="w-full text-left px-4 py-2 text-sm hover:bg-gray-700/80 transition-all duration-300"
               >
                 Log Out
               </button>
+             </a>
             </div>
           </div>
         )}

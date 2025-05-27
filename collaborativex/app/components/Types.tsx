@@ -11,8 +11,9 @@ export interface PathElement {
   points: Point[];
   color: string;
   width: number;
-  tool: 'pen' | 'eraser' | 'highlighter';
+  tool: 'pen' | 'eraser' | 'highlighter' | 'stickyNote' | 'text' | 'shapes';
 }
+
 
 export interface ShapeElement {
   id: string;

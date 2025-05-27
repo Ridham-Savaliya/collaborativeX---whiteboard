@@ -471,7 +471,7 @@ const Onboarding = () => {
                 </div>
               </div>
             ))}
-          </div>
+          </div>  
         )}
       </main>
     </div>

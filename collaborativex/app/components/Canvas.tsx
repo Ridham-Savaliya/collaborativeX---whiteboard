@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback, memo } from 'react';
 import { throttle, debounce } from 'lodash';
-import NavBar from './RightNavbar';
+import NavBar from './CanvasRightNavbar';
 import { WhiteboardElement, PathElement, ShapeElement, TextElement, StickyNote, Point } from './Types';
 import CanvasToolbar from './CanvasToolbar';
 
