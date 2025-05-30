@@ -1,32 +1,32 @@
-CollaborativeX - Whiteboard
-A real-time, AI-powered whiteboard for teams, educators, and creators, built with Next.js, TypeScript, Socket.IO, and MongoDB. Features include smooth drawing, voice-to-doodle AI, private boards, and a freemium model.
-Tech Stack
+<h1 align="center">Welcome to collaborativex 👋</h1>
+<p>
+  <img alt="Version" src="https://img.shields.io/badge/version-0.1.0-blue.svg?cacheSeconds=2592000" />
+</p>
 
-Frontend: Next.js, TypeScript, Tailwind CSS, Konva.js
-Backend: Node.js, Express, Socket.IO, MongoDB Atlas
-Monetization: Clerk (auth), Stripe (payments)
-Analytics: PostHog
-Hosting: Vercel
+> CollaborativeX - Whiteboard A real-time, AI-powered whiteboard for teams, educators, and creators, built with Next.js, TypeScript, Socket.IO, and MongoDB. Features include smooth drawing, voice-to-doodle AI, private boards, and a freemium model. Tech Stack
 
-Setup
+## Install
 
-Clone the repo:
-git clone https://github.com/<your-username>/collaborativex-whiteboard.git
-cd collaborativex-whiteboard
-
-
-Install dependencies:
+```sh
 npm install
+```
 
+## Usage
 
-Run the development server:
-npm run dev
+```sh
+npm run start
+```
 
+## Author
 
+👤 **Ridham Savaliya**
 
-Project Status
+* Website: https://ridham-portfolio.netlify.app/
+* Github: [@Ridham-Savaliya](https://github.com/Ridham-Savaliya)
 
-Week 1: Setting up Next.js, TypeScript, and Tailwind CSS with a purple-themed UI.
+## Show your support
 
-License
-MIT
+Give a ⭐️ if this project helped you!
+
+***
+_This README was generated with ❤️ by [readme-md-generator](https://github.com/kefranabg/readme-md-generator)_
