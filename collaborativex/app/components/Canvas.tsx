@@ -367,9 +367,11 @@ const Canvas: React.FC<CanvasProps> = ({
   history,
   textStyles,
 }) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const gridCanvasRef = useRef<HTMLCanvasElement>(null);
+  const contentCanvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [context, setContext] = useState<CanvasRenderingContext2D | null>(null);
+  const [gridContext, setGridContext] = useState<CanvasRenderingContext2D | null>(null);
+  const [contentContext, setContentContext] = useState<CanvasRenderingContext2D | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [elements, setElements] = useState<WhiteboardElement[]>([]);
   const [currentElement, setCurrentElement] = useState<WhiteboardElement | null>(null);
@@ -460,29 +462,41 @@ const Canvas: React.FC<CanvasProps> = ({
   }, []);
 
   useEffect(() => {
-    if (!canvasRef.current) return;
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      ctx.strokeStyle = strokeColor;
-      ctx.lineWidth = lineWidth;
-      setContext(ctx);
+    if (!gridCanvasRef.current || !contentCanvasRef.current) return;
+    const gridCanvas = gridCanvasRef.current;
+    const contentCanvas = contentCanvasRef.current;
+    const gridCtx = gridCanvas.getContext('2d');
+    const contentCtx = contentCanvas.getContext('2d');
+    if (gridCtx && contentCtx) {
+      gridCtx.lineCap = 'round';
+      gridCtx.lineJoin = 'round';
+      contentCtx.lineCap = 'round';
+      contentCtx.lineJoin = 'round';
+      contentCtx.strokeStyle = strokeColor;
+      contentCtx.lineWidth = lineWidth;
+      setGridContext(gridCtx);
+      setContentContext(contentCtx);
     }
   }, [strokeColor, lineWidth]);
 
   useEffect(() => {
-    if (!canvasRef.current || !context) return;
-    const canvas = canvasRef.current;
+    if (!gridCanvasRef.current || !contentCanvasRef.current || !gridContext || !contentContext) return;
+    const gridCanvas = gridCanvasRef.current;
+    const contentCanvas = contentCanvasRef.current;
     const dpr = window.devicePixelRatio || 1;
-    canvas.width = canvasDimensions.width * dpr;
-    canvas.height = canvasDimensions.height * dpr;
-    canvas.style.width = `${canvasDimensions.width}px`;
-    canvas.style.height = `${canvasDimensions.height}px`;
-    context.scale(dpr * zoomLevel, dpr * zoomLevel);
-    redrawCanvas();
-  }, [canvasDimensions, zoomLevel, context]);
+    gridCanvas.width = canvasDimensions.width * dpr;
+    gridCanvas.height = canvasDimensions.height * dpr;
+    contentCanvas.width = canvasDimensions.width * dpr;
+    contentCanvas.height = canvasDimensions.height * dpr;
+    gridCanvas.style.width = `${canvasDimensions.width}px`;
+    gridCanvas.style.height = `${canvasDimensions.height}px`;
+    contentCanvas.style.width = `${canvasDimensions.width}px`;
+    contentCanvas.style.height = `${canvasDimensions.height}px`;
+    gridContext.scale(dpr * zoomLevel, dpr * zoomLevel);
+    contentContext.scale(dpr * zoomLevel, dpr * zoomLevel);
+    drawGrid();
+    redrawContentCanvas();
+  }, [canvasDimensions, zoomLevel, gridContext, contentContext]);
 
   useEffect(() => {
     if (history.length > 0 && historyIndex >= 0 && historyIndex < history.length) {
@@ -498,62 +512,62 @@ const Canvas: React.FC<CanvasProps> = ({
 
   const drawElement = useCallback(
     (element: WhiteboardElement) => {
-      if (!context || !element) return;
+      if (!contentContext || !element) return;
       if (element.type === 'stickyNote' || element.type === 'text') return;
       const pathElement = element as PathElement;
       if (pathElement.type === 'path' && pathElement.points?.length > 1) {
-        context.beginPath();
-        context.moveTo(pathElement.points[0].x * zoomLevel + panOffset.x, pathElement.points[0].y * zoomLevel + panOffset.y);
-        context.strokeStyle = pathElement.color;
-        context.lineWidth = pathElement.width * zoomLevel;
+        contentContext.beginPath();
+        contentContext.moveTo(pathElement.points[0].x * zoomLevel + panOffset.x, pathElement.points[0].y * zoomLevel + panOffset.y);
+        contentContext.strokeStyle = pathElement.color;
+        contentContext.lineWidth = pathElement.width * zoomLevel;
         if (pathElement.tool === 'eraser') {
-          context.globalCompositeOperation = 'destination-out';
+          contentContext.globalCompositeOperation = 'destination-out';
         } else if (pathElement.tool === 'highlighter') {
-          context.globalCompositeOperation = 'multiply';
-          context.globalAlpha = 0.5;
+          contentContext.globalCompositeOperation = 'multiply';
+          contentContext.globalAlpha = 0.5;
         } else {
-          context.globalCompositeOperation = 'source-over';
-          context.globalAlpha = 1.0;
+          contentContext.globalCompositeOperation = 'source-over';
+          contentContext.globalAlpha = 1.0;
         }
         for (let i = 1; i < pathElement.points.length; i++) {
-          context.lineTo(pathElement.points[i].x * zoomLevel + panOffset.x, pathElement.points[i].y * zoomLevel + panOffset.y);
+          contentContext.lineTo(pathElement.points[i].x * zoomLevel + panOffset.x, pathElement.points[i].y * zoomLevel + panOffset.y);
         }
-        context.stroke();
-        context.globalCompositeOperation = 'source-over';
-        context.globalAlpha = 1.0;
+        contentContext.stroke();
+        contentContext.globalCompositeOperation = 'source-over';
+        contentContext.globalAlpha = 1.0;
       } else if (element.type !== 'path') {
         const shapeElement = element as ShapeElement;
-        context.beginPath();
-        context.strokeStyle = shapeElement.color;
-        context.lineWidth = shapeElement.lineWidth * zoomLevel;
-        context.fillStyle = 'transparent';
+        contentContext.beginPath();
+        contentContext.strokeStyle = shapeElement.color;
+        contentContext.lineWidth = shapeElement.lineWidth * zoomLevel;
+        contentContext.fillStyle = 'transparent';
         const x = shapeElement.x * zoomLevel + panOffset.x;
         const y = shapeElement.y * zoomLevel + panOffset.y;
         const width = shapeElement.width * zoomLevel;
         const height = shapeElement.height * zoomLevel;
         switch (shapeElement.type) {
           case 'rectangle':
-            context.rect(x, y, width, height);
+            contentContext.rect(x, y, width, height);
             break;
           case 'circle':
-            context.ellipse(x + width / 2, y + height / 2, Math.abs(width / 2), Math.abs(height / 2), 0, 0, Math.PI * 2);
+            contentContext.ellipse(x + width / 2, y + height / 2, Math.abs(width / 2), Math.abs(height / 2), 0, 0, Math.PI * 2);
             break;
           case 'line':
-            context.moveTo(x, y);
-            context.lineTo(x + width, y + height);
+            contentContext.moveTo(x, y);
+            contentContext.lineTo(x + width, y + height);
             break;
           case 'triangle':
-            context.moveTo(x + width / 2, y);
-            context.lineTo(x, y + height);
-            context.lineTo(x + width, y + height);
-            context.closePath();
+            contentContext.moveTo(x + width / 2, y);
+            contentContext.lineTo(x, y + height);
+            contentContext.lineTo(x + width, y + height);
+            contentContext.closePath();
             break;
           case 'diamond':
-            context.moveTo(x + width / 2, y);
-            context.lineTo(x + width, y + height / 2);
-            context.lineTo(x + width / 2, y + height);
-            context.lineTo(x, y + height / 2);
-            context.closePath();
+            contentContext.moveTo(x + width / 2, y);
+            contentContext.lineTo(x + width, y + height / 2);
+            contentContext.lineTo(x + width / 2, y + height);
+            contentContext.lineTo(x, y + height / 2);
+            contentContext.closePath();
             break;
           case 'star':
             const spikes = 5;
@@ -562,120 +576,120 @@ const Canvas: React.FC<CanvasProps> = ({
             const cx = x + width / 2;
             const cy = y + height / 2;
             let rot = (Math.PI / 2) * 3;
-            context.moveTo(cx, cy - outerRadius);
+            contentContext.moveTo(cx, cy - outerRadius);
             for (let i = 0; i < spikes; i++) {
-              context.lineTo(cx + Math.cos(rot) * outerRadius, cy + Math.sin(rot) * outerRadius);
+              contentContext.lineTo(cx + Math.cos(rot) * outerRadius, cy + Math.sin(rot) * outerRadius);
               rot += Math.PI / spikes;
-              context.lineTo(cx + Math.cos(rot) * innerRadius, cy + Math.sin(rot) * innerRadius);
+              contentContext.lineTo(cx + Math.cos(rot) * innerRadius, cy + Math.sin(rot) * innerRadius);
               rot += Math.PI / spikes;
             }
-            context.closePath();
+            contentContext.closePath();
             break;
           case 'arrow':
             const headLength = Math.min(width, height) * 0.3;
-            context.moveTo(x, y + height / 2);
-            context.lineTo(x + width - headLength, y + height / 2);
-            context.lineTo(x + width - headLength, y);
-            context.lineTo(x + width, y + height / 2);
-            context.lineTo(x + width - headLength, y + height);
-            context.lineTo(x + width - headLength, y + height / 2);
-            context.lineTo(x, y + height / 2);
-            context.closePath();
+            contentContext.moveTo(x, y + height / 2);
+            contentContext.lineTo(x + width - headLength, y + height / 2);
+            contentContext.lineTo(x + width - headLength, y);
+            contentContext.lineTo(x + width, y + height / 2);
+            contentContext.lineTo(x + width - headLength, y + height);
+            contentContext.lineTo(x + width - headLength, y + height / 2);
+            contentContext.lineTo(x, y + height / 2);
+            contentContext.closePath();
             break;
           case 'heart':
             const cxh = x + width / 2;
             const cyh = y + height / 4;
-            context.moveTo(cxh, cyh + height / 2);
-            context.bezierCurveTo(cxh - width / 2, cyh + height / 2, cxh - width / 2, cyh - height / 4, cxh, cyh - height / 4);
-            context.bezierCurveTo(cxh + width / 2, cyh - height / 4, cxh + width / 2, cyh + height / 2, cxh, cyh + height / 2);
-            context.closePath();
+            contentContext.moveTo(cxh, cyh + height / 2);
+            contentContext.bezierCurveTo(cxh - width / 2, cyh + height / 2, cxh - width / 2, cyh - height / 4, cxh, cyh - height / 4);
+            contentContext.bezierCurveTo(cxh + width / 2, cyh - height / 4, cxh + width / 2, cyh + height / 2, cxh, cyh + height / 2);
+            contentContext.closePath();
             break;
           case 'pentagon':
-            context.moveTo(x + width / 2, y);
+            contentContext.moveTo(x + width / 2, y);
             for (let i = 1; i <= 5; i++) {
-              context.lineTo(
+              contentContext.lineTo(
                 x + (width / 2) * (1 + Math.cos((Math.PI * 2 * i) / 5 - Math.PI / 2)),
                 y + (height / 2) * (1 + Math.sin((Math.PI * 2 * i) / 5 - Math.PI / 2))
               );
             }
-            context.closePath();
+            contentContext.closePath();
             break;
           case 'hexagon':
-            context.moveTo(x + width / 2, y);
+            contentContext.moveTo(x + width / 2, y);
             for (let i = 1; i <= 6; i++) {
-              context.lineTo(
+              contentContext.lineTo(
                 x + (width / 2) * (1 + Math.cos((Math.PI * 2 * i) / 6 - Math.PI / 2)),
                 y + (height / 2) * (1 + Math.sin((Math.PI * 2 * i) / 6 - Math.PI / 2))
               );
             }
-            context.closePath();
+            contentContext.closePath();
             break;
           case 'heptagon':
-            context.moveTo(x + width / 2, y);
+            contentContext.moveTo(x + width / 2, y);
             for (let i = 1; i <= 7; i++) {
-              context.lineTo(
+              contentContext.lineTo(
                 x + (width / 2) * (1 + Math.cos((Math.PI * 2 * i) / 7 - Math.PI / 2)),
                 y + (height / 2) * (1 + Math.sin((Math.PI * 2 * i) / 7 - Math.PI / 2))
               );
             }
-            context.closePath();
+            contentContext.closePath();
             break;
           case 'octagon':
-            context.moveTo(x + width / 2, y);
+            contentContext.moveTo(x + width / 2, y);
             for (let i = 1; i <= 8; i++) {
-              context.lineTo(
+              contentContext.lineTo(
                 x + (width / 2) * (1 + Math.cos((Math.PI * 2 * i) / 8 - Math.PI / 2)),
                 y + (height / 2) * (1 + Math.sin((Math.PI * 2 * i) / 8 - Math.PI / 2))
               );
             }
-            context.closePath();
+            contentContext.closePath();
             break;
           case 'cross':
-            context.moveTo(x + width / 2, y);
-            context.lineTo(x + width / 2, y + height);
-            context.moveTo(x, y + height / 2);
-            context.lineTo(x + width, y + height / 2);
+            contentContext.moveTo(x + width / 2, y);
+            contentContext.lineTo(x + width / 2, y + height);
+            contentContext.moveTo(x, y + height / 2);
+            contentContext.lineTo(x + width, y + height / 2);
             break;
           case 'smiley':
-            context.arc(x + width / 2, y + height / 2, Math.min(width, height) / 2, 0, Math.PI * 2);
-            context.moveTo(x + width / 3, y + height / 3);
-            context.arc(x + width / 3, y + height / 3, width / 10, 0, Math.PI * 2);
-            context.moveTo(x + (2 * width) / 3, y + height / 3);
-            context.arc(x + (2 * width) / 3, y + height / 3, width / 10, 0, Math.PI * 2);
-            context.moveTo(x + width / 2, y + (2 * height) / 3);
-            context.arc(x + width / 2, y + height / 2, width / 4, 0, Math.PI, false);
+            contentContext.arc(x + width / 2, y + height / 2, Math.min(width, height) / 2, 0, Math.PI * 2);
+            contentContext.moveTo(x + width / 3, y + height / 3);
+            contentContext.arc(x + width / 3, y + height / 3, width / 10, 0, Math.PI * 2);
+            contentContext.moveTo(x + (2 * width) / 3, y + height / 3);
+            contentContext.arc(x + (2 * width) / 3, y + height / 3, width / 10, 0, Math.PI * 2);
+            contentContext.moveTo(x + width / 2, y + (2 * height) / 3);
+            contentContext.arc(x + width / 2, y + height / 2, width / 4, 0, Math.PI, false);
             break;
           case 'cloud':
-            context.moveTo(x + width / 4, y + height);
-            context.bezierCurveTo(x, y + height, x, y + height / 2, x + width / 4, y + height / 2);
-            context.bezierCurveTo(x + width / 8, y + height / 4, x + (3 * width) / 8, y + height / 4, x + width / 2, y + height / 2);
-            context.bezierCurveTo(x + (5 * width) / 8, y + height / 4, x + (7 * width) / 8, y + height / 4, x + (3 * width) / 4, y + height / 2);
-            context.bezierCurveTo(x + width, y + height / 2, x + width, y + height, x + (3 * width) / 4, y + height);
-            context.closePath();
+            contentContext.moveTo(x + width / 4, y + height);
+            contentContext.bezierCurveTo(x, y + height, x, y + height / 2, x + width / 4, y + height / 2);
+            contentContext.bezierCurveTo(x + width / 8, y + height / 4, x + (3 * width) / 8, y + height / 4, x + width / 2, y + height / 2);
+            contentContext.bezierCurveTo(x + (5 * width) / 8, y + height / 4, x + (7 * width) / 8, y + height / 4, x + (3 * width) / 4, y + height / 2);
+            contentContext.bezierCurveTo(x + width, y + height / 2, x + width, y + height, x + (3 * width) / 4, y + height);
+            contentContext.closePath();
             break;
         }
-        context.stroke();
+        contentContext.stroke();
       }
     },
-    [context, zoomLevel, panOffset]
+    [contentContext, zoomLevel, panOffset]
   );
 
-  const redrawCanvas = useCallback(() => {
-    if (!context || !canvasRef.current) return;
-    const canvas = canvasRef.current;
+  const drawGrid = useCallback(() => {
+    if (!gridContext || !gridCanvasRef.current) return;
+    const canvas = gridCanvasRef.current;
     const dpr = window.devicePixelRatio || 1;
-    context.save();
-    context.setTransform(1, 0, 0, 1, 0, 0);
-    context.clearRect(0, 0, canvas.width, canvas.height);
-    context.scale(dpr * zoomLevel, dpr * zoomLevel);
-    context.translate(panOffset.x, panOffset.y);
+    gridContext.save();
+    gridContext.setTransform(1, 0, 0, 1, 0, 0);
+    gridContext.clearRect(0, 0, canvas.width, canvas.height);
+    gridContext.scale(dpr * zoomLevel, dpr * zoomLevel);
+    gridContext.translate(panOffset.x, panOffset.y);
 
     const canvasWidth = canvas.width / (dpr * zoomLevel);
     const canvasHeight = canvas.height / (dpr * zoomLevel);
     const gridSize = 30;
 
-    context.strokeStyle = '#80008030';
-    context.lineWidth = 0.5 / zoomLevel;
+    gridContext.strokeStyle = '#80008030';
+    gridContext.lineWidth = 0.5 / zoomLevel;
 
     const startX = Math.floor((-panOffset.x) / gridSize) * gridSize;
     const startY = Math.floor((-panOffset.y) / gridSize) * gridSize;
@@ -683,33 +697,47 @@ const Canvas: React.FC<CanvasProps> = ({
     const endY = startY + canvasHeight + gridSize;
 
     for (let x = startX; x <= endX; x += gridSize) {
-      context.beginPath();
-      context.moveTo(x, startY);
-      context.lineTo(x, endY);
-      context.stroke();
+      gridContext.beginPath();
+      gridContext.moveTo(x, startY);
+      gridContext.lineTo(x, endY);
+      gridContext.stroke();
     }
 
     for (let y = startY; y <= endY; y += gridSize) {
-      context.beginPath();
-      context.moveTo(startX, y);
-      context.lineTo(endX, y);
-      context.stroke();
+      gridContext.beginPath();
+      gridContext.moveTo(startX, y);
+      gridContext.lineTo(endX, y);
+      gridContext.stroke();
     }
+
+    gridContext.restore();
+  }, [gridContext, zoomLevel, panOffset]);
+
+  const redrawContentCanvas = useCallback(() => {
+    if (!contentContext || !contentCanvasRef.current) return;
+    const canvas = contentCanvasRef.current;
+    const dpr = window.devicePixelRatio || 1;
+    contentContext.save();
+    contentContext.setTransform(1, 0, 0, 1, 0, 0);
+    contentContext.clearRect(0, 0, canvas.width, canvas.height);
+    contentContext.scale(dpr * zoomLevel, dpr * zoomLevel);
+    contentContext.translate(panOffset.x, panOffset.y);
 
     if (Array.isArray(elements)) {
       for (const element of elements) drawElement(element);
     }
     if (currentElement) drawElement(currentElement);
-    context.restore();
-  }, [context, elements, drawElement, currentElement, zoomLevel, panOffset]);
+    contentContext.restore();
+  }, [contentContext, elements, drawElement, currentElement, zoomLevel, panOffset]);
 
   useEffect(() => {
-    redrawCanvas();
-  }, [elements, context, currentElement, zoomLevel, panOffset, redrawCanvas]);
+    drawGrid();
+    redrawContentCanvas();
+  }, [elements, contentContext, currentElement, zoomLevel, panOffset, drawGrid, redrawContentCanvas]);
 
   const getCanvasCoordinates = (clientX: number, clientY: number) => {
-    if (!canvasRef.current) return { x: 0, y: 0 };
-    const rect = canvasRef.current.getBoundingClientRect();
+    if (!contentCanvasRef.current) return { x: 0, y: 0 };
+    const rect = contentCanvasRef.current.getBoundingClientRect();
     return {
       x: (clientX - rect.left - panOffset.x * zoomLevel) / zoomLevel,
       y: (clientY - rect.top - panOffset.y * zoomLevel) / zoomLevel,
@@ -717,8 +745,8 @@ const Canvas: React.FC<CanvasProps> = ({
   };
 
   const getScreenCoordinates = (clientX: number, clientY: number) => {
-    if (!canvasRef.current) return { x: 0, y: 0 };
-    const rect = canvasRef.current.getBoundingClientRect();
+    if (!contentCanvasRef.current) return { x: 0, y: 0 };
+    const rect = contentCanvasRef.current.getBoundingClientRect();
     return {
       x: clientX - rect.left,
       y: clientY - rect.top,
@@ -778,7 +806,7 @@ const Canvas: React.FC<CanvasProps> = ({
   };
 
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!context || colorPicker) return;
+    if (!contentContext || colorPicker) return;
     if (isDraggingNote || isResizingNote || isDraggingText || editingTextId || editingNoteId) return;
     const { x: canvasX, y: canvasY } = getCanvasCoordinates(e.clientX, e.clientY);
     if (isPanning) {
@@ -854,7 +882,7 @@ const Canvas: React.FC<CanvasProps> = ({
         text: '',
         color: strokeColor,
         fontSize: textFontSize,
-        isEditing: true,  
+        isEditing: true,
       };
       setElements((prev) => {
         const newElements = [...prev, newElement];
@@ -878,8 +906,8 @@ const Canvas: React.FC<CanvasProps> = ({
         id: generateId(),
         type: 'path',
         points: [{ x: canvasX, y: canvasY }],
-        color: tool === 'eraser' ? '#FFFFFF' : tool === 'highlighter' ? strokeColor : strokeColor,
-        width: tool === 'highlighter' ? 15 : lineWidth,
+        color: tool === 'eraser' ? '#FFFFFF' : strokeColor,
+        width: tool === 'highlighter' ? lineWidth * 2 : lineWidth, // Use lineWidth with a 2x multiplier for highlighter
         tool,
       };
       setCurrentElement(newElement);
@@ -902,14 +930,15 @@ const Canvas: React.FC<CanvasProps> = ({
 
   const handleMouseMove = useCallback(
     throttle((e: React.MouseEvent<HTMLCanvasElement>) => {
-      if (!context || !canvasRef.current) return;
+      if (!contentContext || !contentCanvasRef.current) return;
       const { x: canvasX, y: canvasY } = getCanvasCoordinates(e.clientX, e.clientY);
       if (isPanning && panStart) {
         const dx = (e.clientX - panStart.x) / zoomLevel;
         const dy = (e.clientY - panStart.y) / zoomLevel;
         setPanOffset((prev) => ({ x: prev.x + dx, y: prev.y + dy }));
         setPanStart({ x: e.clientX, y: e.clientY });
-        redrawCanvas();
+        drawGrid();
+        redrawContentCanvas();
         return;
       }
       if (isDraggingNote && activeNoteId && tempNoteState.current) {
@@ -1001,10 +1030,10 @@ const Canvas: React.FC<CanvasProps> = ({
           height: canvasY - startPoint.y,
         });
       }
-      redrawCanvas();
+      redrawContentCanvas();
     }, 4),
     [
-      context,
+      contentContext,
       isPanning,
       panStart,
       isDraggingNote,
@@ -1019,7 +1048,7 @@ const Canvas: React.FC<CanvasProps> = ({
       startPoint,
       zoomLevel,
       panOffset,
-      redrawCanvas,
+      redrawContentCanvas,
       canvasDimensions,
     ]
   );
@@ -1081,7 +1110,7 @@ const Canvas: React.FC<CanvasProps> = ({
       }
     }
     setCurrentElement(null);
-    redrawCanvas();
+    redrawContentCanvas();
   };
 
   const handleStickyNoteMouseDown = (e: React.MouseEvent<HTMLDivElement>, noteId: string) => {
@@ -1202,10 +1231,18 @@ const Canvas: React.FC<CanvasProps> = ({
       onClick={() => setColorPicker(null)}
     >
       <canvas
-        ref={canvasRef}
+        ref={gridCanvasRef}
         width={canvasDimensions.width}
         height={canvasDimensions.height}
-        className={`touch-none ${isPanning ? 'cursor-grab' : tool === 'stickyNote' || tool === 'text' ? 'cursor-cell' : 'cursor-crosshair'}`}
+        className="absolute top-0 left-0 touch-none"
+      />
+      <canvas
+        ref={contentCanvasRef}
+        width={canvasDimensions.width}
+        height={canvasDimensions.height}
+        className={`absolute top-0 left-0 touch-none ${
+          isPanning ? 'cursor-grab' : tool === 'stickyNote' || tool === 'text' ? 'cursor-cell' : 'cursor-crosshair'
+        }`}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
       />
