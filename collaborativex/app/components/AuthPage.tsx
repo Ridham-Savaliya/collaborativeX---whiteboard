@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
 import axios from "axios";
-import { method } from "lodash";
+import { toast } from "react-toastify";
 
 const AuthPage = () => {
   const router = useRouter();
+  const [IsLoading, setIsLoading] = useState(false)
   const pathname = usePathname();
   const isLogin = pathname === "/login";
   const [formData, setFormData] = useState({
@@ -17,8 +18,9 @@ const AuthPage = () => {
     name: "",
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true)
     const { email, password, name } = formData;
     try {
       const res = await axios.post("/api/auth/register", {
@@ -27,7 +29,8 @@ const AuthPage = () => {
         name,
       });
       localStorage.setItem("token", res.data.token);
-      alert('you are registered with CollaborativeX!')
+      toast.success('you are registered with CollaborativeX!') 
+
       router.push("/");
       console.log("Form submitted:", formData);
     } catch (error: any) {
@@ -35,7 +38,33 @@ const AuthPage = () => {
         error.response?.data?.message || "An error occurred while registering"
       );
     }
+    finally{
+      setIsLoading(false)
+    }
   };
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true)
+    const {email,password} = formData;
+
+    try {
+      
+      const res = await axios.post('/api/auth/login',
+        {email,password}
+      )
+      
+      localStorage.setItem("token", res.data.token);
+      toast.success(res.data.message)
+      router.push('/')
+
+    } catch (error : any) {
+    toast.error(error.response?.data?.message || 'Failed to login!'); 
+    }
+    finally {
+      setIsLoading(false)
+    }
+  }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -92,7 +121,7 @@ const AuthPage = () => {
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={isLogin ? handleLogin : handleRegister} className="space-y-6">
             {!isLogin && (
               <div>
                 <label
@@ -175,9 +204,11 @@ const AuthPage = () => {
 
             <button
               type="submit"
+              disabled={IsLoading}
               className="w-full interactive-button bg-[var(--primary)] text-white py-3 rounded-lg hover:bg-[var(--primary-dark)] transition-colors font-semibold"
             >
-              {isLogin ? "Sign In" : "Create Account"}
+              {IsLoading ? isLogin ? "Logging..." : "Registering..." : isLogin ? "Sign In" : "Sign Up"}
+
             </button>
           </form>
 
