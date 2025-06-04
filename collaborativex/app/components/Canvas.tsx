@@ -1,21 +1,43 @@
-import React, { useRef, useEffect, useState, useCallback, memo } from 'react';
-import { throttle, debounce } from 'lodash';
-import NavBar from './CanvasRightNavbar';
-import { WhiteboardElement, PathElement, ShapeElement, TextElement, StickyNote, Point } from './Types';
-import CanvasToolbar from './CanvasToolbar';
+import React, { useRef, useEffect, useState, useCallback, memo } from "react";
+import { throttle, debounce } from "lodash";
+import NavBar from "./CanvasRightNavbar";
+import {
+  WhiteboardElement,
+  PathElement,
+  ShapeElement,
+  TextElement,
+  StickyNote,
+  Point,
+} from "./Types";
+import CanvasToolbar from "./CanvasToolbar";
 
 interface CanvasProps {
   strokeColor: string;
   lineWidth: number;
-  tool: 'pen' | 'eraser' | 'highlighter' | 'shape' | 'stickyNote' | 'text' | null;
+  tool:
+    | "pen"
+    | "eraser"
+    | "highlighter"
+    | "shape"
+    | "stickyNote"
+    | "text"
+    | null;
   shapeType: string | null;
   stickyNotes: StickyNote[];
   setStickyNotes: React.Dispatch<React.SetStateAction<StickyNote[]>>;
   textFontSize: number;
-  saveToHistory: (state: { elements: WhiteboardElement[]; stickyNotes: StickyNote[] }) => void;
+  saveToHistory: (state: {
+    elements: WhiteboardElement[];
+    stickyNotes: StickyNote[];
+  }) => void;
   historyIndex: number;
   history: { elements: WhiteboardElement[]; stickyNotes: StickyNote[] }[];
-  textStyles: { bold: boolean; italic: boolean; underline: boolean; fontFamily: string };
+  textStyles: {
+    bold: boolean;
+    italic: boolean;
+    underline: boolean;
+    fontFamily: string;
+  };
 }
 
 interface StickyNoteProps {
@@ -24,15 +46,33 @@ interface StickyNoteProps {
   panOffset: { x: number; y: number };
   activeNoteId: string | null;
   editingNoteId: string | null;
-  handleStickyNoteMouseDown: (e: React.MouseEvent<HTMLDivElement>, noteId: string) => void;
-  handleStickyNoteDoubleClick: (e: React.MouseEvent<HTMLDivElement>, noteId: string) => void;
-  handleStickyNoteTextChange: (e: React.ChangeEvent<HTMLTextAreaElement>, noteId: string) => void;
+  handleStickyNoteMouseDown: (
+    e: React.MouseEvent<HTMLDivElement>,
+    noteId: string
+  ) => void;
+  handleStickyNoteDoubleClick: (
+    e: React.MouseEvent<HTMLDivElement>,
+    noteId: string
+  ) => void;
+  handleStickyNoteTextChange: (
+    e: React.ChangeEvent<HTMLTextAreaElement>,
+    noteId: string
+  ) => void;
   handleFinishEditing: () => void;
   handleDeleteStickyNote: (noteId: string) => void;
-  handleResizeStart: (e: React.MouseEvent<HTMLDivElement>, noteId: string, direction: string) => void;
+  handleResizeStart: (
+    e: React.MouseEvent<HTMLDivElement>,
+    noteId: string,
+    direction: string
+  ) => void;
   setStickyNotes: React.Dispatch<React.SetStateAction<StickyNote[]>>;
   showColorPicker: (noteId: string, x: number, y: number) => void;
-  textStyles: { bold: boolean; italic: boolean; underline: boolean; fontFamily: string };
+  textStyles: {
+    bold: boolean;
+    italic: boolean;
+    underline: boolean;
+    fontFamily: string;
+  };
   textFontSize: number;
 }
 
@@ -42,45 +82,66 @@ interface TextComponentProps {
   panOffset: { x: number; y: number };
   activeTextId: string | null;
   editingTextId: string | null;
-  handleTextMouseDown: (e: React.MouseEvent<HTMLDivElement>, textId: string) => void;
-  handleTextDoubleClick: (e: React.MouseEvent<HTMLDivElement>, textId: string) => void;
-  handleTextChange: (e: React.ChangeEvent<HTMLTextAreaElement>, textId: string) => void;
+  handleTextMouseDown: (
+    e: React.MouseEvent<HTMLDivElement>,
+    textId: string
+  ) => void;
+  handleTextDoubleClick: (
+    e: React.MouseEvent<HTMLDivElement>,
+    textId: string
+  ) => void;
+  handleTextChange: (
+    e: React.ChangeEvent<HTMLTextAreaElement>,
+    textId: string
+  ) => void;
   handleFinishTextEditing: () => void;
   setElements: React.Dispatch<React.SetStateAction<WhiteboardElement[]>>;
-  textStyles: { bold: boolean; italic: boolean; underline: boolean; fontFamily: string };
+  textStyles: {
+    bold: boolean;
+    italic: boolean;
+    underline: boolean;
+    fontFamily: string;
+  };
   textFontSize: number;
 }
 
-const generateUniqueId = (): string => `id-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 10)}`;
+const generateUniqueId = (): string =>
+  `id-${Date.now().toString(36)}-${Math.random()
+    .toString(36)
+    .substring(2, 10)}`;
 
-const isValidId = (id: string | undefined): boolean => id !== undefined && id !== null && id !== '';
+const isValidId = (id: string | undefined): boolean =>
+  id !== undefined && id !== null && id !== "";
 
 const colorPalette = [
-  { bg: '#FEF7CD', text: '#000000' },
-  { bg: '#D3E4FD', text: '#000000' },
-  { bg: '#E5DEFF', text: '#000000' },
-  { bg: '#F2FCE2', text: '#000000' },
-  { bg: '#FFDEE2', text: '#000000' },
-  { bg: '#FDE1D3', text: '#000000' },
-  { bg: '#FFD700', text: '#000000' },
-  { bg: '#98FB98', text: '#000000' },
-  { bg: '#FFB6C1', text: '#000000' },
-  { bg: '#ADD8E6', text: '#000000' },
-  { bg: '#FFFACD', text: '#000000' },
-  { bg: '#E6E6FA', text: '#000000' },
-  { bg: '#FFFFFF', text: '#000000' },
-  { bg: '#D3D3D3', text: '#000000' },
-  { bg: '#A9A9A9', text: '#FFFFFF' },
-  { bg: '#000000', text: '#FFFFFF' },
+  { bg: "#FEF7CD", text: "#000000" },
+  { bg: "#D3E4FD", text: "#000000" },
+  { bg: "#E5DEFF", text: "#000000" },
+  { bg: "#F2FCE2", text: "#000000" },
+  { bg: "#FFDEE2", text: "#000000" },
+  { bg: "#FDE1D3", text: "#000000" },
+  { bg: "#FFD700", text: "#000000" },
+  { bg: "#98FB98", text: "#000000" },
+  { bg: "#FFB6C1", text: "#000000" },
+  { bg: "#ADD8E6", text: "#000000" },
+  { bg: "#FFFACD", text: "#000000" },
+  { bg: "#E6E6FA", text: "#000000" },
+  { bg: "#FFFFFF", text: "#000000" },
+  { bg: "#D3D3D3", text: "#000000" },
+  { bg: "#A9A9A9", text: "#FFFFFF" },
+  { bg: "#000000", text: "#FFFFFF" },
 ];
 
 const darkenColor = (hex: string, percent: number): string => {
-  const num = parseInt(hex.replace('#', ''), 16);
+  const num = parseInt(hex.replace("#", ""), 16);
   const amt = Math.round(2.55 * percent);
   const R = Math.max(0, (num >> 16) - amt);
   const G = Math.max(0, ((num >> 8) & 0x00ff) - amt);
   const B = Math.max(0, (num & 0x0000ff) - amt);
-  return `#${(0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1).padStart(6, '0')}`;
+  return `#${(0x1000000 + R * 0x10000 + G * 0x100 + B)
+    .toString(16)
+    .slice(1)
+    .padStart(6, "0")}`;
 };
 
 const StickyNoteComponent = memo(
@@ -102,7 +163,7 @@ const StickyNoteComponent = memo(
     textFontSize,
   }: StickyNoteProps) => {
     if (!isValidId(note.id)) {
-      console.error('Invalid note ID', note);
+      console.error("Invalid note ID", note);
       return null;
     }
 
@@ -114,16 +175,19 @@ const StickyNoteComponent = memo(
         data-note-id={note.id}
         className={`absolute rounded-lg overflow-hidden transition-all duration-300 ease-in-out ${
           activeNoteId === note.id
-            ? 'z-1 shadow-2xl ring-2 ring-purple-400 transform scale-105'
-            : 'z-0 shadow-lg hover:shadow-xl'
+            ? "z-1 shadow-2xl ring-2 ring-purple-400 transform scale-105"
+            : "z-0 shadow-lg hover:shadow-xl"
         }`}
         style={{
           width: `${note.width * zoomLevel}px`,
           height: `${note.height * zoomLevel}px`,
-          background: `linear-gradient(145deg, ${note.bgColor}, ${darkenColor(note.bgColor, 10)})`,
+          background: `linear-gradient(145deg, ${note.bgColor}, ${darkenColor(
+            note.bgColor,
+            10
+          )})`,
           left: `${adjustedX}px`,
           top: `${adjustedY}px`,
-          border: '1px solid rgba(0,0,0,0.1)',
+          border: "1px solid rgba(0,0,0,0.1)",
         }}
         onMouseDown={(e) => handleStickyNoteMouseDown(e, note.id)}
         onDoubleClick={(e) => handleStickyNoteDoubleClick(e, note.id)}
@@ -188,9 +252,9 @@ const StickyNoteComponent = memo(
                 style={{
                   color: note.textColor,
                   fontSize: `${textFontSize * zoomLevel}px`,
-                  fontWeight: textStyles.bold ? 'bold' : 'normal',
-                  fontStyle: textStyles.italic ? 'italic' : 'normal',
-                  textDecoration: textStyles.underline ? 'underline' : 'none',
+                  fontWeight: textStyles.bold ? "bold" : "normal",
+                  fontStyle: textStyles.italic ? "italic" : "normal",
+                  textDecoration: textStyles.underline ? "underline" : "none",
                   fontFamily: textStyles.fontFamily,
                 }}
                 value={note.text}
@@ -206,13 +270,13 @@ const StickyNoteComponent = memo(
                 style={{
                   color: note.textColor,
                   fontSize: `${textFontSize * zoomLevel}px`,
-                  fontWeight: textStyles.bold ? 'bold' : 'normal',
-                  fontStyle: textStyles.italic ? 'italic' : 'normal',
-                  textDecoration: textStyles.underline ? 'underline' : 'none',
+                  fontWeight: textStyles.bold ? "bold" : "normal",
+                  fontStyle: textStyles.italic ? "italic" : "normal",
+                  textDecoration: textStyles.underline ? "underline" : "none",
                   fontFamily: textStyles.fontFamily,
                 }}
               >
-                {note.text || 'Double-click to edit'}
+                {note.text || "Double-click to edit"}
               </div>
             )}
           </div>
@@ -221,19 +285,19 @@ const StickyNoteComponent = memo(
           <>
             <div
               className="absolute bottom-0 right-0 w-5 h-5 bg-gradient-to-br from-purple-600 to-purple-800 rounded-full transform translate-x-1/2 translate-y-1/2 cursor-se-resize z-30 hover:bg-purple-700 hover:scale-125 transition-all duration-200"
-              onMouseDown={(e) => handleResizeStart(e, note.id, 'se')}
+              onMouseDown={(e) => handleResizeStart(e, note.id, "se")}
             />
             <div
               className="absolute bottom-0 left-0 w-5 h-5 bg-gradient-to-br from-purple-600 to-purple-800 rounded-full transform -translate-x-1/2 translate-y-1/2 cursor-sw-resize z-30 hover:bg-purple-700 hover:scale-125 transition-all duration-200"
-              onMouseDown={(e) => handleResizeStart(e, note.id, 'sw')}
+              onMouseDown={(e) => handleResizeStart(e, note.id, "sw")}
             />
             <div
               className="absolute top-0 right-0 w-5 h-5 bg-gradient-to-br from-purple-600 to-purple-800 rounded-full transform translate-x-1/2 -translate-y-1/2 cursor-ne-resize z-30 hover:bg-purple-700 hover:scale-125 transition-all duration-200"
-              onMouseDown={(e) => handleResizeStart(e, note.id, 'ne')}
+              onMouseDown={(e) => handleResizeStart(e, note.id, "ne")}
             />
             <div
               className="absolute top-0 left-0 w-5 h-5 bg-gradient-to-br from-purple-600 to-purple-800 rounded-full transform -translate-x-1/2 -translate-y-1/2 cursor-nw-resize z-30 hover:bg-purple-700 hover:scale-125 transition-all duration-200"
-              onMouseDown={(e) => handleResizeStart(e, note.id, 'nw')}
+              onMouseDown={(e) => handleResizeStart(e, note.id, "nw")}
             />
           </>
         )}
@@ -242,7 +306,7 @@ const StickyNoteComponent = memo(
   }
 );
 
-StickyNoteComponent.displayName = 'StickyNoteComponent';
+StickyNoteComponent.displayName = "StickyNoteComponent";
 
 const TextComponent = memo(
   ({
@@ -260,7 +324,7 @@ const TextComponent = memo(
     textFontSize,
   }: TextComponentProps) => {
     if (!isValidId(textElement.id)) {
-      console.error('Invalid text element ID', textElement);
+      console.error("Invalid text element ID", textElement);
       return null;
     }
 
@@ -279,12 +343,14 @@ const TextComponent = memo(
       <div
         data-text-id={textElement.id}
         className={`absolute shadow-md rounded-md overflow-visible transition-shadow duration-200 ${
-          activeTextId === textElement.id ? 'z-20 shadow-xl ring-2 ring-purple-500' : 'z-10'
+          activeTextId === textElement.id
+            ? "z-20 shadow-xl ring-2 ring-purple-500"
+            : "z-10"
         }`}
         style={{
           left: `${adjustedX}px`,
           top: `${adjustedY}px`,
-          cursor: editingTextId === textElement.id ? 'text' : 'move',
+          cursor: editingTextId === textElement.id ? "text" : "move",
         }}
         onMouseDown={(e) => handleTextMouseDown(e, textElement.id)}
         onDoubleClick={(e) => handleTextDoubleClick(e, textElement.id)}
@@ -296,12 +362,12 @@ const TextComponent = memo(
             style={{
               color: textElement.color,
               fontSize: `${textFontSize * zoomLevel}px`,
-              fontWeight: textStyles.bold ? 'bold' : 'normal',
-              fontStyle: textStyles.italic ? 'italic' : 'normal',
-              textDecoration: textStyles.underline ? 'underline' : 'none',
+              fontWeight: textStyles.bold ? "bold" : "normal",
+              fontStyle: textStyles.italic ? "italic" : "normal",
+              textDecoration: textStyles.underline ? "underline" : "none",
               fontFamily: textStyles.fontFamily,
-              minWidth: '100px',
-              minHeight: '30px',
+              minWidth: "100px",
+              minHeight: "30px",
             }}
             value={textElement.text}
             onChange={(e) => handleTextChange(e, textElement.id)}
@@ -314,13 +380,13 @@ const TextComponent = memo(
             style={{
               color: textElement.color,
               fontSize: `${textFontSize * zoomLevel}px`,
-              fontWeight: textStyles.bold ? 'bold' : 'normal',
-              fontStyle: textStyles.italic ? 'italic' : 'normal',
-              textDecoration: textStyles.underline ? 'underline' : 'none',
+              fontWeight: textStyles.bold ? "bold" : "normal",
+              fontStyle: textStyles.italic ? "italic" : "normal",
+              textDecoration: textStyles.underline ? "underline" : "none",
               fontFamily: textStyles.fontFamily,
             }}
           >
-            {textElement.text || 'Double-click to edit'}
+            {textElement.text || "Double-click to edit"}
           </div>
         )}
         {activeTextId === textElement.id && !editingTextId && (
@@ -328,7 +394,9 @@ const TextComponent = memo(
             className="absolute top-0 right-0 w-6 h-6 bg-red-500 text-white rounded-full -translate-x-1/2 -translate-y-1/2 cursor-pointer z-30 hover:bg-red-600 transition-all duration-200 transform hover:scale-105"
             onClick={(e) => {
               e.stopPropagation();
-              setElements((prev) => prev.filter((el) => el.id !== textElement.id));
+              setElements((prev) =>
+                prev.filter((el) => el.id !== textElement.id)
+              );
             }}
           >
             <svg
@@ -352,7 +420,7 @@ const TextComponent = memo(
   }
 );
 
-TextComponent.displayName = 'TextComponent';
+TextComponent.displayName = "TextComponent";
 
 const Canvas: React.FC<CanvasProps> = ({
   strokeColor,
@@ -370,18 +438,27 @@ const Canvas: React.FC<CanvasProps> = ({
   const gridCanvasRef = useRef<HTMLCanvasElement>(null);
   const contentCanvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [gridContext, setGridContext] = useState<CanvasRenderingContext2D | null>(null);
-  const [contentContext, setContentContext] = useState<CanvasRenderingContext2D | null>(null);
+  const [gridContext, setGridContext] =
+    useState<CanvasRenderingContext2D | null>(null);
+  const [contentContext, setContentContext] =
+    useState<CanvasRenderingContext2D | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [elements, setElements] = useState<WhiteboardElement[]>([]);
-  const [currentElement, setCurrentElement] = useState<WhiteboardElement | null>(null);
-  const [canvasDimensions, setCanvasDimensions] = useState({ width: 0, height: 0 });
+  const [currentElement, setCurrentElement] =
+    useState<WhiteboardElement | null>(null);
+  const [canvasDimensions, setCanvasDimensions] = useState({
+    width: 0,
+    height: 0,
+  });
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   const [activeTextId, setActiveTextId] = useState<string | null>(null);
+  const [activeShapeId, setActiveShapeId] = useState<string | null>(null);
   const [isDraggingNote, setIsDraggingNote] = useState(false);
   const [isDraggingText, setIsDraggingText] = useState(false);
+  const [isDraggingShape, setIsDraggingShape] = useState(false);
   const [isResizingNote, setIsResizingNote] = useState(false);
+  const [isResizingShape, setIsResizingShape] = useState(false);
   const [resizeDirection, setResizeDirection] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [startPoint, setStartPoint] = useState<Point | null>(null);
@@ -390,16 +467,30 @@ const Canvas: React.FC<CanvasProps> = ({
   const [isPanning, setIsPanning] = useState(false);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [panStart, setPanStart] = useState<Point | null>(null);
-  const [colorPicker, setColorPicker] = useState<{ noteId: string; x: number; y: number } | null>(null);
-  const stickyNoteColors = ['#FEF7CD', '#D3E4FD', '#E5DEFF', '#F2FCE2', '#FFDEE2', '#FDE1D3'];
+  const [colorPicker, setColorPicker] = useState<{
+    noteId: string;
+    x: number;
+    y: number;
+  } | null>(null);
+  const stickyNoteColors = [
+    "#FEF7CD",
+    "#D3E4FD",
+    "#E5DEFF",
+    "#F2FCE2",
+    "#FFDEE2",
+    "#FDE1D3",
+  ];
   const tempNoteState = useRef<StickyNote | null>(null);
   const tempTextState = useRef<TextElement | null>(null);
+  const tempShapeState = useRef<ShapeElement | null>(null);
   const newTextIdRef = useRef<string | null>(null);
 
   const idCounter = useRef(0);
   const generateId = useCallback(() => {
     idCounter.current += 1;
-    return `${Date.now().toString(36)}-${idCounter.current}-${Math.random().toString(36).substring(2, 10)}`;
+    return `${Date.now().toString(36)}-${idCounter.current}-${Math.random()
+      .toString(36)
+      .substring(2, 10)}`;
   }, []);
 
   const debouncedSaveToHistory = useCallback(
@@ -414,7 +505,7 @@ const Canvas: React.FC<CanvasProps> = ({
     return stickyNotes
       .filter((note) => {
         if (!note || !isValidId(note.id)) {
-          console.warn('Invalid sticky note', note);
+          console.warn("Invalid sticky note", note);
           return false;
         }
         return true;
@@ -431,19 +522,20 @@ const Canvas: React.FC<CanvasProps> = ({
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === 'Space' && !editingTextId && !editingNoteId) setIsPanning(true);
+      if (e.code === "Space" && !editingTextId && !editingNoteId)
+        setIsPanning(true);
     };
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.code === 'Space') {
+      if (e.code === "Space") {
         setIsPanning(false);
         setPanStart(null);
       }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
     };
   }, [editingTextId, editingNoteId]);
 
@@ -457,21 +549,21 @@ const Canvas: React.FC<CanvasProps> = ({
       }
     };
     handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   useEffect(() => {
     if (!gridCanvasRef.current || !contentCanvasRef.current) return;
     const gridCanvas = gridCanvasRef.current;
     const contentCanvas = contentCanvasRef.current;
-    const gridCtx = gridCanvas.getContext('2d');
-    const contentCtx = contentCanvas.getContext('2d');
+    const gridCtx = gridCanvas.getContext("2d");
+    const contentCtx = contentCanvas.getContext("2d");
     if (gridCtx && contentCtx) {
-      gridCtx.lineCap = 'round';
-      gridCtx.lineJoin = 'round';
-      contentCtx.lineCap = 'round';
-      contentCtx.lineJoin = 'round';
+      gridCtx.lineCap = "round";
+      gridCtx.lineJoin = "round";
+      contentCtx.lineCap = "round";
+      contentCtx.lineJoin = "round";
       contentCtx.strokeStyle = strokeColor;
       contentCtx.lineWidth = lineWidth;
       setGridContext(gridCtx);
@@ -480,7 +572,13 @@ const Canvas: React.FC<CanvasProps> = ({
   }, [strokeColor, lineWidth]);
 
   useEffect(() => {
-    if (!gridCanvasRef.current || !contentCanvasRef.current || !gridContext || !contentContext) return;
+    if (
+      !gridCanvasRef.current ||
+      !contentCanvasRef.current ||
+      !gridContext ||
+      !contentContext
+    )
+      return;
     const gridCanvas = gridCanvasRef.current;
     const contentCanvas = contentCanvasRef.current;
     const dpr = window.devicePixelRatio || 1;
@@ -499,12 +597,19 @@ const Canvas: React.FC<CanvasProps> = ({
   }, [canvasDimensions, zoomLevel, gridContext, contentContext]);
 
   useEffect(() => {
-    if (history.length > 0 && historyIndex >= 0 && historyIndex < history.length) {
+    if (
+      history.length > 0 &&
+      historyIndex >= 0 &&
+      historyIndex < history.length
+    ) {
       const { elements = [], stickyNotes = [] } = history[historyIndex] || {};
       setElements(Array.isArray(elements) ? elements : []);
       setStickyNotes(Array.isArray(stickyNotes) ? stickyNotes : []);
     } else {
-      console.warn('Invalid history or historyIndex:', { history, historyIndex });
+      console.warn("Invalid history or historyIndex:", {
+        history,
+        historyIndex,
+      });
       setElements([]);
       setStickyNotes([]);
     }
@@ -513,63 +618,77 @@ const Canvas: React.FC<CanvasProps> = ({
   const drawElement = useCallback(
     (element: WhiteboardElement) => {
       if (!contentContext || !element) return;
-      if (element.type === 'stickyNote' || element.type === 'text') return;
+      if (element.type === "stickyNote" || element.type === "text") return;
       const pathElement = element as PathElement;
-      if (pathElement.type === 'path' && pathElement.points?.length > 1) {
+      if (pathElement.type === "path" && pathElement.points?.length > 1) {
         contentContext.beginPath();
-        contentContext.moveTo(pathElement.points[0].x * zoomLevel + panOffset.x, pathElement.points[0].y * zoomLevel + panOffset.y);
+        contentContext.moveTo(
+          pathElement.points[0].x * zoomLevel + panOffset.x,
+          pathElement.points[0].y * zoomLevel + panOffset.y
+        );
         contentContext.strokeStyle = pathElement.color;
         contentContext.lineWidth = pathElement.width * zoomLevel;
-        if (pathElement.tool === 'eraser') {
-          contentContext.globalCompositeOperation = 'destination-out';
-        } else if (pathElement.tool === 'highlighter') {
-          contentContext.globalCompositeOperation = 'multiply';
+        if (pathElement.tool === "eraser") {
+          contentContext.globalCompositeOperation = "destination-out";
+        } else if (pathElement.tool === "highlighter") {
+          contentContext.globalCompositeOperation = "multiply";
           contentContext.globalAlpha = 0.5;
         } else {
-          contentContext.globalCompositeOperation = 'source-over';
+          contentContext.globalCompositeOperation = "source-over";
           contentContext.globalAlpha = 1.0;
         }
         for (let i = 1; i < pathElement.points.length; i++) {
-          contentContext.lineTo(pathElement.points[i].x * zoomLevel + panOffset.x, pathElement.points[i].y * zoomLevel + panOffset.y);
+          contentContext.lineTo(
+            pathElement.points[i].x * zoomLevel + panOffset.x,
+            pathElement.points[i].y * zoomLevel + panOffset.y
+          );
         }
         contentContext.stroke();
-        contentContext.globalCompositeOperation = 'source-over';
+        contentContext.globalCompositeOperation = "source-over";
         contentContext.globalAlpha = 1.0;
-      } else if (element.type !== 'path') {
+      } else if (element.type !== "path") {
         const shapeElement = element as ShapeElement;
         contentContext.beginPath();
         contentContext.strokeStyle = shapeElement.color;
         contentContext.lineWidth = shapeElement.lineWidth * zoomLevel;
-        contentContext.fillStyle = 'transparent';
+        contentContext.fillStyle = "transparent";
         const x = shapeElement.x * zoomLevel + panOffset.x;
         const y = shapeElement.y * zoomLevel + panOffset.y;
         const width = shapeElement.width * zoomLevel;
         const height = shapeElement.height * zoomLevel;
         switch (shapeElement.type) {
-          case 'rectangle':
+          case "rectangle":
             contentContext.rect(x, y, width, height);
             break;
-          case 'circle':
-            contentContext.ellipse(x + width / 2, y + height / 2, Math.abs(width / 2), Math.abs(height / 2), 0, 0, Math.PI * 2);
+          case "circle":
+            contentContext.ellipse(
+              x + width / 2,
+              y + height / 2,
+              Math.abs(width / 2),
+              Math.abs(height / 2),
+              0,
+              0,
+              Math.PI * 2
+            );
             break;
-          case 'line':
+          case "line":
             contentContext.moveTo(x, y);
             contentContext.lineTo(x + width, y + height);
             break;
-          case 'triangle':
+          case "triangle":
             contentContext.moveTo(x + width / 2, y);
             contentContext.lineTo(x, y + height);
             contentContext.lineTo(x + width, y + height);
             contentContext.closePath();
             break;
-          case 'diamond':
+          case "diamond":
             contentContext.moveTo(x + width / 2, y);
             contentContext.lineTo(x + width, y + height / 2);
             contentContext.lineTo(x + width / 2, y + height);
             contentContext.lineTo(x, y + height / 2);
             contentContext.closePath();
             break;
-          case 'star':
+          case "star":
             const spikes = 5;
             const outerRadius = Math.min(width, height) / 2;
             const innerRadius = outerRadius / 2.5;
@@ -578,93 +697,227 @@ const Canvas: React.FC<CanvasProps> = ({
             let rot = (Math.PI / 2) * 3;
             contentContext.moveTo(cx, cy - outerRadius);
             for (let i = 0; i < spikes; i++) {
-              contentContext.lineTo(cx + Math.cos(rot) * outerRadius, cy + Math.sin(rot) * outerRadius);
+              contentContext.lineTo(
+                cx + Math.cos(rot) * outerRadius,
+                cy + Math.sin(rot) * outerRadius
+              );
               rot += Math.PI / spikes;
-              contentContext.lineTo(cx + Math.cos(rot) * innerRadius, cy + Math.sin(rot) * innerRadius);
+              contentContext.lineTo(
+                cx + Math.cos(rot) * innerRadius,
+                cy + Math.sin(rot) * innerRadius
+              );
               rot += Math.PI / spikes;
             }
             contentContext.closePath();
             break;
-          case 'arrow':
-            const headLength = Math.min(width, height) * 0.3;
-            contentContext.moveTo(x, y + height / 2);
-            contentContext.lineTo(x + width - headLength, y + height / 2);
-            contentContext.lineTo(x + width - headLength, y);
-            contentContext.lineTo(x + width, y + height / 2);
-            contentContext.lineTo(x + width - headLength, y + height);
-            contentContext.lineTo(x + width - headLength, y + height / 2);
-            contentContext.lineTo(x, y + height / 2);
-            contentContext.closePath();
+          case "arrow":
+          case "arrowRight":
+          case "arrowLeft":
+          case "arrowUp":
+          case "arrowDown": {
+            let dx = width;
+            let dy = height;
+
+            // Adjust dx/dy depending on direction
+            switch (shapeElement.type) {
+              case "arrowRight":
+                dx = width;
+                dy = 0;
+                break;
+              case "arrowLeft":
+                dx = -width;
+                dy = 0;
+                break;
+              case "arrowUp":
+                dx = 0;
+                dy = -height;
+                break;
+              case "arrowDown":
+                dx = 0;
+                dy = height;
+                break;
+              case "arrow":
+                // keep default dx=width, dy=height
+                break;
+            }
+
+            const endX = x + dx;
+            const endY = y + dy;
+            const angle = Math.atan2(dy, dx);
+            const arrowSize = 10 * zoomLevel;
+
+            // Draw shaft
+            contentContext.moveTo(x, y);
+            contentContext.lineTo(endX, endY);
+
+            // Arrowhead left side
+            contentContext.moveTo(endX, endY);
+            contentContext.lineTo(
+              endX - arrowSize * Math.cos(angle - Math.PI / 6),
+              endY - arrowSize * Math.sin(angle - Math.PI / 6)
+            );
+
+            // Arrowhead right side
+            contentContext.moveTo(endX, endY);
+            contentContext.lineTo(
+              endX - arrowSize * Math.cos(angle + Math.PI / 6),
+              endY - arrowSize * Math.sin(angle + Math.PI / 6)
+            );
             break;
-          case 'heart':
+          }
+
+          case "heart":
             const cxh = x + width / 2;
             const cyh = y + height / 4;
             contentContext.moveTo(cxh, cyh + height / 2);
-            contentContext.bezierCurveTo(cxh - width / 2, cyh + height / 2, cxh - width / 2, cyh - height / 4, cxh, cyh - height / 4);
-            contentContext.bezierCurveTo(cxh + width / 2, cyh - height / 4, cxh + width / 2, cyh + height / 2, cxh, cyh + height / 2);
+            contentContext.bezierCurveTo(
+              cxh - width / 2,
+              cyh + height / 2,
+              cxh - width / 2,
+              cyh - height / 4,
+              cxh,
+              cyh - height / 4
+            );
+            contentContext.bezierCurveTo(
+              cxh + width / 2,
+              cyh - height / 4,
+              cxh + width / 2,
+              cyh + height / 2,
+              cxh,
+              cyh + height / 2
+            );
             contentContext.closePath();
             break;
-          case 'pentagon':
+          case "pentagon":
             contentContext.moveTo(x + width / 2, y);
             for (let i = 1; i <= 5; i++) {
               contentContext.lineTo(
-                x + (width / 2) * (1 + Math.cos((Math.PI * 2 * i) / 5 - Math.PI / 2)),
-                y + (height / 2) * (1 + Math.sin((Math.PI * 2 * i) / 5 - Math.PI / 2))
+                x +
+                  (width / 2) *
+                    (1 + Math.cos((Math.PI * 2 * i) / 5 - Math.PI / 2)),
+                y +
+                  (height / 2) *
+                    (1 + Math.sin((Math.PI * 2 * i) / 5 - Math.PI / 2))
               );
             }
             contentContext.closePath();
             break;
-          case 'hexagon':
+          case "hexagon":
             contentContext.moveTo(x + width / 2, y);
             for (let i = 1; i <= 6; i++) {
               contentContext.lineTo(
-                x + (width / 2) * (1 + Math.cos((Math.PI * 2 * i) / 6 - Math.PI / 2)),
-                y + (height / 2) * (1 + Math.sin((Math.PI * 2 * i) / 6 - Math.PI / 2))
+                x +
+                  (width / 2) *
+                    (1 + Math.cos((Math.PI * 2 * i) / 6 - Math.PI / 2)),
+                y +
+                  (height / 2) *
+                    (1 + Math.sin((Math.PI * 2 * i) / 6 - Math.PI / 2))
               );
             }
             contentContext.closePath();
             break;
-          case 'heptagon':
+          case "heptagon":
             contentContext.moveTo(x + width / 2, y);
             for (let i = 1; i <= 7; i++) {
               contentContext.lineTo(
-                x + (width / 2) * (1 + Math.cos((Math.PI * 2 * i) / 7 - Math.PI / 2)),
-                y + (height / 2) * (1 + Math.sin((Math.PI * 2 * i) / 7 - Math.PI / 2))
+                x +
+                  (width / 2) *
+                    (1 + Math.cos((Math.PI * 2 * i) / 7 - Math.PI / 2)),
+                y +
+                  (height / 2) *
+                    (1 + Math.sin((Math.PI * 2 * i) / 7 - Math.PI / 2))
               );
             }
             contentContext.closePath();
             break;
-          case 'octagon':
+          case "octagon":
             contentContext.moveTo(x + width / 2, y);
             for (let i = 1; i <= 8; i++) {
               contentContext.lineTo(
-                x + (width / 2) * (1 + Math.cos((Math.PI * 2 * i) / 8 - Math.PI / 2)),
-                y + (height / 2) * (1 + Math.sin((Math.PI * 2 * i) / 8 - Math.PI / 2))
+                x +
+                  (width / 2) *
+                    (1 + Math.cos((Math.PI * 2 * i) / 8 - Math.PI / 2)),
+                y +
+                  (height / 2) *
+                    (1 + Math.sin((Math.PI * 2 * i) / 8 - Math.PI / 2))
               );
             }
             contentContext.closePath();
             break;
-          case 'cross':
+          case "cross":
             contentContext.moveTo(x + width / 2, y);
             contentContext.lineTo(x + width / 2, y + height);
             contentContext.moveTo(x, y + height / 2);
             contentContext.lineTo(x + width, y + height / 2);
             break;
-          case 'smiley':
-            contentContext.arc(x + width / 2, y + height / 2, Math.min(width, height) / 2, 0, Math.PI * 2);
+          case "smiley":
+            contentContext.arc(
+              x + width / 2,
+              y + height / 2,
+              Math.min(width, height) / 2,
+              0,
+              Math.PI * 2
+            );
             contentContext.moveTo(x + width / 3, y + height / 3);
-            contentContext.arc(x + width / 3, y + height / 3, width / 10, 0, Math.PI * 2);
+            contentContext.arc(
+              x + width / 3,
+              y + height / 3,
+              width / 10,
+              0,
+              Math.PI * 2
+            );
             contentContext.moveTo(x + (2 * width) / 3, y + height / 3);
-            contentContext.arc(x + (2 * width) / 3, y + height / 3, width / 10, 0, Math.PI * 2);
+            contentContext.arc(
+              x + (2 * width) / 3,
+              y + height / 3,
+              width / 10,
+              0,
+              Math.PI * 2
+            );
             contentContext.moveTo(x + width / 2, y + (2 * height) / 3);
-            contentContext.arc(x + width / 2, y + height / 2, width / 4, 0, Math.PI, false);
+            contentContext.arc(
+              x + width / 2,
+              y + height / 2,
+              width / 4,
+              0,
+              Math.PI,
+              false
+            );
             break;
-          case 'cloud':
+          case "cloud":
             contentContext.moveTo(x + width / 4, y + height);
-            contentContext.bezierCurveTo(x, y + height, x, y + height / 2, x + width / 4, y + height / 2);
-            contentContext.bezierCurveTo(x + width / 8, y + height / 4, x + (3 * width) / 8, y + height / 4, x + width / 2, y + height / 2);
-            contentContext.bezierCurveTo(x + (5 * width) / 8, y + height / 4, x + (7 * width) / 8, y + height / 4, x + (3 * width) / 4, y + height / 2);
-            contentContext.bezierCurveTo(x + width, y + height / 2, x + width, y + height, x + (3 * width) / 4, y + height);
+            contentContext.bezierCurveTo(
+              x,
+              y + height,
+              x,
+              y + height / 2,
+              x + width / 4,
+              y + height / 2
+            );
+            contentContext.bezierCurveTo(
+              x + width / 8,
+              y + height / 4,
+              x + (3 * width) / 8,
+              y + height / 4,
+              x + width / 2,
+              y + height / 2
+            );
+            contentContext.bezierCurveTo(
+              x + (5 * width) / 8,
+              y + height / 4,
+              x + (7 * width) / 8,
+              y + height / 4,
+              x + (3 * width) / 4,
+              y + height / 2
+            );
+            contentContext.bezierCurveTo(
+              x + width,
+              y + height / 2,
+              x + width,
+              y + height,
+              x + (3 * width) / 4,
+              y + height
+            );
             contentContext.closePath();
             break;
         }
@@ -688,11 +941,11 @@ const Canvas: React.FC<CanvasProps> = ({
     const canvasHeight = canvas.height / (dpr * zoomLevel);
     const gridSize = 30;
 
-    gridContext.strokeStyle = '#80008030';
+    gridContext.strokeStyle = "#80008030";
     gridContext.lineWidth = 0.5 / zoomLevel;
 
-    const startX = Math.floor((-panOffset.x) / gridSize) * gridSize;
-    const startY = Math.floor((-panOffset.y) / gridSize) * gridSize;
+    const startX = Math.floor(-panOffset.x / gridSize) * gridSize;
+    const startY = Math.floor(-panOffset.y / gridSize) * gridSize;
     const endX = startX + canvasWidth + gridSize;
     const endY = startY + canvasHeight + gridSize;
 
@@ -728,12 +981,27 @@ const Canvas: React.FC<CanvasProps> = ({
     }
     if (currentElement) drawElement(currentElement);
     contentContext.restore();
-  }, [contentContext, elements, drawElement, currentElement, zoomLevel, panOffset]);
+  }, [
+    contentContext,
+    elements,
+    drawElement,
+    currentElement,
+    zoomLevel,
+    panOffset,
+  ]);
 
   useEffect(() => {
     drawGrid();
     redrawContentCanvas();
-  }, [elements, contentContext, currentElement, zoomLevel, panOffset, drawGrid, redrawContentCanvas]);
+  }, [
+    elements,
+    contentContext,
+    currentElement,
+    zoomLevel,
+    panOffset,
+    drawGrid,
+    redrawContentCanvas,
+  ]);
 
   const getCanvasCoordinates = (clientX: number, clientY: number) => {
     if (!contentCanvasRef.current) return { x: 0, y: 0 };
@@ -757,40 +1025,62 @@ const Canvas: React.FC<CanvasProps> = ({
     setColorPicker({ noteId, x, y });
   };
 
-  const handleColorSelect = (noteId: string, bgColor: string, textColor: string) => {
+  const handleColorSelect = (
+    noteId: string,
+    bgColor: string,
+    textColor: string
+  ) => {
     setStickyNotes((prev) => {
-      const newNotes = prev.map((note) =>
-        note.id === noteId ? { ...note, bgColor, textColor } : note
-      ).filter((note) => isValidId(note.id));
+      const newNotes = prev
+        .map((note) =>
+          note.id === noteId ? { ...note, bgColor, textColor } : note
+        )
+        .filter((note) => isValidId(note.id));
       debouncedSaveToHistory(elements, newNotes);
       return newNotes;
     });
     setColorPicker(null);
   };
 
-  const isOverStickyNote = (e: React.MouseEvent<HTMLCanvasElement>): string | null => {
-    const { x: screenX, y: screenY } = getScreenCoordinates(e.clientX, e.clientY);
+  const isOverStickyNote = (
+    e: React.MouseEvent<HTMLCanvasElement>
+  ): string | null => {
+    const { x: screenX, y: screenY } = getScreenCoordinates(
+      e.clientX,
+      e.clientY
+    );
     for (const note of uniqueStickyNotes) {
       if (!isValidId(note.id)) continue;
       const noteX = note.x * zoomLevel + panOffset.x;
       const noteY = note.y * zoomLevel + panOffset.y;
       const noteWidth = note.width * zoomLevel;
       const noteHeight = note.height * zoomLevel;
-      if (screenX >= noteX && screenX <= noteX + noteWidth && screenY >= noteY && screenY <= noteY + noteHeight) {
+      if (
+        screenX >= noteX &&
+        screenX <= noteX + noteWidth &&
+        screenY >= noteY &&
+        screenY <= noteY + noteHeight
+      ) {
         return note.id;
       }
     }
     return null;
   };
 
-  const isOverTextElement = (e: React.MouseEvent<HTMLCanvasElement>): string | null => {
-    const { x: screenX, y: screenY } = getScreenCoordinates(e.clientX, e.clientY);
+  const isOverTextElement = (
+    e: React.MouseEvent<HTMLCanvasElement>
+  ): string | null => {
+    const { x: screenX, y: screenY } = getScreenCoordinates(
+      e.clientX,
+      e.clientY
+    );
     for (const element of elements) {
-      if (element.type === 'text') {
+      if (element.type === "text") {
         const textElement = element as TextElement;
         const adjustedX = textElement.x * zoomLevel + panOffset.x;
         const adjustedY = textElement.y * zoomLevel + panOffset.y;
-        const textWidth = (textElement.text.length || 10) * (textFontSize * zoomLevel * 0.6);
+        const textWidth =
+          (textElement.text.length || 10) * (textFontSize * zoomLevel * 0.6);
         const textHeight = textFontSize * zoomLevel * 1.2;
         if (
           screenX >= adjustedX &&
@@ -807,8 +1097,20 @@ const Canvas: React.FC<CanvasProps> = ({
 
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!contentContext || colorPicker) return;
-    if (isDraggingNote || isResizingNote || isDraggingText || editingTextId || editingNoteId) return;
-    const { x: canvasX, y: canvasY } = getCanvasCoordinates(e.clientX, e.clientY);
+    if (
+      isDraggingNote ||
+      isResizingNote ||
+      isDraggingText ||
+      editingTextId ||
+      editingNoteId ||
+      isDraggingShape ||
+      isResizingShape
+    )
+      return;
+    const { x: canvasX, y: canvasY } = getCanvasCoordinates(
+      e.clientX,
+      e.clientY
+    );
     if (isPanning) {
       setPanStart({ x: e.clientX, y: e.clientY });
       return;
@@ -824,7 +1126,9 @@ const Canvas: React.FC<CanvasProps> = ({
     const clickedTextId = isOverTextElement(e);
     if (clickedTextId) {
       setActiveTextId(clickedTextId);
-      const textElement = elements.find((el) => el.id === clickedTextId && el.type === 'text') as TextElement;
+      const textElement = elements.find(
+        (el) => el.id === clickedTextId && el.type === "text"
+      ) as TextElement;
       if (textElement) {
         tempTextState.current = { ...textElement };
         setDragOffset({
@@ -837,10 +1141,42 @@ const Canvas: React.FC<CanvasProps> = ({
     } else {
       setActiveTextId(null);
     }
-    if (tool === 'stickyNote') {
+    const clickedShape = elements.find((el) => {
+      if (el.type === "text") return false;
+      const { x, y } = getCanvasCoordinates(e.clientX, e.clientY);
+      if (el.type === "path") {
+        const pathEl = el as PathElement;
+        if (pathEl.points.length === 0) return false;
+        const xs = pathEl.points.map((p) => p.x);
+        const ys = pathEl.points.map((p) => p.y);
+        const minX = Math.min(...xs);
+        const maxX = Math.max(...xs);
+        const minY = Math.min(...ys);
+        const maxY = Math.max(...ys);
+        return x >= minX && x <= maxX && y >= minY && y <= maxY;
+      } else {
+        const shape = el as ShapeElement;
+        return (
+          x >= shape.x &&
+          x <= shape.x + shape.width &&
+          y >= shape.y &&
+          y <= shape.y + shape.height
+        );
+      }
+    });
+    if (clickedShape) {
+      setActiveShapeId(clickedShape.id);
+      setDragOffset({ x: canvasX, y: canvasY });
+      setIsDraggingShape(true);
+      return;
+    } else {
+      setActiveShapeId(null);
+    }
+    if (tool === "stickyNote") {
       e.stopPropagation();
       const id = generateId();
-      const randomColor = stickyNoteColors[Math.floor(Math.random() * stickyNoteColors.length)];
+      const randomColor =
+        stickyNoteColors[Math.floor(Math.random() * stickyNoteColors.length)];
       const noteWidth = 200;
       const noteHeight = 200;
       let adjustedX = canvasX;
@@ -851,17 +1187,20 @@ const Canvas: React.FC<CanvasProps> = ({
       adjustedY = Math.max(0, Math.min(adjustedY, canvasHeight - noteHeight));
       const newNote: StickyNote = {
         id,
-        type: 'stickyNote',
+        type: "stickyNote",
         x: adjustedX,
         y: adjustedY,
         width: noteWidth,
         height: noteHeight,
-        text: '',
-        textColor: '#000000',
+        text: "",
+        textColor: "#000000",
         bgColor: randomColor,
       };
       setStickyNotes((prev) => {
-        const newNotes = [...prev.filter((note) => isValidId(note.id)), newNote];
+        const newNotes = [
+          ...prev.filter((note) => isValidId(note.id)),
+          newNote,
+        ];
         debouncedSaveToHistory(elements, newNotes);
         return newNotes;
       });
@@ -869,17 +1208,17 @@ const Canvas: React.FC<CanvasProps> = ({
       setEditingNoteId(newNote.id);
       return;
     }
-    if (tool === 'text') {
+    if (tool === "text") {
       e.stopPropagation();
       e.preventDefault();
       const newTextId = generateId();
       newTextIdRef.current = newTextId;
       const newElement: TextElement = {
         id: newTextId,
-        type: 'text',
+        type: "text",
         x: canvasX,
         y: canvasY,
-        text: '',
+        text: "",
         color: strokeColor,
         fontSize: textFontSize,
         isEditing: true,
@@ -892,7 +1231,9 @@ const Canvas: React.FC<CanvasProps> = ({
       setEditingTextId(newTextId);
       setActiveTextId(newTextId);
       setTimeout(() => {
-        const textarea = document.querySelector(`[data-text-id="${newTextId}"] textarea`) as HTMLTextAreaElement | null;
+        const textarea = document.querySelector(
+          `[data-text-id="${newTextId}"] textarea`
+        ) as HTMLTextAreaElement | null;
         if (textarea) {
           textarea.focus();
           textarea.select();
@@ -900,18 +1241,18 @@ const Canvas: React.FC<CanvasProps> = ({
       }, 0);
       return;
     }
-    if (tool === 'pen' || tool === 'eraser' || tool === 'highlighter') {
+    if (tool === "pen" || tool === "eraser" || tool === "highlighter") {
       setIsDrawing(true);
       const newElement: PathElement = {
         id: generateId(),
-        type: 'path',
+        type: "path",
         points: [{ x: canvasX, y: canvasY }],
-        color: tool === 'eraser' ? '#FFFFFF' : strokeColor,
-        width: tool === 'highlighter' ? lineWidth * 2 : lineWidth, // Use lineWidth with a 2x multiplier for highlighter
+        color: tool === "eraser" ? "#FFFFFF" : strokeColor,
+        width: tool === "highlighter" ? lineWidth * 2 : lineWidth,
         tool,
       };
       setCurrentElement(newElement);
-    } else if (tool === 'shape' && shapeType) {
+    } else if (tool === "shape" && shapeType) {
       setIsDrawing(true);
       setStartPoint({ x: canvasX, y: canvasY });
       const newElement: ShapeElement = {
@@ -931,7 +1272,10 @@ const Canvas: React.FC<CanvasProps> = ({
   const handleMouseMove = useCallback(
     throttle((e: React.MouseEvent<HTMLCanvasElement>) => {
       if (!contentContext || !contentCanvasRef.current) return;
-      const { x: canvasX, y: canvasY } = getCanvasCoordinates(e.clientX, e.clientY);
+      const { x: canvasX, y: canvasY } = getCanvasCoordinates(
+        e.clientX,
+        e.clientY
+      );
       if (isPanning && panStart) {
         const dx = (e.clientX - panStart.x) / zoomLevel;
         const dy = (e.clientY - panStart.y) / zoomLevel;
@@ -946,14 +1290,26 @@ const Canvas: React.FC<CanvasProps> = ({
         const canvasHeight = canvasDimensions.height / zoomLevel;
         const newX = canvasX - dragOffset.x;
         const newY = canvasY - dragOffset.y;
-        const clampedX = Math.max(0, Math.min(newX, canvasWidth - tempNoteState.current.width));
-        const clampedY = Math.max(0, Math.min(newY, canvasHeight - tempNoteState.current.height));
-        tempNoteState.current = { ...tempNoteState.current, x: clampedX, y: clampedY };
+        const clampedX = Math.max(
+          0,
+          Math.min(newX, canvasWidth - tempNoteState.current.width)
+        );
+        const clampedY = Math.max(
+          0,
+          Math.min(newY, canvasHeight - tempNoteState.current.height)
+        );
+        tempNoteState.current = {
+          ...tempNoteState.current,
+          x: clampedX,
+          y: clampedY,
+        };
         setStickyNotes((prev) => {
           const updatedNotes = prev.map((note) =>
             note.id === activeNoteId ? { ...tempNoteState.current! } : note
           );
-          const filteredNotes = updatedNotes.filter((note) => isValidId(note.id));
+          const filteredNotes = updatedNotes.filter((note) =>
+            isValidId(note.id)
+          );
           return filteredNotes;
         });
         return;
@@ -965,15 +1321,68 @@ const Canvas: React.FC<CanvasProps> = ({
         const newY = canvasY - dragOffset.y;
         const clampedX = Math.max(0, Math.min(newX, canvasWidth));
         const clampedY = Math.max(0, Math.min(newY, canvasHeight));
-        tempTextState.current = { ...tempTextState.current, x: clampedX, y: clampedY };
+        tempTextState.current = {
+          ...tempTextState.current,
+          x: clampedX,
+          y: clampedY,
+        };
         setElements((prev) =>
-          prev.map((el) => (el.id === activeTextId && el.type === 'text' ? tempTextState.current! : el))
+          prev.map((el) =>
+            el.id === activeTextId && el.type === "text"
+              ? tempTextState.current!
+              : el
+          )
         );
         return;
       }
-      if (isResizingNote && activeNoteId && resizeDirection && tempNoteState.current) {
+      if (isDraggingShape && activeShapeId) {
+        const el = elements.find((el) => el.id === activeShapeId);
+        if (!el) return;
+        const deltaX = canvasX - dragOffset.x;
+        const deltaY = canvasY - dragOffset.y;
+        if (el.type === "path") {
+          const pathEl = el as PathElement;
+          const newPoints = pathEl.points.map((p) => ({
+            x: p.x + deltaX,
+            y: p.y + deltaY,
+          }));
+          setElements((prev) =>
+            prev.map((el) =>
+              el.id === activeShapeId ? { ...el, points: newPoints } : el
+            )
+          );
+        } else {
+          const shape = el as ShapeElement;
+          const newX = shape.x + deltaX;
+          const newY = shape.y + deltaY;
+          const canvasWidth = canvasDimensions.width / zoomLevel;
+          const canvasHeight = canvasDimensions.height / zoomLevel;
+          const clampedX = Math.max(
+            0,
+            Math.min(newX, canvasWidth - shape.width)
+          );
+          const clampedY = Math.max(
+            0,
+            Math.min(newY, canvasHeight - shape.height)
+          );
+          setElements((prev) =>
+            prev.map((el) =>
+              el.id === activeShapeId ? { ...el, x: clampedX, y: clampedY } : el
+            )
+          );
+        }
+        setDragOffset({ x: canvasX, y: canvasY });
+        return;
+      }
+      if (
+        isResizingNote &&
+        activeNoteId &&
+        resizeDirection &&
+        tempNoteState.current
+      ) {
         const MIN_SIZE = 50;
-        const MAX_SIZE = Math.max(canvasDimensions.width, canvasDimensions.height) / zoomLevel;
+        const MAX_SIZE =
+          Math.max(canvasDimensions.width, canvasDimensions.height) / zoomLevel;
         const mouseX = canvasX;
         const mouseY = canvasY;
         let newX = tempNoteState.current.x;
@@ -982,48 +1391,197 @@ const Canvas: React.FC<CanvasProps> = ({
         let newHeight = tempNoteState.current.height;
 
         switch (resizeDirection) {
-          case 'se':
+          case "se":
             newWidth = Math.max(MIN_SIZE, Math.min(mouseX - newX, MAX_SIZE));
             newHeight = Math.max(MIN_SIZE, Math.min(mouseY - newY, MAX_SIZE));
             break;
-          case 'sw':
-            newWidth = Math.max(MIN_SIZE, Math.min(tempNoteState.current.x + tempNoteState.current.width - mouseX, MAX_SIZE));
-            newX = tempNoteState.current.x + tempNoteState.current.width - newWidth;
+          case "sw":
+            newWidth = Math.max(
+              MIN_SIZE,
+              Math.min(
+                tempNoteState.current.x + tempNoteState.current.width - mouseX,
+                MAX_SIZE
+              )
+            );
+            newX =
+              tempNoteState.current.x + tempNoteState.current.width - newWidth;
             newHeight = Math.max(MIN_SIZE, Math.min(mouseY - newY, MAX_SIZE));
             break;
-          case 'ne':
+          case "ne":
             newWidth = Math.max(MIN_SIZE, Math.min(mouseX - newX, MAX_SIZE));
-            newHeight = Math.max(MIN_SIZE, Math.min(tempNoteState.current.y + tempNoteState.current.height - mouseY, MAX_SIZE));
-            newY = tempNoteState.current.y + tempNoteState.current.height - newHeight;
+            newHeight = Math.max(
+              MIN_SIZE,
+              Math.min(
+                tempNoteState.current.y + tempNoteState.current.height - mouseY,
+                MAX_SIZE
+              )
+            );
+            newY =
+              tempNoteState.current.y +
+              tempNoteState.current.height -
+              newHeight;
             break;
-          case 'nw':
-            newWidth = Math.max(MIN_SIZE, Math.min(tempNoteState.current.x + tempNoteState.current.width - mouseX, MAX_SIZE));
-            newX = tempNoteState.current.x + tempNoteState.current.width - newWidth;
-            newHeight = Math.max(MIN_SIZE, Math.min(tempNoteState.current.y + tempNoteState.current.height - mouseY, MAX_SIZE));
-            newY = tempNoteState.current.y + tempNoteState.current.height - newHeight;
+          case "nw":
+            newWidth = Math.max(
+              MIN_SIZE,
+              Math.min(
+                tempNoteState.current.x + tempNoteState.current.width - mouseX,
+                MAX_SIZE
+              )
+            );
+            newX =
+              tempNoteState.current.x + tempNoteState.current.width - newWidth;
+            newHeight = Math.max(
+              MIN_SIZE,
+              Math.min(
+                tempNoteState.current.y + tempNoteState.current.height - mouseY,
+                MAX_SIZE
+              )
+            );
+            newY =
+              tempNoteState.current.y +
+              tempNoteState.current.height -
+              newHeight;
             break;
         }
 
-        newX = Math.max(0, Math.min(newX, canvasDimensions.width / zoomLevel - newWidth));
-        newY = Math.max(0, Math.min(newY, canvasDimensions.height / zoomLevel - newHeight));
+        newX = Math.max(
+          0,
+          Math.min(newX, canvasDimensions.width / zoomLevel - newWidth)
+        );
+        newY = Math.max(
+          0,
+          Math.min(newY, canvasDimensions.height / zoomLevel - newHeight)
+        );
 
-        tempNoteState.current = { ...tempNoteState.current, x: newX, y: newY, width: newWidth, height: newHeight };
+        tempNoteState.current = {
+          ...tempNoteState.current,
+          x: newX,
+          y: newY,
+          width: newWidth,
+          height: newHeight,
+        };
         setStickyNotes((prev) => {
           const updatedNotes = prev.map((note) =>
             note.id === activeNoteId ? { ...tempNoteState.current! } : note
           );
-          const filteredNotes = updatedNotes.filter((note) => isValidId(note.id));
+          const filteredNotes = updatedNotes.filter((note) =>
+            isValidId(note.id)
+          );
           return filteredNotes;
         });
         return;
       }
+      if (
+        isResizingShape &&
+        activeShapeId &&
+        resizeDirection &&
+        tempShapeState.current
+      ) {
+        const MIN_SIZE = 50;
+        const MAX_SIZE =
+          Math.max(canvasDimensions.width, canvasDimensions.height) / zoomLevel;
+        const mouseX = canvasX;
+        const mouseY = canvasY;
+        let newX = tempShapeState.current.x;
+        let newY = tempShapeState.current.y;
+        let newWidth = tempShapeState.current.width;
+        let newHeight = tempShapeState.current.height;
+        switch (resizeDirection) {
+          case "se":
+            newWidth = Math.max(MIN_SIZE, Math.min(mouseX - newX, MAX_SIZE));
+            newHeight = Math.max(MIN_SIZE, Math.min(mouseY - newY, MAX_SIZE));
+            break;
+          case "sw":
+            newWidth = Math.max(
+              MIN_SIZE,
+              Math.min(
+                tempShapeState.current.x +
+                  tempShapeState.current.width -
+                  mouseX,
+                MAX_SIZE
+              )
+            );
+            newX =
+              tempShapeState.current.x +
+              tempShapeState.current.width -
+              newWidth;
+            newHeight = Math.max(MIN_SIZE, Math.min(mouseY - newY, MAX_SIZE));
+            break;
+          case "ne":
+            newWidth = Math.max(MIN_SIZE, Math.min(mouseX - newX, MAX_SIZE));
+            newHeight = Math.max(
+              MIN_SIZE,
+              Math.min(
+                tempShapeState.current.y +
+                  tempShapeState.current.height -
+                  mouseY,
+                MAX_SIZE
+              )
+            );
+            newY =
+              tempShapeState.current.y +
+              tempShapeState.current.height -
+              newHeight;
+            break;
+          case "nw":
+            newWidth = Math.max(
+              MIN_SIZE,
+              Math.min(
+                tempShapeState.current.x +
+                  tempShapeState.current.width -
+                  mouseX,
+                MAX_SIZE
+              )
+            );
+            newX =
+              tempShapeState.current.x +
+              tempShapeState.current.width -
+              newWidth;
+            newHeight = Math.max(
+              MIN_SIZE,
+              Math.min(
+                tempShapeState.current.y +
+                  tempShapeState.current.height -
+                  mouseY,
+                MAX_SIZE
+              )
+            );
+            newY =
+              tempShapeState.current.y +
+              tempShapeState.current.height -
+              newHeight;
+            break;
+        }
+        newX = Math.max(
+          0,
+          Math.min(newX, canvasDimensions.width / zoomLevel - newWidth)
+        );
+        newY = Math.max(
+          0,
+          Math.min(newY, canvasDimensions.height / zoomLevel - newHeight)
+        );
+        tempShapeState.current = {
+          ...tempShapeState.current,
+          x: newX,
+          y: newY,
+          width: newWidth,
+          height: newHeight,
+        };
+        setElements((prev) =>
+          prev.map((el) =>
+            el.id === activeShapeId ? { ...tempShapeState.current! } : el
+          )
+        );
+        return;
+      }
       if (!isDrawing || !currentElement) return;
-      if ('points' in currentElement) {
+      if ("points" in currentElement) {
         setCurrentElement({
           ...currentElement,
           points: [...currentElement.points, { x: canvasX, y: canvasY }],
         });
-      } else if (startPoint && 'width' in currentElement) {
+      } else if (startPoint && "width" in currentElement) {
         setCurrentElement({
           ...currentElement,
           width: canvasX - startPoint.x,
@@ -1038,9 +1596,12 @@ const Canvas: React.FC<CanvasProps> = ({
       panStart,
       isDraggingNote,
       isDraggingText,
+      isDraggingShape,
       isResizingNote,
+      isResizingShape,
       activeNoteId,
       activeTextId,
+      activeShapeId,
       resizeDirection,
       dragOffset,
       isDrawing,
@@ -1062,7 +1623,9 @@ const Canvas: React.FC<CanvasProps> = ({
       if (tempNoteState.current && activeNoteId) {
         const updatedNote = { ...tempNoteState.current };
         setStickyNotes((prev) => {
-          const newNotes = prev.map((note) => (note.id === activeNoteId ? updatedNote : note)).filter((note) => isValidId(note.id));
+          const newNotes = prev
+            .map((note) => (note.id === activeNoteId ? updatedNote : note))
+            .filter((note) => isValidId(note.id));
           debouncedSaveToHistory(elements, newNotes);
           return newNotes;
         });
@@ -1076,7 +1639,9 @@ const Canvas: React.FC<CanvasProps> = ({
     if (isDraggingText && activeTextId && tempTextState.current) {
       const updatedText = { ...tempTextState.current };
       setElements((prev) => {
-        const newElements = prev.map((el) => (el.id === activeTextId && el.type === 'text' ? updatedText : el));
+        const newElements = prev.map((el) =>
+          el.id === activeTextId && el.type === "text" ? updatedText : el
+        );
         debouncedSaveToHistory(newElements, stickyNotes);
         return newElements;
       });
@@ -1084,17 +1649,36 @@ const Canvas: React.FC<CanvasProps> = ({
       tempTextState.current = null;
       return;
     }
-    if (tool === 'text' && editingTextId) {
+    if (isDraggingShape || isResizingShape) {
+      if (isResizingShape && tempShapeState.current && activeShapeId) {
+        const updatedShape = { ...tempShapeState.current };
+        setElements((prev) => {
+          const newElements = prev.map((el) =>
+            el.id === activeShapeId ? updatedShape : el
+          );
+          debouncedSaveToHistory(newElements, stickyNotes);
+          return newElements;
+        });
+      } else {
+        debouncedSaveToHistory(elements, stickyNotes);
+      }
+      setIsDraggingShape(false);
+      setIsResizingShape(false);
+      setResizeDirection(null);
+      tempShapeState.current = null;
+      return;
+    }
+    if (tool === "text" && editingTextId) {
       return;
     }
     if (!isDrawing || !currentElement) return;
     setIsDrawing(false);
     setStartPoint(null);
-    if ('points' in currentElement && currentElement.points.length > 1) {
+    if ("points" in currentElement && currentElement.points.length > 1) {
       const newElements = [...elements, currentElement];
       setElements(newElements);
       debouncedSaveToHistory(newElements, stickyNotes);
-    } else if ('width' in currentElement) {
+    } else if ("width" in currentElement) {
       const shape = currentElement as ShapeElement;
       if (shape.width !== 0 || shape.height !== 0) {
         const fixedShape = {
@@ -1113,20 +1697,30 @@ const Canvas: React.FC<CanvasProps> = ({
     redrawContentCanvas();
   };
 
-  const handleStickyNoteMouseDown = (e: React.MouseEvent<HTMLDivElement>, noteId: string) => {
+  const handleStickyNoteMouseDown = (
+    e: React.MouseEvent<HTMLDivElement>,
+    noteId: string
+  ) => {
     e.stopPropagation();
     if (!isValidId(noteId)) return;
     setActiveNoteId(noteId);
     const note = uniqueStickyNotes.find((n) => n.id === noteId);
     if (!note) return;
-    const { x: canvasX, y: canvasY } = getCanvasCoordinates(e.clientX, e.clientY);
+    const { x: canvasX, y: canvasY } = getCanvasCoordinates(
+      e.clientX,
+      e.clientY
+    );
     setDragOffset({ x: canvasX - note.x, y: canvasY - note.y });
     tempNoteState.current = { ...note };
     setIsDraggingNote(true);
     if (editingNoteId === noteId) setEditingNoteId(null);
   };
 
-  const handleResizeStart = (e: React.MouseEvent<HTMLDivElement>, noteId: string, direction: string) => {
+  const handleResizeStart = (
+    e: React.MouseEvent<HTMLDivElement>,
+    noteId: string,
+    direction: string
+  ) => {
     e.stopPropagation();
     e.preventDefault();
     if (!isValidId(noteId)) return;
@@ -1139,12 +1733,35 @@ const Canvas: React.FC<CanvasProps> = ({
     if (editingNoteId === noteId) setEditingNoteId(null);
   };
 
-  const handleStickyNoteDoubleClick = (e: React.MouseEvent<HTMLDivElement>, noteId: string) => {
+  const handleShapeResizeStart = (
+    e: React.MouseEvent<HTMLDivElement>,
+    shapeId: string,
+    direction: string
+  ) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (!isValidId(shapeId)) return;
+    setActiveShapeId(shapeId);
+    setIsResizingShape(true);
+    setResizeDirection(direction);
+    const shape = elements.find(
+      (el) => el.id === shapeId && el.type !== "path" && el.type !== "text"
+    ) as ShapeElement;
+    if (!shape) return;
+    tempShapeState.current = { ...shape };
+  };
+
+  const handleStickyNoteDoubleClick = (
+    e: React.MouseEvent<HTMLDivElement>,
+    noteId: string
+  ) => {
     e.stopPropagation();
     if (!isValidId(noteId)) return;
     setEditingNoteId(noteId);
     setTimeout(() => {
-      const textarea = document.querySelector(`[data-note-id="${noteId}"] textarea`) as HTMLTextAreaElement | null;
+      const textarea = document.querySelector(
+        `[data-note-id="${noteId}"] textarea`
+      ) as HTMLTextAreaElement | null;
       if (textarea) {
         textarea.focus();
         textarea.select();
@@ -1152,12 +1769,17 @@ const Canvas: React.FC<CanvasProps> = ({
     }, 0);
   };
 
-  const handleStickyNoteTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>, noteId: string) => {
+  const handleStickyNoteTextChange = (
+    e: React.ChangeEvent<HTMLTextAreaElement>,
+    noteId: string
+  ) => {
     if (!isValidId(noteId)) return;
     setStickyNotes((prev) => {
-      const newNotes = prev.map((note) =>
-        note.id === noteId ? { ...note, text: e.target.value } : note
-      ).filter((note) => isValidId(note.id));
+      const newNotes = prev
+        .map((note) =>
+          note.id === noteId ? { ...note, text: e.target.value } : note
+        )
+        .filter((note) => isValidId(note.id));
       debouncedSaveToHistory(elements, newNotes);
       return newNotes;
     });
@@ -1168,29 +1790,45 @@ const Canvas: React.FC<CanvasProps> = ({
     debouncedSaveToHistory(elements, stickyNotes);
   };
 
-  const handleTextMouseDown = (e: React.MouseEvent<HTMLDivElement>, textId: string) => {
+  const handleTextMouseDown = (
+    e: React.MouseEvent<HTMLDivElement>,
+    textId: string
+  ) => {
     e.stopPropagation();
     if (!isValidId(textId) || editingTextId === textId) return;
     setActiveTextId(textId);
-    const textElement = elements.find((el) => el.id === textId && el.type === 'text') as TextElement;
+    const textElement = elements.find(
+      (el) => el.id === textId && el.type === "text"
+    ) as TextElement;
     if (!textElement) return;
-    const { x: canvasX, y: canvasY } = getCanvasCoordinates(e.clientX, e.clientY);
+    const { x: canvasX, y: canvasY } = getCanvasCoordinates(
+      e.clientX,
+      e.clientY
+    );
     setDragOffset({ x: canvasX - textElement.x, y: canvasY - textElement.y });
     tempTextState.current = { ...textElement };
     setIsDraggingText(true);
   };
 
-  const handleTextDoubleClick = (e: React.MouseEvent<HTMLDivElement>, textId: string) => {
+  const handleTextDoubleClick = (
+    e: React.MouseEvent<HTMLDivElement>,
+    textId: string
+  ) => {
     e.stopPropagation();
     if (!isValidId(textId)) return;
     setEditingTextId(textId);
   };
 
-  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>, textId: string) => {
+  const handleTextChange = (
+    e: React.ChangeEvent<HTMLTextAreaElement>,
+    textId: string
+  ) => {
     if (!isValidId(textId)) return;
     setElements((prev) => {
       const newElements = prev.map((el) =>
-        el.id === textId && el.type === 'text' ? { ...el, text: e.target.value } : el
+        el.id === textId && el.type === "text"
+          ? { ...el, text: e.target.value }
+          : el
       );
       debouncedSaveToHistory(newElements, stickyNotes);
       return newElements;
@@ -1201,7 +1839,8 @@ const Canvas: React.FC<CanvasProps> = ({
     setEditingTextId(null);
     setElements((prev) => {
       const newElements = prev.filter(
-        (el) => !(el.type === 'text' && el.id === editingTextId && !el.text.trim())
+        (el) =>
+          !(el.type === "text" && el.id === editingTextId && !el.text.trim())
       );
       debouncedSaveToHistory(newElements, stickyNotes);
       return newElements;
@@ -1209,7 +1848,8 @@ const Canvas: React.FC<CanvasProps> = ({
   };
 
   const handleZoomIn = () => setZoomLevel((prev) => Math.min(prev + 0.25, 4.0));
-  const handleZoomOut = () => setZoomLevel((prev) => Math.max(prev - 0.25, 0.25));
+  const handleZoomOut = () =>
+    setZoomLevel((prev) => Math.max(prev - 0.25, 0.25));
 
   const handleDeleteStickyNote = (noteId: string) => {
     if (!isValidId(noteId)) return;
@@ -1241,11 +1881,113 @@ const Canvas: React.FC<CanvasProps> = ({
         width={canvasDimensions.width}
         height={canvasDimensions.height}
         className={`absolute top-0 left-0 touch-none ${
-          isPanning ? 'cursor-grab' : tool === 'stickyNote' || tool === 'text' ? 'cursor-cell' : 'cursor-crosshair'
+          isPanning
+            ? "cursor-grab"
+            : tool === "stickyNote" || tool === "text"
+            ? "cursor-cell"
+            : "cursor-crosshair"
         }`}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
       />
+      {activeShapeId &&
+        elements.find((el) => el.id === activeShapeId)?.type !== "path" &&
+        !isDrawing &&
+        !isPanning && (
+          <>
+            {elements
+              .filter(
+                (el) =>
+                  el.id === activeShapeId &&
+                  el.type !== "path" &&
+                  el.type !== "text"
+              )
+              .map((shape) => {
+                const { x, y, width, height } = shape;
+                const adjustedX = x * zoomLevel + panOffset.x;
+                const adjustedY = y * zoomLevel + panOffset.y;
+                const adjustedWidth = width * zoomLevel;
+                const adjustedHeight = height * zoomLevel;
+                return (
+                  <React.Fragment key={shape.id}>
+                    <div
+                      className="absolute w-4 h-4 bg-purple-600 rounded-full cursor-nw-resize z-30"
+                      style={{
+                        left: `${adjustedX}px`,
+                        top: `${adjustedY}px`,
+                        transform: "translate(-50%, -50%)",
+                      }}
+                      onMouseDown={(e) =>
+                        handleShapeResizeStart(e, shape.id, "nw")
+                      }
+                    />
+                    <div
+                      className="absolute w-4 h-4 bg-purple-600 rounded-full cursor-ne-resize z-30"
+                      style={{
+                        left: `${adjustedX + adjustedWidth}px`,
+                        top: `${adjustedY}px`,
+                        transform: "translate(-50%, -50%)",
+                      }}
+                      onMouseDown={(e) =>
+                        handleShapeResizeStart(e, shape.id, "ne")
+                      }
+                    />
+                    <div
+                      className="absolute w-4 h-4 bg-purple-600 rounded-full cursor-sw-resize z-30"
+                      style={{
+                        left: `${adjustedX}px`,
+                        top: `${adjustedY + adjustedHeight}px`,
+                        transform: "translate(-50%, -50%)",
+                      }}
+                      onMouseDown={(e) =>
+                        handleShapeResizeStart(e, shape.id, "sw")
+                      }
+                    />
+                    <div
+                      className="absolute w-4 h-4 bg-purple-600 rounded-full cursor-se-resize z-30"
+                      style={{
+                        left: `${adjustedX + adjustedWidth}px`,
+                        top: `${adjustedY + adjustedHeight}px`,
+                        transform: "translate(-50%, -50%)",
+                      }}
+                      onMouseDown={(e) =>
+                        handleShapeResizeStart(e, shape.id, "se")
+                      }
+                    />
+                    <div
+                      className="absolute top-0 right-0 w-6 h-6 bg-red-500 text-white rounded-full -translate-x-1/2 -translate-y-1/2 cursor-pointer z-30 hover:bg-red-600 transition-all duration-200 transform hover:scale-105"
+                      style={{
+                        left: `${adjustedX + adjustedWidth}px`,
+                        top: `${adjustedY}px`,
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setElements((prev) =>
+                          prev.filter((el) => el.id !== activeShapeId)
+                        );
+                        setActiveShapeId(null);
+                      }}
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="white"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                      </svg>
+                    </div>
+                  </React.Fragment>
+                );
+              })}
+          </>
+        )}
       {uniqueStickyNotes.map((note) => (
         <StickyNoteComponent
           key={note.id}
@@ -1267,7 +2009,7 @@ const Canvas: React.FC<CanvasProps> = ({
         />
       ))}
       {elements
-        .filter((el) => el.type === 'text')
+        .filter((el) => el.type === "text")
         .map((textElement) => (
           <TextComponent
             key={textElement.id}
@@ -1296,7 +2038,9 @@ const Canvas: React.FC<CanvasProps> = ({
               key={`color-${color.bg}-${index}`}
               className="w-8 h-8 rounded-full border border-gray-200 hover:scale-105 hover:border-purple-300 transition-all duration-200"
               style={{ backgroundColor: color.bg, borderColor: color.text }}
-              onClick={() => handleColorSelect(colorPicker.noteId, color.bg, color.text)}
+              onClick={() =>
+                handleColorSelect(colorPicker.noteId, color.bg, color.text)
+              }
             />
           ))}
         </div>
@@ -1307,7 +2051,7 @@ const Canvas: React.FC<CanvasProps> = ({
           className="p-2 rounded-l-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
           disabled={zoomLevel <= 0.25}
           aria-label="Zoom out"
-          style={{ minHeight: '44px', minWidth: '44px' }}
+          style={{ minHeight: "44px", minWidth: "44px" }}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -1324,13 +2068,15 @@ const Canvas: React.FC<CanvasProps> = ({
             <line x1="8" y1="12" x2="16" y2="12" />
           </svg>
         </button>
-        <span className="px-3 border-l border-r border-purple-500 text-sm select-none">{Math.round(zoomLevel * 100)}%</span>
+        <span className="px-3 border-l border-r border-purple-500 text-sm select-none">
+          {Math.round(zoomLevel * 100)}%
+        </span>
         <button
           onClick={handleZoomIn}
           className="p-2 rounded-r-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
           disabled={zoomLevel >= 4.0}
           aria-label="Zoom in"
-          style={{ minHeight: '44px', minWidth: '44px' }}
+          style={{ minHeight: "44px", minWidth: "44px" }}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"

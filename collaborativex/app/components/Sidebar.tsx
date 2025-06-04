@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Pencil, Eraser, Highlighter, Square, StickyNote, Type,
   ChevronLeft, ChevronRight, UndoIcon, RedoIcon, Trash2,
-  Circle, Triangle, Diamond, Star, ArrowRight,
+  Circle, Triangle, Diamond, Star, ArrowUp, ArrowDown, ArrowLeft, ArrowRight,
   Heart, Pentagon, Hexagon, Octagon, CrossIcon, SmilePlus, Cloud,
   Bold, Italic, Underline
 } from 'lucide-react';
@@ -85,7 +85,10 @@ const Sidebar: React.FC<SidebarProps> = ({
     { type: 'triangle', label: 'Triangle', icon: <Triangle size={16} /> },
     { type: 'diamond', label: 'Diamond', icon: <Diamond size={16} /> },
     { type: 'star', label: 'Star', icon: <Star size={16} /> },
-    { type: 'arrow', label: 'Arrow', icon: <ArrowRight size={16} /> },
+    { type: 'arrowUp', label: 'Arrow Up', icon: <ArrowUp size={16} /> },
+    { type: 'arrowDown', label: 'Arrow Down', icon: <ArrowDown size={16} /> },
+    { type: 'arrowLeft', label: 'Arrow Left', icon: <ArrowLeft size={16} /> },
+    { type: 'arrowRight', label: 'Arrow Right', icon: <ArrowRight size={16} /> },
     { type: 'heart', label: 'Heart', icon: <Heart size={16} /> },
     { type: 'pentagon', label: 'Pentagon', icon: <Pentagon size={16} /> },
     { type: 'hexagon', label: 'Hexagon', icon: <Hexagon size={16} /> },
@@ -150,10 +153,9 @@ const Sidebar: React.FC<SidebarProps> = ({
       >
         {isCollapsed ? (
           <div className="h-full px-2 py-5 flex flex-col items-center justify-start">
-            {/* Logo in collapsed state */}
             <div className="mb-4">
               <img
-                src="/logo2.png" // Adjust the path based on your project structure
+                src="/logo2.png"
                 alt="Logo"
                 className="w-10 h-10 rounded-full object-contain transition-all duration-300 transform hover:scale-110 shadow-lg hover:shadow-purple-500/30"
               />
@@ -247,10 +249,9 @@ const Sidebar: React.FC<SidebarProps> = ({
           </div>
         ) : (
           <div className="h-full py-4 px-4 flex flex-col overflow-y-auto scrollbar-custom">
-            {/* Logo in expanded state */}
             <div className="mb-5 flex items-center justify-center">
               <img
-                src="/logo2.png" // Adjust the path based on your project structure
+                src="/logo2.png"
                 alt="Logo"
                 className="w-16 h-16 rounded-full object-contain transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-purple-500/40 border border-purple-500/20 bg-gradient-to-br from-purple-600/20 to-purple-800/20 p-1"
               />

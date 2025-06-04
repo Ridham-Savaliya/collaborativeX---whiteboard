@@ -1,7 +1,22 @@
-
-'use client'
-import React, { useState, useEffect } from 'react';
-import { Search, Plus, ArrowLeft, Clock, LayoutGrid, Star, Filter, Settings, Compass, ChevronLeft, ChevronRight, Users, Target, X } from 'lucide-react';
+"use client";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import {
+  Search,
+  Plus,
+  ArrowLeft,
+  Clock,
+  LayoutGrid,
+  Star,
+  Filter,
+  Settings,
+  Compass,
+  ChevronLeft,
+  ChevronRight,
+  Users,
+  Target,
+  X,
+} from "lucide-react";
 
 interface Whiteboard {
   id: string;
@@ -11,23 +26,26 @@ interface Whiteboard {
   purpose?: string;
   collaborators?: string[];
 }
+  
+
 
 const Onboarding = () => {
+  const router = useRouter();
   const [whiteboards, setWhiteboards] = useState<Whiteboard[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
-  const [view, setView] = useState<'grid' | 'list'>('grid');
+  const [view, setView] = useState<"grid" | "list">("grid");
   const [isOnboarding, setIsOnboarding] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(1);
   const [onboardingData, setOnboardingData] = useState({
-    name: '',
-    purpose: '',
-    collaborators: '',
+    name: "",
+    purpose: "",
+    collaborators: "",
   });
 
   // Load whiteboards from localStorage when component mounts
   useEffect(() => {
-    const saved = localStorage.getItem('whiteboards');
+    const saved = localStorage.getItem("whiteboards");
     if (saved) {
       try {
         setWhiteboards(JSON.parse(saved));
@@ -40,29 +58,31 @@ const Onboarding = () => {
 
   // Save whiteboards to localStorage whenever they change
   useEffect(() => {
-    localStorage.setItem('whiteboards', JSON.stringify(whiteboards));
+    localStorage.setItem("whiteboards", JSON.stringify(whiteboards));
   }, [whiteboards]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return new Intl.DateTimeFormat('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: 'numeric',
-      minute: 'numeric',
+    return new Intl.DateTimeFormat("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "numeric",
     }).format(date);
   };
 
   const toggleFavorite = (id: string) => {
-    setWhiteboards(whiteboards.map(board => 
-      board.id === id ? { ...board, isFavorite: !board.isFavorite } : board
-    ));
+    setWhiteboards(
+      whiteboards.map((board) =>
+        board.id === id ? { ...board, isFavorite: !board.isFavorite } : board
+      )
+    );
   };
 
   const deleteWhiteboard = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this whiteboard?')) {
-      setWhiteboards(whiteboards.filter(board => board.id !== id));
+    if (window.confirm("Are you sure you want to delete this whiteboard?")) {
+      setWhiteboards(whiteboards.filter((board) => board.id !== id));
     }
   };
 
@@ -82,18 +102,22 @@ const Onboarding = () => {
         createdAt: new Date().toISOString(),
         isFavorite: false,
         purpose: onboardingData.purpose,
-        collaborators: onboardingData.collaborators ? onboardingData.collaborators.split(',').map(email => email.trim()) : [],
+        collaborators: onboardingData.collaborators
+          ? onboardingData.collaborators.split(",").map((email) => email.trim())
+          : [],
       };
       setWhiteboards([newWhiteboard, ...whiteboards]);
       setIsOnboarding(false);
       setOnboardingStep(1);
-      setOnboardingData({ name: '', purpose: '', collaborators: '' });
+      setOnboardingData({ name: "", purpose: "", collaborators: "" });
     }
   };
 
   const filteredWhiteboards = whiteboards
-    .filter(board => board.name.toLowerCase().includes(searchTerm.toLowerCase()))
-    .filter(board => !showFavoritesOnly || board.isFavorite);
+    .filter((board) =>
+      board.name.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .filter((board) => !showFavoritesOnly || board.isFavorite);
 
   if (isOnboarding) {
     return (
@@ -122,7 +146,9 @@ const Onboarding = () => {
               <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
                 Create Whiteboard
               </h1>
-              <p className="text-sm text-gray-500 mt-1">Step {onboardingStep} of 3</p>
+              <p className="text-sm text-gray-500 mt-1">
+                Step {onboardingStep} of 3
+              </p>
             </div>
             <button
               onClick={() => setIsOnboarding(false)}
@@ -140,18 +166,20 @@ const Onboarding = () => {
                   <div
                     className={`w-12 h-12 rounded-full flex items-center justify-center font-semibold transition-all duration-300 ${
                       step === onboardingStep
-                        ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg scale-110'
+                        ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg scale-110"
                         : step < onboardingStep
-                        ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white'
-                        : 'bg-gray-100 text-gray-400'
+                        ? "bg-gradient-to-r from-green-500 to-emerald-500 text-white"
+                        : "bg-gray-100 text-gray-400"
                     }`}
                   >
-                    {step < onboardingStep ? '✓' : step}
+                    {step < onboardingStep ? "✓" : step}
                   </div>
                   {step < 3 && (
                     <div
                       className={`w-16 h-1 mx-2 rounded-full transition-all duration-500 ${
-                        step < onboardingStep ? 'bg-gradient-to-r from-green-500 to-emerald-500' : 'bg-gray-200'
+                        step < onboardingStep
+                          ? "bg-gradient-to-r from-green-500 to-emerald-500"
+                          : "bg-gray-200"
                       }`}
                     />
                   )}
@@ -167,23 +195,43 @@ const Onboarding = () => {
                   <div className="w-16 h-16 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Target size={28} className="text-indigo-600" />
                   </div>
-                  <h2 className="text-3xl font-bold text-gray-800 mb-3">Name your whiteboard</h2>
-                  <p className="text-gray-600 text-lg">Give your whiteboard a descriptive name that inspires creativity</p>
+                  <h2 className="text-3xl font-bold text-gray-800 mb-3">
+                    Name your whiteboard
+                  </h2>
+                  <p className="text-gray-600 text-lg">
+                    Give your whiteboard a descriptive name that inspires
+                    creativity
+                  </p>
                 </div>
                 <div className="space-y-4">
                   <input
                     type="text"
                     value={onboardingData.name}
-                    onChange={(e) => setOnboardingData({ ...onboardingData, name: e.target.value })}
+                    onChange={(e) =>
+                      setOnboardingData({
+                        ...onboardingData,
+                        name: e.target.value,
+                      })
+                    }
                     placeholder="e.g., Product Strategy 2025"
                     className="w-full px-6 py-4 rounded-2xl text-[#8028f9] border-2 border-gray-200 focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 text-lg placeholder-gray-400"
                     autoFocus
                   />
                   <div className="flex flex-wrap gap-2">
-                    {['Project Planning', 'Team Brainstorm', 'Design Sprint', 'Strategy Session'].map((suggestion) => (
+                    {[
+                      "Project Planning",
+                      "Team Brainstorm",
+                      "Design Sprint",
+                      "Strategy Session",
+                    ].map((suggestion) => (
                       <button
                         key={suggestion}
-                        onClick={() => setOnboardingData({ ...onboardingData, name: suggestion })}
+                        onClick={() =>
+                          setOnboardingData({
+                            ...onboardingData,
+                            name: suggestion,
+                          })
+                        }
                         className="px-4 py-2 bg-gray-100 hover:bg-indigo-100 text-gray-700 hover:text-indigo-700 rounded-full text-sm transition-all duration-200"
                       >
                         {suggestion}
@@ -200,30 +248,66 @@ const Onboarding = () => {
                   <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-pink-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Compass size={28} className="text-purple-600" />
                   </div>
-                  <h2 className="text-3xl font-bold text-gray-800 mb-3">Choose your purpose</h2>
-                  <p className="text-gray-600 text-lg">What will you use this whiteboard for?</p>
+                  <h2 className="text-3xl font-bold text-gray-800 mb-3">
+                    Choose your purpose
+                  </h2>
+                  <p className="text-gray-600 text-lg">
+                    What will you use this whiteboard for?
+                  </p>
                 </div>
                 <div className="grid grid-cols-1 gap-3">
                   {[
-                    { value: 'brainstorming', label: 'Brainstorming', desc: 'Generate and organize ideas', icon: '💡' },
-                    { value: 'planning', label: 'Project Planning', desc: 'Plan and track project progress', icon: '📋' },
-                    { value: 'design', label: 'Design & Wireframing', desc: 'Create mockups and prototypes', icon: '🎨' },
-                    { value: 'teaching', label: 'Teaching & Education', desc: 'Educational content and lessons', icon: '📚' },
-                    { value: 'other', label: 'Other', desc: 'Custom use case', icon: '⚡' }
+                    {
+                      value: "brainstorming",
+                      label: "Brainstorming",
+                      desc: "Generate and organize ideas",
+                      icon: "💡",
+                    },
+                    {
+                      value: "planning",
+                      label: "Project Planning",
+                      desc: "Plan and track project progress",
+                      icon: "📋",
+                    },
+                    {
+                      value: "design",
+                      label: "Design & Wireframing",
+                      desc: "Create mockups and prototypes",
+                      icon: "🎨",
+                    },
+                    {
+                      value: "teaching",
+                      label: "Teaching & Education",
+                      desc: "Educational content and lessons",
+                      icon: "📚",
+                    },
+                    {
+                      value: "other",
+                      label: "Other",
+                      desc: "Custom use case",
+                      icon: "⚡",
+                    },
                   ].map((option) => (
                     <button
                       key={option.value}
-                      onClick={() => setOnboardingData({ ...onboardingData, purpose: option.value })}
+                      onClick={() =>
+                        setOnboardingData({
+                          ...onboardingData,
+                          purpose: option.value,
+                        })
+                      }
                       className={`p-4 rounded-2xl border-2 text-left transition-all duration-200 hover:scale-105 ${
                         onboardingData.purpose === option.value
-                          ? 'border-indigo-500 bg-indigo-50 shadow-lg'
-                          : 'border-gray-200 hover:border-indigo-300 hover:bg-gray-50'
+                          ? "border-indigo-500 bg-indigo-50 shadow-lg"
+                          : "border-gray-200 hover:border-indigo-300 hover:bg-gray-50"
                       }`}
                     >
                       <div className="flex items-center space-x-4">
                         <span className="text-2xl">{option.icon}</span>
                         <div>
-                          <h3 className="font-semibold text-gray-800">{option.label}</h3>
+                          <h3 className="font-semibold text-gray-800">
+                            {option.label}
+                          </h3>
                           <p className="text-sm text-gray-600">{option.desc}</p>
                         </div>
                       </div>
@@ -239,20 +323,30 @@ const Onboarding = () => {
                   <div className="w-16 h-16 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Users size={28} className="text-green-600" />
                   </div>
-                  <h2 className="text-3xl font-bold text-gray-800 mb-3">Invite collaborators</h2>
-                  <p className="text-gray-600 text-lg">Add team members to collaborate (optional)</p>
+                  <h2 className="text-3xl font-bold text-gray-800 mb-3">
+                    Invite collaborators
+                  </h2>
+                  <p className="text-gray-600 text-lg">
+                    Add team members to collaborate (optional)
+                  </p>
                 </div>
                 <div className="space-y-4">
                   <input
                     type="text"
                     value={onboardingData.collaborators}
-                    onChange={(e) => setOnboardingData({ ...onboardingData, collaborators: e.target.value })}
+                    onChange={(e) =>
+                      setOnboardingData({
+                        ...onboardingData,
+                        collaborators: e.target.value,
+                      })
+                    }
                     placeholder="colleague@company.com, designer@company.com"
                     className="w-full px-6 py-4 rounded-2xl text-[#8028f9] border-2 border-gray-200 focus:ring-4 focus:ring-green-500/20 focus:border-green-500 transition-all duration-200 text-lg placeholder-gray-400"
                   />
                   <p className="text-sm text-gray-500 flex items-center">
                     <span className="mr-2">💡</span>
-                    Separate multiple emails with commas - you can always add more later
+                    Separate multiple emails with commas - you can always add
+                    more later
                   </p>
                 </div>
               </div>
@@ -261,18 +355,22 @@ const Onboarding = () => {
 
           <div className="mt-10 flex justify-between items-center">
             <div className="text-sm text-gray-500">
-              {onboardingStep === 3 ? 'Ready to create!' : `${3 - onboardingStep} steps remaining`}
+              {onboardingStep === 3
+                ? "Ready to create!"
+                : `${3 - onboardingStep} steps remaining`}
             </div>
             <button
               onClick={handleOnboardingNext}
               disabled={onboardingStep === 1 && !onboardingData.name.trim()}
               className={`flex items-center gap-3 px-8 py-4 rounded-2xl text-white font-semibold transition-all duration-200 ${
                 onboardingStep === 1 && !onboardingData.name.trim()
-                  ? 'bg-gray-300 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-lg hover:shadow-xl transform hover:scale-105'
+                  ? "bg-gray-300 cursor-not-allowed"
+                  : "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-lg hover:shadow-xl transform hover:scale-105"
               }`}
             >
-              <span className="text-lg">{onboardingStep === 3 ? '🚀 Create Whiteboard' : 'Continue'}</span>
+              <span className="text-lg">
+                {onboardingStep === 3 ? "🚀 Create Whiteboard" : "Continue"}
+              </span>
               <ChevronRight size={24} />
             </button>
           </div>
@@ -301,33 +399,43 @@ const Onboarding = () => {
                 <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
                   CollaborativeX
                 </h1>
-                <p className="text-sm text-gray-500 font-medium">Creative Workspace Dashboard</p>
+                <p className="text-sm text-gray-500 font-medium">
+                  Creative Workspace Dashboard
+                </p>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2 bg-white/60 backdrop-blur-sm rounded-2xl p-2 border border-white/20">
-                <button 
-                  onClick={() => setShowFavoritesOnly(!showFavoritesOnly)} 
-                  className={`p-3 rounded-xl transition-all duration-200 hover:scale-105 ${showFavoritesOnly 
-                    ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg' 
-                    : 'bg-gray-100/80 text-gray-500 hover:bg-gray-200/80'}`}
+                <button
+                  onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+                  className={`p-3 rounded-xl transition-all duration-200 hover:scale-105 ${
+                    showFavoritesOnly
+                      ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg"
+                      : "bg-gray-100/80 text-gray-500 hover:bg-gray-200/80"
+                  }`}
                   aria-label="Show favorites only"
                 >
-                  <Star size={20} className={showFavoritesOnly ? 'fill-white' : ''} />
+                  <Star
+                    size={20}
+                    className={showFavoritesOnly ? "fill-white" : ""}
+                  />
                 </button>
-                
-                <button 
-                  onClick={() => setView(view === 'grid' ? 'list' : 'grid')} 
+
+                <button
+                  onClick={() => setView(view === "grid" ? "list" : "grid")}
                   className="p-3 rounded-xl bg-gray-100/80 text-gray-500 hover:bg-gray-200/80 transition-all duration-200 hover:scale-105"
                   aria-label="Toggle view"
                 >
                   <LayoutGrid size={20} />
                 </button>
               </div>
-              
+
               <div className="relative">
-                <Search size={20} className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <Search
+                  size={20}
+                  className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"
+                />
                 <input
                   type="text"
                   placeholder="Search whiteboards..."
@@ -336,8 +444,8 @@ const Onboarding = () => {
                   className="pl-12 pr-6 py-4 rounded-2xl bg-white/60 backdrop-blur-sm border border-white/20 focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 focus:bg-white/80 w-full lg:w-80 transition-all duration-200 placeholder-gray-400"
                 />
               </div>
-              
-              <button 
+
+              <button
                 onClick={() => setIsOnboarding(true)}
                 className="flex items-center gap-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-6 py-4 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 font-semibold"
               >
@@ -361,10 +469,15 @@ const Onboarding = () => {
             </div>
             {searchTerm ? (
               <div className="text-center max-w-md">
-                <h2 className="text-2xl font-bold text-gray-800 mb-3">No matches found</h2>
-                <p className="text-gray-600 text-lg">Try adjusting your search terms or clear filters to see all whiteboards</p>
-                <button 
-                  onClick={() => setSearchTerm('')}
+                <h2 className="text-2xl font-bold text-gray-800 mb-3">
+                  No matches found
+                </h2>
+                <p className="text-gray-600 text-lg">
+                  Try adjusting your search terms or clear filters to see all
+                  whiteboards
+                </p>
+                <button
+                  onClick={() => setSearchTerm("")}
                   className="mt-4 px-6 py-3 bg-indigo-100 text-indigo-700 rounded-xl hover:bg-indigo-200 transition-all duration-200 font-medium"
                 >
                   Clear Search
@@ -372,9 +485,14 @@ const Onboarding = () => {
               </div>
             ) : (
               <div className="text-center max-w-2xl">
-                <h2 className="text-4xl font-bold text-gray-800 mb-4">Start Your Creative Journey</h2>
-                <p className="text-gray-600 text-xl mb-8 leading-relaxed">Create your first whiteboard and bring your ideas to life with our premium collaborative workspace designed for modern teams.</p>
-                <button 
+                <h2 className="text-4xl font-bold text-gray-800 mb-4">
+                  Start Your Creative Journey
+                </h2>
+                <p className="text-gray-600 text-xl mb-8 leading-relaxed">
+                  Create your first whiteboard and bring your ideas to life with
+                  our premium collaborative workspace designed for modern teams.
+                </p>
+                <button
                   onClick={() => setIsOnboarding(true)}
                   className="inline-flex items-center gap-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-8 py-4 rounded-2xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-xl hover:shadow-2xl hover:scale-105 text-lg font-semibold"
                 >
@@ -385,36 +503,35 @@ const Onboarding = () => {
             )}
           </div>
         ) : (
-          <div className={view === 'grid' 
-            ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8" 
-            : "flex flex-col gap-4"
-          }>
+          <div
+            className={
+              view === "grid"
+                ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8"
+                : "flex flex-col gap-4"
+            }
+          >
             {filteredWhiteboards.map((whiteboard, index) => (
-              <div 
+              <div
                 key={whiteboard.id}
                 className={`group relative bg-white/70 backdrop-blur-sm rounded-3xl border border-white/30 transition-all duration-300 hover:scale-105 hover:bg-white/90 hover:shadow-2xl overflow-hidden animate-fade-in ${
-                  view === 'grid' 
-                    ? 'shadow-lg hover:shadow-2xl' 
-                    : 'shadow-md hover:shadow-xl flex items-center'
+                  view === "grid"
+                    ? "shadow-lg hover:shadow-2xl"
+                    : "shadow-md hover:shadow-xl flex items-center"
                 }`}
                 style={{ animationDelay: `${index * 100}ms` }}
               >
-                {view === 'grid' && (
+                {view === "grid" && (
                   <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-indigo-500 to-purple-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 )}
-                
-                <div 
-                  className={`${
-                    view === 'grid' 
-                      ? 'p-8' 
-                      : 'p-6 flex-grow'
-                  }`}
-                >
+
+                <div className={`${view === "grid" ? "p-8" : "p-6 flex-grow"}`}>
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-grow">
-                      <h2 className={`font-bold text-gray-800 group-hover:text-indigo-700 transition-colors duration-200 ${
-                        view === 'grid' ? 'text-xl mb-3' : 'text-lg mb-2'
-                      }`}>
+                      <h2
+                        className={`font-bold text-gray-800 group-hover:text-indigo-700 transition-colors duration-200 ${
+                          view === "grid" ? "text-xl mb-3" : "text-lg mb-2"
+                        }`}
+                      >
                         {whiteboard.name}
                       </h2>
                       {whiteboard.purpose && (
@@ -423,55 +540,82 @@ const Onboarding = () => {
                         </span>
                       )}
                     </div>
-                    <button 
+                    <button
                       onClick={(e) => {
                         e.preventDefault();
                         toggleFavorite(whiteboard.id);
                       }}
                       className={`p-2.5 rounded-full transition-all duration-200 hover:scale-110 ${
-                        whiteboard.isFavorite 
-                          ? 'text-amber-500 bg-amber-50' 
-                          : 'text-gray-400 hover:text-amber-500 hover:bg-amber-50'
+                        whiteboard.isFavorite
+                          ? "text-amber-500 bg-amber-50"
+                          : "text-gray-400 hover:text-amber-500 hover:bg-amber-50"
                       }`}
-                      aria-label={whiteboard.isFavorite ? "Remove from favorites" : "Add to favorites"}
+                      aria-label={
+                        whiteboard.isFavorite
+                          ? "Remove from favorites"
+                          : "Add to favorites"
+                      }
                     >
-                      <Star size={18} className={whiteboard.isFavorite ? 'fill-amber-500' : ''} />
+                      <Star
+                        size={18}
+                        className={
+                          whiteboard.isFavorite ? "fill-amber-500" : ""
+                        }
+                      />
                     </button>
                   </div>
-                  
-                  <div className={`flex items-center text-sm text-gray-500 ${view === 'grid' ? 'mb-6' : 'mb-0'}`}>
+
+                  <div
+                    className={`flex items-center text-sm text-gray-500 ${
+                      view === "grid" ? "mb-6" : "mb-0"
+                    }`}
+                  >
                     <Clock size={16} className="mr-2" />
-                    <span className="font-medium">{formatDate(whiteboard.createdAt)}</span>
+                    <span className="font-medium">
+                      {formatDate(whiteboard.createdAt)}
+                    </span>
                   </div>
 
-                  {view === 'grid' && whiteboard.collaborators && whiteboard.collaborators.length > 0 && (
-                    <div className="flex items-center mt-4">
-                      <Users size={16} className="mr-2 text-gray-400" />
-                      <span className="text-sm text-gray-500">{whiteboard.collaborators.length} collaborator{whiteboard.collaborators.length > 1 ? 's' : ''}</span>
-                    </div>
-                  )}
+                  {view === "grid" &&
+                    whiteboard.collaborators &&
+                    whiteboard.collaborators.length > 0 && (
+                      <div className="flex items-center mt-4">
+                        <Users size={16} className="mr-2 text-gray-400" />
+                        <span className="text-sm text-gray-500">
+                          {whiteboard.collaborators.length} collaborator
+                          {whiteboard.collaborators.length > 1 ? "s" : ""}
+                        </span>
+                      </div>
+                    )}
                 </div>
-                
-                <div className={`${view === 'grid' ? 'absolute inset-x-0 bottom-0 p-4  bg-gradient-to-t from-white/90 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300' : 'flex items-center gap-3 p-4'}`}>
-                  <a 
-                    href={`/whiteboard/${whiteboard.id}`}
+
+                <div
+                  className={`${
+                    view === "grid"
+                      ? "absolute inset-x-0 bottom-0 p-4  bg-gradient-to-t from-white/90 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300"
+                      : "flex items-center gap-3 p-4"
+                  }`}
+                >
+                  <button
+                    onClick={() => router.push(`/whiteboard/${whiteboard.id}`)}
                     className="flex-1 text-center px-4 py-3 mr-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 hover:scale-105 shadow-lg"
+                    aria-label={`Open whiteboard ${whiteboard.name}`}
                   >
                     Open Board
-                  </a>
-                  <button 
+                  </button>
+                  <button
                     className="px-4 py-3 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-xl font-semibold hover:from-red-600 hover:to-pink-600 transition-all duration-200 hover:scale-105 shadow-lg"
                     onClick={(e) => {
                       e.preventDefault();
                       deleteWhiteboard(whiteboard.id);
                     }}
                   >
-                    {view === 'grid' ? 'Delete' : '🗑️'}
+                    {view === "grid" ? "Delete" : "🗑️"}
                   </button>
                 </div>
               </div>
             ))}
-          </div>  
+          </div>
         )}
       </main>
     </div>

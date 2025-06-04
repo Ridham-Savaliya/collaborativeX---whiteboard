@@ -75,7 +75,7 @@ const AuthPage = () => {
       const res = await axios.post("/api/auth/login", { email, password });
       localStorage.setItem("token", res.data.token);
       toast.success(res.data.message);
-      router.push("/whiteboard/slug");
+      router.push("/onboarding");
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Login failed");
     } finally {

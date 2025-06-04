@@ -1,6 +1,7 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useReducer, useState } from 'react';
 import { User, Home, Save, Download } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 const RightNavBar: React.FC = () => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -14,6 +15,8 @@ const RightNavBar: React.FC = () => {
     // Placeholder for export functionality
     alert('Exporting whiteboard as PNG...');
   };
+
+  const router = useRouter();
 
   return (
     <div className="absolute top-5 right-5 flex items-center space-x-2 z-30">
@@ -33,14 +36,14 @@ const RightNavBar: React.FC = () => {
       >
         <Download size={20} />
       </button>
-      <a
-        href="/onboarding"
+        <button 
+        onClick={()=>{router.push("/onboarding")}}
         className="p-2 bg-gray-700/90 text-white rounded-full hover:bg-gray-600 transition-all duration-300"
         title="Go to Dashboard"
-        aria-label="Go to Dashboard"
-      >
+        aria-label="Go to Dashboard">
+      
         <Home size={20} />
-      </a>
+      </button>
       <div className="relative">
         <button
           onClick={() => setIsProfileOpen(!isProfileOpen)}
@@ -58,21 +61,21 @@ const RightNavBar: React.FC = () => {
             </div>
             <div className="border-t border-purple-500/20">
               
-            <a href="/profile">
+            
               <button
-               
+               onClick={()=>{router.push("/profile")}}
                 className="w-full text-left px-4 py-2 text-sm tracking-wider hover:bg-gray-700/80 transition-all duration-300"
               >
                 Profile
-              </button></a>
-             <a href="/">
+              </button>
+             
               <button
-                onClick={() => alert('Logging out...')}
+               onClick={()=>{router.push("/")}}
                 className="w-full text-left px-4 py-2 text-sm hover:bg-gray-700/80 transition-all duration-300"
               >
                 Log Out
               </button>
-             </a>
+             
             </div>
           </div>
         )}
