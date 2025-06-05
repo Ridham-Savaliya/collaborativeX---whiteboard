@@ -57,6 +57,7 @@ const AuthPage = () => {
         name,
       });
       localStorage.setItem("token", res.data.token);
+      localStorage.setItem("userId", res.data.user.id);
       toast.success("Registered successfully!");
       router.push("/onboarding");
     } catch (error: any) {

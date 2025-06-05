@@ -102,16 +102,16 @@ const WhiteboardSchema: Schema = new Schema(
     isFavorite: { type: Boolean, default: false },
     owner: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     elements: [
-      {
-        id: { type: String, required: true },
+      { 
+        id: { type: String, required: false },
         type: {
           type: String,
           enum: ['pen', 'eraser', 'highlighter', 'shape', 'text'],
-          required: true,
+          required: false,
         },
-        points: [{ x: { type: Number, required: true }, y: { type: Number, required: true } }],
-        color: { type: String, required: true },
-        lineWidth: { type: Number, required: true },
+        points: [{ x: { type: Number, required: false}, y: { type: Number, required: false} }],
+        color: { type: String, required: false },
+        lineWidth: { type: Number, required: false },
         shapeType: {
           type: String,
           enum: [
@@ -145,30 +145,30 @@ const WhiteboardSchema: Schema = new Schema(
     ],
     stickyNotes: [
       {
-        id: { type: String, required: true },
-        content: { type: String, required: true },
-        x: { type: Number, required: true },
-        y: { type: Number, required: true },
-        width: { type: Number, required: true },
-        height: { type: Number, required: true },
-        color: { type: String, required: true },
+        id: { type: String, required: false },
+        content: { type: String, required: false },
+        x: { type: Number, required: false },
+        y: { type: Number, required: false },
+        width: { type: Number, required: false},
+        height: { type: Number, required: false},
+        color: { type: String, required: false },
       },
     ],
     history: [
       {
         elements: [
           {
-            id: { type: String, required: true },
+            id: { type: String, required: false },
             type: {
               type: String,
               enum: ['pen', 'eraser', 'highlighter', 'shape', 'text'],
-              required: true,
+              required: false,
             },
             points: [
-              { x: { type: Number, required: true }, y: { type: Number, required: true } },
+              { x: { type: Number, required: false}, y: { type: Number, required: false } },
             ],
-            color: { type: String, required: true },
-            lineWidth: { type: Number, required: true },
+            color: { type: String, required: false },
+            lineWidth: { type: Number, required: false},
             shapeType: {
               type: String,
               enum: [
@@ -202,13 +202,13 @@ const WhiteboardSchema: Schema = new Schema(
         ],
         stickyNotes: [
           {
-            id: { type: String, required: true },
-            content: { type: String, required: true },
-            x: { type: Number, required: true },
-            y: { type: Number, required: true },
-            width: { type: Number, required: true },
-            height: { type: Number, required: true },
-            color: { type: String, required: true },
+            id: { type: String, required: false },
+            content: { type: String, required: false },
+            x: { type: Number, required: false },
+            y: { type: Number, required: false },
+            width: { type: Number, required: false },
+            height: { type: Number, required: false},
+            color: { type: String, required: false },
           },
         ],
       },

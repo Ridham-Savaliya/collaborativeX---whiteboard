@@ -26,7 +26,8 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ message: "invalid credentials!" }, { status: 400 })
     } 
 
-    const token = jwt.sign({ email: isExisted.email, password: isExisted.password },
+    const token = jwt.sign(
+      { userId: isExisted._id, email: isExisted.email, name: isExisted.name },
         process.env.NEXTAUTH_SECRET!,
         { expiresIn: '1h' })
 
