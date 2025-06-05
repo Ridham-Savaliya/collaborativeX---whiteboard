@@ -22,7 +22,7 @@ export async function POST(req: NextRequest, res: NextResponse) {
   const newWhiteboard = new Whiteboard({
     name,
     purpose,
-    collaborators: collaborators || [],
+    collaborators: collaborators,
     isFavorite: false,
     owner: user.userId,
     elements: [],
@@ -32,7 +32,25 @@ export async function POST(req: NextRequest, res: NextResponse) {
 
   await newWhiteboard.save();
 
-  const collaboratorsArray = Array.isArray(collaborators) ? collaborators : [collaborators];
+
+
+  // Sanitize collaborators: split comma-separated strings, trim, filter
+  const rawCollaborators = Array.isArray(collaborators) ? collaborators : [collaborators];
+
+  // Sanitize collaborators: split comma-separated strings, trim, filter
+  const collaboratorsArray = rawCollaborators
+    .flatMap(item =>
+      typeof item === "string" ? item.split(",") : []
+    )
+    .map(email => email.trim())
+    .filter(email =>
+      email &&
+      email.includes("@") &&
+      !email.startsWith("eyJ") && // crude JWT detection
+      !email.endsWith(",") &&
+      email.length > 5
+    );
+
 
   const userRecord = await User.findByIdAndUpdate(
     user.userId,
@@ -51,7 +69,6 @@ export async function POST(req: NextRequest, res: NextResponse) {
     },
     { new: true }
   );
-
 
   // Now manually increment collaborations if collaborators exist
   if (collaborators?.length) {

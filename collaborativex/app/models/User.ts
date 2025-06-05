@@ -88,7 +88,7 @@ const UserSchema: Schema = new Schema(
     ],
     whiteboards: [{ type: Schema.Types.ObjectId, ref: 'Whiteboard' }],
     isOnboarded: { type: Boolean, default: false },
-    invitees: [{ type: String }],
+    invitees: [{ type: String,default:[] }],
   },
   { timestamps: true }
 );
