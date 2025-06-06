@@ -1,9 +1,10 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
-import Canvas from '../../components/Canvas';
-import Sidebar from '../../components/Sidebar';
-import { StickyNote, WhiteboardElement } from '../../components/Types';
+import React, { useState, useEffect, useCallback } from "react";
+import Canvas from "../../components/Canvas";
+import Sidebar from "../../components/Sidebar";
+import { StickyNote, WhiteboardElement } from "../../components/Types";
+import { log } from "console";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -13,29 +14,31 @@ const WhiteboardPage: React.FC<PageProps> = ({ params }) => {
   // Unwrap the params promise using React.use()
   const { id } = React.use(params);
 
-  console.log('Whiteboard ID:', id);
+  console.log("Whiteboard ID:", id);
 
   // Rest of your existing code...
-  const [strokeColor, setStrokeColor] = useState<string>('#000000');
+  const [strokeColor, setStrokeColor] = useState<string>("#000000");
   const [lineWidth, setLineWidth] = useState<number>(5);
-  const [tool, setTool] = useState<'pen' | 'eraser' | 'highlighter' | 'shape' | 'stickyNote' | 'text' | null>('pen');
+  const [tool, setTool] = useState<
+    "pen" | "eraser" | "highlighter" | "shape" | "stickyNote" | "text" | null
+  >("pen");
   const [showShapesDrawer, setShowShapesDrawer] = useState(false);
   const [selectedShapeType, setSelectedShapeType] = useState<
-    | 'rectangle'
-    | 'circle'
-    | 'line'
-    | 'triangle'
-    | 'diamond'
-    | 'star'
-    | 'arrow'
-    | 'heart'
-    | 'pentagon'
-    | 'hexagon'
-    | 'heptagon'
-    | 'octagon'
-    | 'cross'
-    | 'smiley'
-    | 'cloud'
+    | "rectangle"
+    | "circle"
+    | "line"
+    | "triangle"
+    | "diamond"
+    | "star"
+    | "arrow"
+    | "heart"
+    | "pentagon"
+    | "hexagon"
+    | "heptagon"
+    | "octagon"
+    | "cross"
+    | "smiley"
+    | "cloud"
     | null
   >(null);
   const [stickyNotes, setStickyNotes] = useState<StickyNote[]>([]);
@@ -46,16 +49,48 @@ const WhiteboardPage: React.FC<PageProps> = ({ params }) => {
     bold: false,
     italic: false,
     underline: false,
-    fontFamily: 'Arial',
+    fontFamily: "Arial",
   });
-  const [history, setHistory] = useState<{ elements: WhiteboardElement[]; stickyNotes: StickyNote[] }[]>([{ elements: [], stickyNotes: [] }]);
+  const [history, setHistory] = useState<
+    { elements: WhiteboardElement[]; stickyNotes: StickyNote[] }[]
+  >([{ elements: [], stickyNotes: [] }]);
   const [historyIndex, setHistoryIndex] = useState(0);
 
   const canUndo = historyIndex > 0;
   const canRedo = historyIndex < history.length - 1;
 
   useEffect(() => {
-    if (window.innerWidth < 768) { 
+    const startTime = Date.now(); // Track when user opened the page
+    const token = localStorage.getItem("token"); // Get the JWT token
+
+    const handleBeforeUnload = () => {
+      const endTime = Date.now();
+      const durationSeconds = Math.floor((endTime - startTime) / 1000);
+
+      if (token) {
+        fetch("/api/user/profile/timespent", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODQyZTZkZjFjZjIxM2ZmM2FlMzNmMGMiLCJlbWFpbCI6Im1kYXNoODk1MkBnbWFpbC5jb20iLCJuYW1lIjoiYmFsbyIsImlhdCI6MTc0OTIxOTQ2MSwiZXhwIjoxNzQ5MjIzMDYxfQ.XoWju3qSJDTrCX8zJ77NNVnR2ZlSb1D3SnOlGkdcnUw`, // ✅ Auth header
+          },
+          body: JSON.stringify({ sessionDurationSeconds: durationSeconds }),
+          keepalive: true, // ✅ Ensures it still sends even if tab is closed
+        });
+      }
+    };
+
+    // ✅ Attach event before window unloads
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    // ✅ Cleanup on component unmount
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (window.innerWidth < 768) {
       setIsCollapsed(true);
     }
   }, []);
@@ -66,8 +101,8 @@ const WhiteboardPage: React.FC<PageProps> = ({ params }) => {
         setIsCollapsed(true);
       }
     };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, [isCollapsed]);
 
   const clearCanvas = useCallback(() => {
@@ -76,30 +111,45 @@ const WhiteboardPage: React.FC<PageProps> = ({ params }) => {
     setHistoryIndex(0);
   }, []);
 
-  const saveToHistory = useCallback((state: { elements: WhiteboardElement[]; stickyNotes: StickyNote[] }) => {
-    setHistory(prev => {
-      const newHistory = [...prev.slice(0, historyIndex + 1), state];
-      setHistoryIndex(newHistory.length - 1);
-      return newHistory;
-    });
-  }, [historyIndex]);
+  const saveToHistory = useCallback(
+    (state: { elements: WhiteboardElement[]; stickyNotes: StickyNote[] }) => {
+      setHistory((prev) => {
+        const newHistory = [...prev.slice(0, historyIndex + 1), state];
+        setHistoryIndex(newHistory.length - 1);
+        return newHistory;
+      });
+    },
+    [historyIndex]
+  );
 
   const undo = useCallback(() => {
     if (canUndo) {
-      setHistoryIndex(prev => prev - 1);
+      setHistoryIndex((prev) => prev - 1);
     }
   }, [canUndo]);
 
   const redo = useCallback(() => {
     if (canRedo) {
-      setHistoryIndex(prev => prev + 1);
+      setHistoryIndex((prev) => prev + 1);
     }
   }, [canRedo]);
 
-  const handleToolChange = useCallback((newTool: 'pen' | 'eraser' | 'highlighter' | 'shape' | 'stickyNote' | 'text' | null) => {
-    setTool(newTool);
-    setShowShapesDrawer(newTool === 'shape');
-  }, []);
+  const handleToolChange = useCallback(
+    (
+      newTool:
+        | "pen"
+        | "eraser"
+        | "highlighter"
+        | "shape"
+        | "stickyNote"
+        | "text"
+        | null
+    ) => {
+      setTool(newTool);
+      setShowShapesDrawer(newTool === "shape");
+    },
+    []
+  );
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50 font-sans">
@@ -125,7 +175,9 @@ const WhiteboardPage: React.FC<PageProps> = ({ params }) => {
         setIsCollapsed={setIsCollapsed}
         textStyles={textStyles}
         setTextStyles={setTextStyles}
-        addStickyNote={(note: StickyNote) => setStickyNotes(prev => [...prev, note])}
+        addStickyNote={(note: StickyNote) =>
+          setStickyNotes((prev) => [...prev, note])
+        }
       />
       <main className="flex-1 overflow-hidden relative">
         <Canvas

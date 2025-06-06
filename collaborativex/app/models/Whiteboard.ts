@@ -5,6 +5,7 @@ export interface IWhiteboard extends Document {
   purpose: string;
   collaborators: Array<string>;
   isFavorite: boolean;
+  isShared: boolean,
   owner: mongoose.Types.ObjectId;
   elements: Array<{
     id: string;
@@ -13,24 +14,24 @@ export interface IWhiteboard extends Document {
     color: string;
     lineWidth: number;
     shapeType?:
-      | 'rectangle'
-      | 'circle'
-      | 'line'
-      | 'triangle'
-      | 'diamond'
-      | 'star'
-      | 'arrowRight'
-      | 'arrowLeft'
-      | 'arrowUp'
-      | 'arrowDown'
-      | 'heart'
-      | 'pentagon'
-      | 'hexagon'
-      | 'heptagon'
-      | 'octagon'
-      | 'cross'
-      | 'smiley'
-      | 'cloud';
+    | 'rectangle'
+    | 'circle'
+    | 'line'
+    | 'triangle'
+    | 'diamond'
+    | 'star'
+    | 'arrowRight'
+    | 'arrowLeft'
+    | 'arrowUp'
+    | 'arrowDown'
+    | 'heart'
+    | 'pentagon'
+    | 'hexagon'
+    | 'heptagon'
+    | 'octagon'
+    | 'cross'
+    | 'smiley'
+    | 'cloud';
     text?: string;
     fontSize?: number;
     fontFamily?: string;
@@ -55,24 +56,24 @@ export interface IWhiteboard extends Document {
       color: string;
       lineWidth: number;
       shapeType?:
-        | 'rectangle'
-        | 'circle'
-        | 'line'
-        | 'triangle'
-        | 'diamond'
-        | 'star'
-        | 'arrowRight'
-        | 'arrowLeft'
-        | 'arrowUp'
-        | 'arrowDown'
-        | 'heart'
-        | 'pentagon'
-        | 'hexagon'
-        | 'heptagon'
-        | 'octagon'
-        | 'cross'
-        | 'smiley'
-        | 'cloud';
+      | 'rectangle'
+      | 'circle'
+      | 'line'
+      | 'triangle'
+      | 'diamond'
+      | 'star'
+      | 'arrowRight'
+      | 'arrowLeft'
+      | 'arrowUp'
+      | 'arrowDown'
+      | 'heart'
+      | 'pentagon'
+      | 'hexagon'
+      | 'heptagon'
+      | 'octagon'
+      | 'cross'
+      | 'smiley'
+      | 'cloud';
       text?: string;
       fontSize?: number;
       fontFamily?: string;
@@ -97,19 +98,29 @@ export interface IWhiteboard extends Document {
 const WhiteboardSchema: Schema = new Schema(
   {
     name: { type: String, required: true },
-    purpose: { type: String, required: true },
+    purpose: {
+      type: String, required: true,
+      enum: [
+        "Project Planning",
+        "Team Brainstorm",
+        "Design Sprint",
+        "Strategy Session",
+        "Other"
+      ]
+    },
+    isShared: { type: Boolean, default: false },
     collaborators: [{ type: String }],
     isFavorite: { type: Boolean, default: false },
     owner: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     elements: [
-      { 
+      {
         id: { type: String, required: false },
         type: {
           type: String,
           enum: ['pen', 'eraser', 'highlighter', 'shape', 'text'],
           required: false,
         },
-        points: [{ x: { type: Number, required: false}, y: { type: Number, required: false} }],
+        points: [{ x: { type: Number, required: false }, y: { type: Number, required: false } }],
         color: { type: String, required: false },
         lineWidth: { type: Number, required: false },
         shapeType: {
@@ -149,8 +160,8 @@ const WhiteboardSchema: Schema = new Schema(
         content: { type: String, required: false },
         x: { type: Number, required: false },
         y: { type: Number, required: false },
-        width: { type: Number, required: false},
-        height: { type: Number, required: false},
+        width: { type: Number, required: false },
+        height: { type: Number, required: false },
         color: { type: String, required: false },
       },
     ],
@@ -165,10 +176,10 @@ const WhiteboardSchema: Schema = new Schema(
               required: false,
             },
             points: [
-              { x: { type: Number, required: false}, y: { type: Number, required: false } },
+              { x: { type: Number, required: false }, y: { type: Number, required: false } },
             ],
             color: { type: String, required: false },
-            lineWidth: { type: Number, required: false},
+            lineWidth: { type: Number, required: false },
             shapeType: {
               type: String,
               enum: [
@@ -207,7 +218,7 @@ const WhiteboardSchema: Schema = new Schema(
             x: { type: Number, required: false },
             y: { type: Number, required: false },
             width: { type: Number, required: false },
-            height: { type: Number, required: false},
+            height: { type: Number, required: false },
             color: { type: String, required: false },
           },
         ],

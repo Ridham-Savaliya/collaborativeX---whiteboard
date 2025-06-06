@@ -4,7 +4,6 @@ export interface IUser extends Document {
   email: string;
   password: string;
   name: string;
-  username: string;
   profilePicture?: string;
   bio?: string;
   location?: string;
@@ -46,11 +45,13 @@ const UserSchema: Schema = new Schema(
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     name: { type: String, required: true },
-    username: { type: String, required: false, unique: true },
     profilePicture: { type: String },
-    bio: { type: String },
-    location: { type: String },
-    website: { type: String },
+    bio: { type: String, default: "Enter your bio." },
+    location: { type: String, default: "Enter your location." },
+    website: {
+      type: String,
+      default: "Enter your site here"
+    },
     preferences: {
       theme: { type: String, enum: ['light', 'dark', 'system'], default: 'system' },
       notifications: { type: Boolean, default: true },
@@ -63,12 +64,12 @@ const UserSchema: Schema = new Schema(
       timeSpent: { type: String, default: '0h' },
       achievements: { type: Number, default: 0 },
     },
-    achievements: [
+     achievements: [
       {
         id: { type: String, required: false },
         title: { type: String, required: false },
         description: { type: String, required: false },
-        icon: { type: String, required: false},
+        icon: { type: String, required: false },
         unlocked: { type: Boolean, default: false },
         date: { type: Date },
       },
@@ -86,9 +87,12 @@ const UserSchema: Schema = new Schema(
         timestamp: { type: Date, required: false },
       },
     ],
+    isEnabledEmails: { type: Boolean, default: true },
+    isEnabledPrivacyMode: { type: Boolean, default: false },
     whiteboards: [{ type: Schema.Types.ObjectId, ref: 'Whiteboard' }],
     isOnboarded: { type: Boolean, default: false },
-    invitees: [{ type: String,default:[] }],
+    invitees: [{ type: String, default: [] }],
+
   },
   { timestamps: true }
 );

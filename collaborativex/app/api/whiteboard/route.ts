@@ -19,21 +19,6 @@ export async function POST(req: NextRequest, res: NextResponse) {
     return NextResponse.json({ message: "Name and purpose are required" }, { status: 400 });
   }
 
-  const newWhiteboard = new Whiteboard({
-    name,
-    purpose,
-    collaborators: collaborators,
-    isFavorite: false,
-    owner: user.userId,
-    elements: [],
-    stickyNotes: [],
-    history: [],
-  });
-
-  await newWhiteboard.save();
-
-
-
   // Sanitize collaborators: split comma-separated strings, trim, filter
   const rawCollaborators = Array.isArray(collaborators) ? collaborators : [collaborators];
 
@@ -46,18 +31,29 @@ export async function POST(req: NextRequest, res: NextResponse) {
     .filter(email =>
       email &&
       email.includes("@") &&
-      !email.startsWith("eyJ") && // crude JWT detection
       !email.endsWith(",") &&
       email.length > 5
     );
 
+  const newWhiteboard = new Whiteboard({
+    name,
+    purpose,
+    collaborators: collaboratorsArray,
+    isFavorite: false,
+    owner: user.userId,
+    elements: [],
+    stickyNotes: [],
+    history: [],
+  });
+
+  await newWhiteboard.save();
 
   const userRecord = await User.findByIdAndUpdate(
     user.userId,
     {
       $push: {
         whiteboards: newWhiteboard._id,
-      },
+      },  
       ...(collaboratorsArray.length
         ? {
           $addToSet: {
@@ -78,8 +74,6 @@ export async function POST(req: NextRequest, res: NextResponse) {
 
   return NextResponse.json({ whiteboard: newWhiteboard }, { status: 201 });
 }
-
-
 
 
 export async function GET(req: NextRequest) {

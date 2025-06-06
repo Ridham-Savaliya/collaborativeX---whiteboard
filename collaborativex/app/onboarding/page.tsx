@@ -345,7 +345,7 @@ const Onboarding = () => {
                   />
                   <p className="text-sm text-gray-500 flex items-center">
                     <span className="mr-2">💡</span>
-                    Separate multiple emails with commas - you can always add
+                    Separate multiple emails with commas "<b>,</b>" you can always add
                     more later
                   </p>
                 </div>
