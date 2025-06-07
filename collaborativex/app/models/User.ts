@@ -45,7 +45,7 @@ const UserSchema: Schema = new Schema(
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     name: { type: String, required: true },
-    profilePicture: { type: String },
+    profilePicture: { type: String,default:"upload your profilePicture here!"},
     bio: { type: String, default: "Enter your bio." },
     location: { type: String, default: "Enter your location." },
     website: {

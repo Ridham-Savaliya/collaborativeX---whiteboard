@@ -72,7 +72,7 @@ const WhiteboardPage: React.FC<PageProps> = ({ params }) => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODQzYzNlNjk0Y2EyMDg4MTM1ZDQ4NjUiLCJlbWFpbCI6Im1kYXNoODk1MkBnbWFpbC5jb20iLCJuYW1lIjoiYmFsbyIsImlhdCI6MTc0OTI3MTUyNiwiZXhwIjoxNzQ5Mjc1MTI2fQ.pk-eD6tkjspam7L69w8RG492jP8UpfkEleuzlB59RmY`, // ✅ Auth header
+            Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODQzZDU3OTk0Y2EyMDg4MTM1ZDQ5NDYiLCJlbWFpbCI6Im1kYXNoODk1MkBnbWFpbC5jb20iLCJuYW1lIjoiYmFsbyIsImlhdCI6MTc0OTMwMDAwNywiZXhwIjoxNzQ5MzAzNjA3fQ.nd03N9NHM4Ntkt8Y3cs1GTUV6CkiuxQXGaNdt9fIfkQ`, // ✅ Auth header
           },
           body: JSON.stringify({ sessionDurationSeconds: durationSeconds }),
           keepalive: true, // ✅ Ensures it still sends even if tab is closed

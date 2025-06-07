@@ -34,9 +34,9 @@ export async function PATCH(req: NextRequest) {
     const { userId } = authResult as AuthenticatedUser;
 
     const body = await req.json();
-    const allowedFields = ['name', 'username', 'bio', 'location', 'website', 'profilePicture'];
+    const allowedFields = ['name', 'bio','email', 'location', 'website', 'profilePicture'];
     const updates: any = {};
-
+    
     allowedFields.forEach(field => {
         if (body[field] !== undefined) {
             updates[field] = body[field];
