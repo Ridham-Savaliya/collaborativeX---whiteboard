@@ -4,7 +4,7 @@ import { generateOTP } from "@/app/utills/generateOTP";
 import { sendMail } from "@/app/utills/sendMail";
 import User from "@/app/models/User";
 import OTP from "@/app/models/OTP";
-import connectDB from "@/app/lib/db";
+import connectDB from "@/app/api/_lib/db";
 import bcrypt from "bcryptjs";
 
 export async function POST(req: NextRequest) {

@@ -1,34 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/app/lib/db';
+import connectDB from '@/app/api/_lib/db';
 import User from '@/app/models/User';
 import { authenticate } from '../../_lib/authMiddleware';
 import { v4 as uuidv4 } from 'uuid';
 import Whiteboard from '@/app/models/Whiteboard';
-import {ACHIEVEMENT_PRESETS} from "../../constants/achievements"
+import { ACHIEVEMENT_PRESETS } from "../../constants/achievements"
 
 
 type AuthenticatedUser = { userId: string };
 
-export async function unlockAchievements(req: NextRequest) {
+export async function POST(req: NextRequest) {
+  await connectDB();
+  const authResult = await authenticate(req);
 
-    await connectDB();
-    const authResult = await authenticate(req);
+  if (authResult instanceof NextResponse) return authResult;
 
-    if (authResult instanceof NextResponse) return authResult;
+  const { userId } = authResult as AuthenticatedUser;
 
-    const { userId } = authResult as AuthenticatedUser;
+  const user = await User.findById(userId);
 
-    const user = await User.findById({_id:userId})
+  if (!user) {
+    return NextResponse.json({ message: "User not found" }, { status: 404 });
+  }
 
-   const alreadyUnlocked = new Set(user.achievements?.map((a:any)=>a.id));
+  const alreadyUnlocked = new Set(user.achievements?.map((a: any) => a.id));
 
-   const newAchievements  = ACHIEVEMENT_PRESETS.filter((achievement)=>{
-    return !alreadyUnlocked.has(achievement.id) && achievement.condition(user)
-   })
+  const newAchievements = ACHIEVEMENT_PRESETS.filter((achievement) => {
+    return !alreadyUnlocked.has(achievement.id) && achievement.condition(user);
+  });
 
-     if (newAchievements.length === 0) return; // nothing new to unlock
+  if (newAchievements.length === 0) {
+    return NextResponse.json({ message: "No new achievements" }, { status: 200 });
+  }
 
-     const insertData = newAchievements.map((a) => ({
+
+  const insertData = newAchievements.map((a) => ({
     id: a.id,
     title: a.title,
     description: a.description,
@@ -37,9 +43,26 @@ export async function unlockAchievements(req: NextRequest) {
     date: new Date(),
   }));
 
-   await User.findByIdAndUpdate(userId, {
-    $push: { achievements: { $each: insertData } },
-    $inc: { 'stats.achievements': insertData.length },
-  });
+  // Make sure you're not inserting duplicates again
+  const updatedUser = await User.findByIdAndUpdate(
+    userId,
+    {
+      $addToSet: {
+        achievements: {
+          $each: insertData,
+        },
+      },
+      $inc: { 'stats.achievements': insertData.length },
+    },
+    { new: true, projection: { achievements: 1 } }
+  );
 
+  return NextResponse.json(
+    {
+      message: "Achievements updated successfully!",
+      isAchievements: updatedUser,
+    },
+    { status: 200 }
+  );
 }
+

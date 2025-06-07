@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/app/lib/db';
+import connectDB from '@/app/api/_lib/db';
 import User from '@/app/models/User';
 import { authenticate } from '../../_lib/authMiddleware';
 import { v4 as uuidv4 } from 'uuid';
@@ -28,8 +28,9 @@ export async function POST(req: NextRequest) {
 
     const history = whiteboards.map((wb) => {
         const isOwner = String(wb.owner) === String(userId);
-        const isUpdated = wb.createdAt.getTime() != wb.updatedAt.getTime();
+        const isUpdated = wb.createdAt.getTime() !== wb.updatedAt.getTime();
         const isShared = wb.collaborators?.length > 0;
+        const isJustCreated = wb.createdAt.getTime() === wb.updatedAt.getTime();
 
         let type = "created";
         let description = `Created a new whiteboard for ${wb.purpose.toLowerCase()}`;
@@ -37,13 +38,16 @@ export async function POST(req: NextRequest) {
         if (!isOwner) {
             type = 'collaborated';
             description = `Collaborated with team on ${wb.name}`;
-        } else if (isShared) {
-            type = 'shared';
-            description = `Shared whiteboard with collaborators: ${wb.collaborators.slice(0, 2).join(', ')}`;
+        } else if (isJustCreated) {
+            // Keep type as "created"
         } else if (isUpdated) {
             type = 'edited';
             description = `Made updates to ${wb.name}`;
+        } else if (isShared) {
+            type = 'shared';
+            description = `Shared whiteboard with collaborators: ${wb.collaborators.slice(0, 2).join(', ')}`;
         }
+
 
         return {
             id: uuidv4(),
@@ -52,10 +56,27 @@ export async function POST(req: NextRequest) {
             description,
             timestamp: wb.updatedAt,
         };
-    })
+    });
 
-    user.recentActivity = history;
-    await user.save();
+    // ✅ Only add truly new entries
+    const existingActivities = user.recentActivity || [];
 
-    return NextResponse.json({ history });
+    const newHistory = history.filter((newItem) => {
+        return !existingActivities.some((oldItem: any) =>
+            oldItem.title === newItem.title &&
+            oldItem.type === newItem.type &&
+            new Date(oldItem.timestamp).getTime() === new Date(newItem.timestamp).getTime()
+        );
+    });
+
+    if (newHistory.length > 0) {
+        user.recentActivity = [
+            ...newHistory,
+            ...existingActivities,
+        ].slice(0, 20); // Keep only 20 most recent
+        await user.save();
+    }
+
+    return NextResponse.json({ history: user.recentActivity });
+
 }

@@ -1,7 +1,7 @@
 // app/api/auth/verify-otp/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import connectDB from "@/app/lib/db";
+import connectDB from "@/app/api/_lib/db";
 import OTP from "@/app/models/OTP";
 import User from "@/app/models/User";
 
