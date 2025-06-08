@@ -5,6 +5,7 @@ import Canvas from "../../components/Canvas";
 import Sidebar from "../../components/Sidebar";
 import { StickyNote, WhiteboardElement } from "../../components/Types";
 import { log } from "console";
+import withAuth from "@/app/api/_lib/withAuth";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -72,7 +73,7 @@ const WhiteboardPage: React.FC<PageProps> = ({ params }) => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODQzZDU3OTk0Y2EyMDg4MTM1ZDQ5NDYiLCJlbWFpbCI6Im1kYXNoODk1MkBnbWFpbC5jb20iLCJuYW1lIjoiYmFsbyIsImlhdCI6MTc0OTMwMDAwNywiZXhwIjoxNzQ5MzAzNjA3fQ.nd03N9NHM4Ntkt8Y3cs1GTUV6CkiuxQXGaNdt9fIfkQ`, // ✅ Auth header
+            Authorization: `Bearer ${token}`, // ✅ Auth header
           },
           body: JSON.stringify({ sessionDurationSeconds: durationSeconds }),
           keepalive: true, // ✅ Ensures it still sends even if tab is closed
@@ -199,4 +200,4 @@ const WhiteboardPage: React.FC<PageProps> = ({ params }) => {
   );
 };
 
-export default WhiteboardPage;
+export default withAuth(WhiteboardPage);

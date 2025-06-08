@@ -54,11 +54,13 @@ export async function POST(req: NextRequest, res: NextResponse) {
       $push: {
         whiteboards: newWhiteboard._id,
       },  
+      $set:{isOnboarded:true},
       ...(collaboratorsArray.length
         ? {
           $addToSet: {
             invitees: { $each: collaboratorsArray },
           },
+
         }
         : {}),
       $inc: { "stats.whiteboards": 1 },

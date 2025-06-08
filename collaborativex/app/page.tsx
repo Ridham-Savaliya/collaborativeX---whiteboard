@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
-
+import { useRouter } from 'next/navigation';
+import { ToastContainer,toast } from 'react-toastify';
 import Navbar from './components/Navbar';
 import Image from 'next/image';
 import WhiteboardDemo from './components/WhiteboardDemo';
@@ -13,7 +14,12 @@ import WhiteboardFeatureDemo from './components/WhiteboardFeatureDemo';
 
 const LandingPage = () => {
   const pageRef = useRef<HTMLDivElement>(null);
-
+  const router = useRouter();
+    const handleRedirect = () => {
+      
+      router.push("/register");
+      toast.success('redirected to Registration..')
+    };
   useEffect(() => {
     // Initialize animations for elements with animate-on-scroll class
     const observer = new IntersectionObserver(
@@ -59,7 +65,7 @@ const LandingPage = () => {
             understands you better than ever!
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-            <button className="interactive-button bg-[var(--primary)] text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-semibold hover-lift">
+            <button onClick={handleRedirect} className="interactive-button bg-[var(--primary)] text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-semibold hover-lift">
               Get Started Free
             </button>
             <button className="interactive-button bg-transparent border-2 border-[var(--primary)] text-[var(--primary)] px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-semibold hover-lift">
@@ -211,7 +217,7 @@ const LandingPage = () => {
                     </li>
                   ))}
                 </ul>
-                <button className="w-full bg-[var(--primary)] hover:bg-[var(--primary-light)] text-white px-6 py-3 rounded-lg font-semibold transition-all cursor-pointer">
+                <button onClick={handleRedirect} className="w-full bg-[var(--primary)] hover:bg-[var(--primary-light)] text-white px-6 py-3 rounded-lg font-semibold transition-all cursor-pointer">
                   Get Started
                 </button>
               </div>

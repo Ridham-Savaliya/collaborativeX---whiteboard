@@ -1,3 +1,4 @@
+// ```  typescript
 "use client";
 import React, { useState, useEffect } from "react";
 import {
@@ -11,15 +12,11 @@ import {
   FiX,
   FiUpload,
   FiCamera,
-  FiBell,
-  FiShield,
-  FiZap,
-  FiTarget,
-  FiTrendingUp,
+  FiGrid,
   FiClock,
   FiHome,
-  FiGrid,
 } from "react-icons/fi";
+import withAuth from "../api/_lib/withAuth";
 
 interface UserProfile {
   name: string;
@@ -52,6 +49,7 @@ interface Achievement {
   icon: string;
   unlocked: boolean;
   date?: string;
+  _id: string;
 }
 
 interface Activity {
@@ -60,19 +58,19 @@ interface Activity {
   title: string;
   description: string;
   timestamp: string;
+  _id: string;
 }
 
 const Profile: React.FC = () => {
   const defaultUser: UserProfile = {
-    name: "Alex Rodriguez",
-    email: "alex.rodriguez@example.com",
-    username: "alexr_design",
-    profilePicture:
-      "https://images.unsplash.com/photo-1649972904349-6e44c42644a7?w=150&h=150&fit=crop&crop=face",
-    createdAt: new Date("2024-01-15").toISOString(),
-    bio: "Creative designer passionate about visual storytelling and collaborative innovation.",
-    location: "San Francisco, CA",
-    website: "https://alexrodriguez.design",
+    name: "",
+    email: "",
+    username: "",
+    profilePicture: "",
+    createdAt: new Date().toISOString(),
+    bio: "",
+    location: "",
+    website: "",
     preferences: {
       theme: "system",
       notifications: true,
@@ -83,78 +81,14 @@ const Profile: React.FC = () => {
 
   const [mounted, setMounted] = useState(false);
   const [user, setUser] = useState<UserProfile>(defaultUser);
-  // const [stats] = useState<UserStats>({
-  //   whiteboards: 24,
-  //   collaborations: 156,
-  //   timeSpent: "127h",
-  //   achievements: 8,
-  // });
-
-  const [achievements] = useState<Achievement[]>([
-    {
-      id: "1",
-      title: "First Whiteboard",
-      description: "Created your first whiteboard",
-      icon: "🎨",
-      unlocked: true,
-      date: "2024-01-15",
-    },
-    {
-      id: "2",
-      title: "Collaborator",
-      description: "Invited 10 people to collaborate",
-      icon: "🤝",
-      unlocked: true,
-      date: "2024-02-10",
-    },
-    {
-      id: "3",
-      title: "Creative Streak",
-      description: "Used the platform for 30 consecutive days",
-      icon: "🔥",
-      unlocked: true,
-      date: "2024-03-01",
-    },
-    {
-      id: "4",
-      title: "Master Creator",
-      description: "Create 50 whiteboards",
-      icon: "👑",
-      unlocked: false,
-    },
-  ]);
-
-  const [activities] = useState<Activity[]>([
-    {
-      id: "1",
-      type: "created",
-      title: "New Marketing Campaign",
-      description: "Created a new whiteboard for Q2 marketing strategy",
-      timestamp: "2024-05-26T10:30:00Z",
-    },
-    {
-      id: "2",
-      type: "collaborated",
-      title: "Design Review Session",
-      description: "Collaborated with team on product redesign",
-      timestamp: "2024-05-25T14:20:00Z",
-    },
-    {
-      id: "3",
-      type: "shared",
-      title: "Shared Project Alpha",
-      description: "Shared whiteboard with external stakeholders",
-      timestamp: "2024-05-24T09:15:00Z",
-    },
-    {
-      id: "4",
-      type: "edited",
-      title: "Updated Brand Guidelines",
-      description: "Made updates to the brand guidelines whiteboard",
-      timestamp: "2024-05-23T16:45:00Z",
-    },
-  ]);
-
+  const [stats, setStats] = useState<UserStats>({
+    whiteboards: 0,
+    collaborations: 0,
+    timeSpent: "0h",
+    achievements: 0,
+  });
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const [activities, setActivities] = useState<Activity[]>([]);
   const [activeTab, setActiveTab] = useState("overview");
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
@@ -162,80 +96,28 @@ const Profile: React.FC = () => {
     bio: defaultUser.bio,
     location: defaultUser.location,
     website: defaultUser.website,
-    stats:null,
     profilePicture: defaultUser.profilePicture,
   });
-  const [stats, setStats] = useState<UserStats>({
-  whiteboards: 24,
-  collaborations: 156,
-  timeSpent: "127h",
-  achievements: 8,
-});
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [token, setToken] = useState<string | null>(null);
 
   useEffect(() => {
-  setMounted(true);
-  const fetchUserProfile = async () => {
-    try {
-      const response = await fetch("/api/user/profile", {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODQzZDU3OTk0Y2EyMDg4MTM1ZDQ5NDYiLCJlbWFpbCI6Im1kYXNoODk1MkBnbWFpbC5jb20iLCJuYW1lIjoiUmlkaGFtIFNhdmFsaXlhIiwiaWF0IjoxNzQ5MzA1NjE2LCJleHAiOjE3NDkzMDkyMTZ9.JV33z2E-NmiUI53WlcxQwXxiht9NHgDwmeO5kXq8jD4`,
-        },
-      });
-      if (response.ok) {
-        const userData = await response.json();
-        setUser(userData);
-        setFormData({
-          name: userData.name,
-          bio: userData.bio,
-          location: userData.location,
-          website: userData.website,
-          profilePicture: userData.profilePicture,
-          stats: userData.stats || null,
-        });
-        setStats(
-          userData.stats || {
-            whiteboards: 24,
-            collaborations: 156,
-            timeSpent: "127h",
-            achievements: 8,
-          }
-        );
-      } else {
-        console.error("Failed to fetch user profile");
-        setUser(defaultUser);
-        setStats({
-          whiteboards: 24,
-          collaborations: 156,
-          timeSpent: "127h",
-          achievements: 8,
-        });
-      }
-    } catch (error) {
-      console.error("Error fetching user profile:", error);
-      setUser(defaultUser);
-      setStats({
-        whiteboards: 24,
-        collaborations: 156,
-        timeSpent: "127h",
-        achievements: 8,
-      });
+    const storedToken = localStorage.getItem("token");
+    if (storedToken) {
+      setToken(storedToken);
     }
-  };
-  fetchUserProfile();
-}, []);
+  }, []);
 
   useEffect(() => {
     setMounted(true);
     const fetchUserProfile = async () => {
+      if (!token) return;
       try {
         const response = await fetch("/api/user/profile", {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODQzZDU3OTk0Y2EyMDg4MTM1ZDQ5NDYiLCJlbWFpbCI6Im1kYXNoODk1MkBnbWFpbC5jb20iLCJuYW1lIjoiUmlkaGFtIFNhdmFsaXlhIiwiaWF0IjoxNzQ5MzA1NjE2LCJleHAiOjE3NDkzMDkyMTZ9.JV33z2E-NmiUI53WlcxQwXxiht9NHgDwmeO5kXq8jD4`, // Assuming token is stored
+            Authorization: `Bearer ${token}`,
           },
         });
         if (response.ok) {
@@ -247,45 +129,107 @@ const Profile: React.FC = () => {
             location: userData.location,
             website: userData.website,
             profilePicture: userData.profilePicture,
-            stats:userData.stats
           });
+          setStats(
+            userData.stats || {
+              whiteboards: 0,
+              collaborations: 0,
+              timeSpent: "0h",
+              achievements: 0,
+            }
+          );
         } else {
           console.error("Failed to fetch user profile");
           setUser(defaultUser);
+          setStats({
+            whiteboards: 0,
+            collaborations: 0,
+            timeSpent: "0h",
+            achievements: 0,
+          });
         }
       } catch (error) {
         console.error("Error fetching user profile:", error);
         setUser(defaultUser);
+        setStats({
+          whiteboards: 0,
+          collaborations: 0,
+          timeSpent: "0h",
+          achievements: 0,
+        });
       }
     };
+
+    const fetchAchievements = async () => {
+      if (!token) return;
+      try {
+        const response = await fetch("/api/user/achievements", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({}),
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setAchievements(data.achievements || []);
+        } else {
+          console.error("Failed to fetch achievements");
+          setAchievements([]);
+        }
+      } catch (error) {
+        console.error("Error fetching achievements:", error);
+        setAchievements([]);
+      }
+    };
+
+    const fetchActivities = async () => {
+      if (!token) return;
+      try {
+        const response = await fetch("/api/user/activity", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({}),
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setActivities(data.history || []);
+        } else {
+          console.error("Failed to fetch activities");
+          setActivities([]);
+        }
+      } catch (error) {
+        console.error("Error fetching activities:", error);
+        setActivities([]);
+      }
+    };
+
     fetchUserProfile();
-  }, []);
+    fetchAchievements();
+    fetchActivities();
+  }, [token]);
 
   useEffect(() => {
     if (mounted) {
-      // Apply theme
       const root = document.documentElement;
-      if (user.preferences.theme === "dark") {
-        root.classList.add("dark");
-      } else if (user.preferences.theme === "light") {
-        root.classList.remove("dark");
-      } else {
-        // System preference
-        if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
-          root.classList.add("dark");
-        } else {
-          root.classList.remove("dark");
-        }
-      }
+      const isDark =
+        user.preferences.theme === "dark" ||
+        (user.preferences.theme === "system" &&
+          window.matchMedia("(prefers-color-scheme: dark)").matches);
+      root.classList.toggle("dark", isDark);
     }
-  }, [user, mounted]);
+  }, [user.preferences.theme, mounted]);
 
   const handleUpdateProfilePicture = async () => {
     if (!selectedFile) return;
     try {
       const imageData = new FormData();
       imageData.append("file", selectedFile);
-      imageData.append("upload_preset", "colloborativex"); // Replace with your Cloudinary preset
+      imageData.append("upload_preset", process.env.NEXT_PUBLIC_CLOUDINARY_PRESET || "colloborativex");
 
       const uploadRes = await fetch(
         "https://api.cloudinary.com/v1_1/dsqpc6sp6/image/upload",
@@ -304,7 +248,7 @@ const Profile: React.FC = () => {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODQzZDU3OTk0Y2EyMDg4MTM1ZDQ5NDYiLCJlbWFpbCI6Im1kYXNoODk1MkBnbWFpbC5jb20iLCJuYW1lIjoiUmlkaGFtIFNhdmFsaXlhIiwiaWF0IjoxNzQ5MzA1NjE2LCJleHAiOjE3NDkzMDkyMTZ9.JV33z2E-NmiUI53WlcxQwXxiht9NHgDwmeO5kXq8jD4`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           ...formData,
@@ -346,7 +290,7 @@ const Profile: React.FC = () => {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODQzZDU3OTk0Y2EyMDg4MTM1ZDQ5NDYiLCJlbWFpbCI6Im1kYXNoODk1MkBnbWFpbC5jb20iLCJuYW1lIjoiUmlkaGFtIFNhdmFsaXlhIiwiaWF0IjoxNzQ5MzA1NjE2LCJleHAiOjE3NDkzMDkyMTZ9.JV33z2E-NmiUI53WlcxQwXxiht9NHgDwmeO5kXq8jD4`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           preferences: { ...user.preferences, [key]: value },
@@ -370,7 +314,7 @@ const Profile: React.FC = () => {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODQzZDU3OTk0Y2EyMDg4MTM1ZDQ5NDYiLCJlbWFpbCI6Im1kYXNoODk1MkBnbWFpbC5jb20iLCJuYW1lIjoiUmlkaGFtIFNhdmFsaXlhIiwiaWF0IjoxNzQ5MzA1NjE2LCJleHAiOjE3NDkzMDkyMTZ9.JV33z2E-NmiUI53WlcxQwXxiht9NHgDwmeO5kXq8jD4`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(formData),
       });
@@ -394,7 +338,6 @@ const Profile: React.FC = () => {
       location: user.location,
       website: user.website,
       profilePicture: user.profilePicture,
-      stats:user.stats
     });
     setIsEditing(false);
   };
@@ -455,7 +398,7 @@ const Profile: React.FC = () => {
               <div className="text-center p-8 bg-gradient-to-br from-purple-600 to-indigo-600">
                 <div className="relative inline-block">
                   <img
-                    src={user.profilePicture}
+                    src={user.profilePicture || "https://via.placeholder.com/150"}
                     alt="Profile"
                     className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
                   />
@@ -476,9 +419,9 @@ const Profile: React.FC = () => {
                   Upload Profile Picture
                 </button>
                 <h2 className="text-xl font-bold text-white mt-4">
-                  {user.name}
+                  {user.name || "User"}
                 </h2>
-                <p className="text-purple-100">@{user.username}</p>
+                <p className="text-purple-100">@{user.username || "username"}</p>
               </div>
 
               <nav className="p-4">
@@ -517,53 +460,53 @@ const Profile: React.FC = () => {
             {activeTab === "overview" && (
               <div className="space-y-8">
                 {/* Stats Cards */}
-       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-  {[
-    {
-      label: "Whiteboards",
-      value: formData.stats?.whiteboards || 0,
-      icon: FiGrid,
-      color: "purple",
-    },
-    {
-      label: "Collaborations",
-      value: formData.stats?.collaborations || 0,
-      icon: FiUser,
-      color: "blue",
-    },
-    {
-      label: "Time Spent",
-      value: formData.stats?.timeSpent || "0h",
-      icon: FiClock,
-      color: "green",
-    },
-    {
-      label: "Achievements",
-      value: formData.stats?.achievements || 0,
-      icon: FiAward,
-      color: "orange",
-    },
-  ].map((stat, index) => (
-    <div
-      key={index}
-      className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow"
-    >
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium text-gray-600 dark:text-gray-300">
-            {stat.label}
-          </p>
-          <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
-            {stat.value}
-          </p>
-        </div>
-        <div className={`p-3 rounded-full bg-${stat.color}-100`}>
-          <stat.icon className={`w-6 h-6 text-${stat.color}-600`} />
-        </div>
-      </div>
-    </div>
-  ))}
-</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {[
+                    {
+                      label: "Whiteboards",
+                      value: stats.whiteboards,
+                      icon: FiGrid,
+                      color: "purple",
+                    },
+                    {
+                      label: "Collaborations",
+                      value: stats.collaborations,
+                      icon: FiUser,
+                      color: "blue",
+                    },
+                    {
+                      label: "Time Spent",
+                      value: stats.timeSpent,
+                      icon: FiClock,
+                      color: "green",
+                    },
+                    {
+                      label: "Achievements",
+                      value: stats.achievements,
+                      icon: FiAward,
+                      color: "orange",
+                    },
+                  ].map((stat, index) => (
+                    <div
+                      key={index}
+                      className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-600 dark:text-gray-300">
+                            {stat.label}
+                          </p>
+                          <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
+                            {stat.value}
+                          </p>
+                        </div>
+                        <div className={`p-3 rounded-full bg-${stat.color}-100`}>
+                          <stat.icon className={`w-6 h-6 text-${stat.color}-600`} />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
 
                 {/* Profile Info */}
                 <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden">
@@ -659,7 +602,7 @@ const Profile: React.FC = () => {
                                 Email
                               </p>
                               <p className="text-lg font-medium text-gray-900 dark:text-white">
-                                {user.email}
+                                {user.email || "Not provided"}
                               </p>
                             </div>
                             <div>
@@ -667,7 +610,7 @@ const Profile: React.FC = () => {
                                 Location
                               </p>
                               <p className="text-lg font-medium text-gray-900 dark:text-white">
-                                {user.location}
+                                {user.location || "Not provided"}
                               </p>
                             </div>
                             <div>
@@ -675,7 +618,7 @@ const Profile: React.FC = () => {
                                 Website
                               </p>
                               <p className="text-lg font-medium text-purple-600 dark:text-purple-400">
-                                {user.website}
+                                {user.website || "Not provided"}
                               </p>
                             </div>
                           </div>
@@ -690,7 +633,7 @@ const Profile: React.FC = () => {
                                 Bio
                               </p>
                               <p className="text-lg font-medium text-gray-900 dark:text-white">
-                                {user.bio}
+                                {user.bio || "Not provided"}
                               </p>
                             </div>
                             <div>
@@ -719,31 +662,37 @@ const Profile: React.FC = () => {
                 </div>
                 <div className="p-8">
                   <div className="space-y-6">
-                    {activities.map((activity) => (
-                      <div
-                        key={activity.id}
-                        className="flex items-start space-x-4"
-                      >
+                    {activities.length > 0 ? (
+                      activities.map((activity) => (
                         <div
-                          className={`flex-shrink-0 p-2 rounded-full ${getActivityColor(
-                            activity.type
-                          )}`}
+                          key={activity._id}
+                          className="flex items-start space-x-4"
                         >
-                          {getActivityIcon(activity.type)}
+                          <div
+                            className={`flex-shrink-0 p-2 rounded-full ${getActivityColor(
+                              activity.type
+                            )}`}
+                          >
+                            {getActivityIcon(activity.type)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-lg font-medium text-gray-900 dark:text-white">
+                              {activity.title}
+                            </p>
+                            <p className="text-gray-600 dark:text-gray-300">
+                              {activity.description}
+                            </p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                              {formatDate(activity.timestamp)}
+                            </p>
+                          </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-lg font-medium text-gray-900 dark:text-white">
-                            {activity.title}
-                          </p>
-                          <p className="text-gray-600 dark:text-gray-300">
-                            {activity.description}
-                          </p>
-                          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                            {formatDate(activity.timestamp)}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
+                      ))
+                    ) : (
+                      <p className="text-gray-600 dark:text-gray-300">
+                        No activities found.
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -758,33 +707,39 @@ const Profile: React.FC = () => {
                 </div>
                 <div className="p-8">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {achievements.map((achievement) => (
-                      <div
-                        key={achievement.id}
-                        className={`p-6 rounded-xl border-2 transition-all ${
-                          achievement.unlocked
-                            ? "border-purple-200 bg-purple-50 dark:border-purple-900 dark:bg-purple-950"
-                            : "border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800 opacity-60"
-                        }`}
-                      >
-                        <div className="flex items-center space-x-4">
-                          <div className="text-3xl">{achievement.icon}</div>
-                          <div className="flex-1">
-                            <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
-                              {achievement.title}
-                            </h4>
-                            <p className="text-gray-600 dark:text-gray-300">
-                              {achievement.description}
-                            </p>
-                            {achievement.unlocked && achievement.date && (
-                              <p className="text-sm text-purple-600 dark:text-purple-400 mt-2">
-                                Unlocked on {formatDate(achievement.date)}
+                    {achievements.length > 0 ? (
+                      achievements.map((achievement) => (
+                        <div
+                          key={achievement._id}
+                          className={`p-6 rounded-xl border-2 transition-all ${
+                            achievement.unlocked
+                              ? "border-purple-200 bg-purple-50 dark:border-purple-900 dark:bg-purple-950"
+                              : "border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800 opacity-60"
+                          }`}
+                        >
+                          <div className="flex items-center space-x-4">
+                            <div className="text-3xl">{achievement.icon}</div>
+                            <div className="flex-1">
+                              <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
+                                {achievement.title}
+                              </h4>
+                              <p className="text-gray-600 dark:text-gray-300">
+                                {achievement.description}
                               </p>
-                            )}
+                              {achievement.unlocked && achievement.date && (
+                                <p className="text-sm text-purple-600 dark:text-purple-400 mt-2">
+                                  Unlocked on {formatDate(achievement.date)}
+                                </p>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      ))
+                    ) : (
+                      <p className="text-gray-600 dark:text-gray-300">
+                        No achievements found.
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -908,4 +863,5 @@ const Profile: React.FC = () => {
   );
 };
 
-export default Profile;
+export default withAuth(Profile);
+

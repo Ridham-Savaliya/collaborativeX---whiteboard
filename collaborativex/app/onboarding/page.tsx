@@ -1,33 +1,36 @@
+// ```tsx
 "use client";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Search,
   Plus,
-  ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
   Clock,
   LayoutGrid,
   Star,
-  Filter,
-  Settings,
-  Compass,
-  ChevronLeft,
-  ChevronRight,
+  X,
   Users,
   Target,
-  X,
+  Compass,
 } from "lucide-react";
+import { jwtDecode } from "jwt-decode";
+import withAuth from "../api/_lib/withAuth";
 
 interface Whiteboard {
-  id: string;
+  _id: string;
   name: string;
   createdAt: string;
   isFavorite: boolean;
   purpose?: string;
   collaborators?: string[];
 }
-  
 
+interface User {
+  userId: string;
+  isOnboarded: boolean;
+}
 
 const Onboarding = () => {
   const router = useRouter();
@@ -42,24 +45,76 @@ const Onboarding = () => {
     purpose: "",
     collaborators: "",
   });
+  const [token, setToken] = useState<string | null>(null);
+  const [user, setUser] = useState<User | null>(null);
 
-  // Load whiteboards from localStorage when component mounts
+  // Initialize token and fetch user data
   useEffect(() => {
-    const saved = localStorage.getItem("whiteboards");
-    if (saved) {
+    const storedToken = localStorage.getItem("token");
+    if (storedToken) {
+      setToken(storedToken);
       try {
-        setWhiteboards(JSON.parse(saved));
+        const decoded: any = jwtDecode(storedToken);
+        const userId = decoded.userId;
+        fetchUserData(userId, storedToken);
       } catch (e) {
-        console.error("Failed to parse saved whiteboards:", e);
+        console.error("Failed to decode token:", e);
+        router.push("/login");
+      }
+    } else {
+      router.push("/login");
+    }
+  }, [router]);
+
+  const fetchUserData = async (userId: string, token: string) => {
+    try {
+      const response = await fetch(`/api/user/profile`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (response.ok) {
+        const userData = await response.json();
+        setUser({ userId, isOnboarded: userData.isOnboarded });
+        setIsOnboarding(!userData.isOnboarded);
+      } else {
+        console.error("Failed to fetch user data");
+        router.push("/login");
+      }
+    } catch (e) {
+      console.error("Error fetching user data:", e);
+      router.push("/login");
+    }
+  };
+
+  // Fetch whiteboards
+  useEffect(() => {
+    if (token) {
+      fetchWhiteboards();
+    }
+  }, [token]);
+
+  const fetchWhiteboards = async () => {
+    try {
+      const response = await fetch("/api/whiteboard", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setWhiteboards(Array.isArray(data.whiteboards) ? data.whiteboards : []);
+      } else {
+        console.error("Failed to fetch whiteboards");
         setWhiteboards([]);
       }
+    } catch (e) {
+      console.error("Error fetching whiteboards:", e);
+      setWhiteboards([]);
     }
-  }, []);
-
-  // Save whiteboards to localStorage whenever they change
-  useEffect(() => {
-    localStorage.setItem("whiteboards", JSON.stringify(whiteboards));
-  }, [whiteboards]);
+  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -72,57 +127,105 @@ const Onboarding = () => {
     }).format(date);
   };
 
-  const toggleFavorite = (id: string) => {
-    setWhiteboards(
-      whiteboards.map((board) =>
-        board.id === id ? { ...board, isFavorite: !board.isFavorite } : board
-      )
-    );
+  const toggleFavorite = async (id: string) => {
+    try {
+      const response = await fetch("/api/whiteboard/makeAsFavorite", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ whiteboardId: id }),
+      });
+      if (response.ok) {
+        setWhiteboards(
+          whiteboards.map((board) =>
+            board._id === id ? { ...board, isFavorite: !board.isFavorite } : board
+          )
+        );
+      }
+    } catch (e) {
+      console.error("Error toggling favorite:", e);
+    }
   };
 
-  const deleteWhiteboard = (id: string) => {
+  const deleteWhiteboard = async (id: string) => {
     if (window.confirm("Are you sure you want to delete this whiteboard?")) {
-      setWhiteboards(whiteboards.filter((board) => board.id !== id));
+      try {
+        const response = await fetch("/api/whiteboard", {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ whiteboardId: id }),
+        });
+        if (response.ok) {
+          setWhiteboards(whiteboards.filter((board) => board._id !== id));
+        }
+      } catch (e) {
+        console.error("Error deleting whiteboard:", e);
+      }
     }
   };
 
-  const handleOnboardingNext = () => {
-    if (onboardingStep === 1 && !onboardingData.name.trim()) {
-      return;
-    }
-    if (onboardingStep === 2 && !onboardingData.purpose) {
-      return;
-    }
+  const handleOnboardingNext = async () => {
+    if (onboardingStep === 1 && !onboardingData.name.trim()) return;
+    if (onboardingStep === 2 && !onboardingData.purpose) return;
+
     if (onboardingStep < 3) {
       setOnboardingStep(onboardingStep + 1);
     } else {
-      const newWhiteboard: Whiteboard = {
-        id: Date.now().toString(),
-        name: onboardingData.name,
-        createdAt: new Date().toISOString(),
-        isFavorite: false,
-        purpose: onboardingData.purpose,
-        collaborators: onboardingData.collaborators
-          ? onboardingData.collaborators.split(",").map((email) => email.trim())
-          : [],
-      };
-      setWhiteboards([newWhiteboard, ...whiteboards]);
-      setIsOnboarding(false);
-      setOnboardingStep(1);
-      setOnboardingData({ name: "", purpose: "", collaborators: "" });
+      try {
+        const response = await fetch("/api/whiteboard", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            name: onboardingData.name,
+            purpose: onboardingData.purpose,
+            collaborators: onboardingData.collaborators
+              ? onboardingData.collaborators.split(",").map((email) => email.trim())
+              : [],
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const newWhiteboard = data.whiteboard || data; // Handle nested or flat response
+          if (newWhiteboard._id) {
+            setWhiteboards([newWhiteboard, ...whiteboards]);
+            setOnboardingStep(1);
+            setOnboardingData({ name: "", purpose: "", collaborators: "" });
+            await router.push(`/whiteboard/${newWhiteboard._id}`); // Wait for redirect
+          } else {
+            console.error("Whiteboard ID not found in response:", data);
+            alert("Failed to redirect to whiteboard. Please select it from the list.");
+          }
+        } else {
+          console.error("Failed to create whiteboard:", response.statusText);
+          alert("Failed to create whiteboard. Please try again.");
+        }
+      } catch (e) {
+        console.error("Error creating whiteboard:", e);
+        alert("An error occurred. Please try again.");
+      }
     }
   };
 
-  const filteredWhiteboards = whiteboards
-    .filter((board) =>
-      board.name.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-    .filter((board) => !showFavoritesOnly || board.isFavorite);
+  const filteredWhiteboards = Array.isArray(whiteboards)
+    ? whiteboards
+        .filter((board) =>
+          board.name?.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+        .filter((board) => !showFavoritesOnly || board.isFavorite)
+    : [];
 
   if (isOnboarding) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-4 flex items-center justify-center relative overflow-hidden">
-        {/* Animated background elements */}
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-purple-400/20 to-pink-400/20 rounded-full blur-3xl animate-pulse"></div>
           <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-cyan-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
@@ -158,7 +261,6 @@ const Onboarding = () => {
             </button>
           </div>
 
-          {/* Progress Bar */}
           <div className="flex justify-center mb-10">
             <div className="flex items-center space-x-4">
               {[1, 2, 3].map((step) => (
@@ -199,8 +301,7 @@ const Onboarding = () => {
                     Name your whiteboard
                   </h2>
                   <p className="text-gray-600 text-lg">
-                    Give your whiteboard a descriptive name that inspires
-                    creativity
+                    Give your whiteboard a descriptive name that inspires creativity
                   </p>
                 </div>
                 <div className="space-y-4">
@@ -217,27 +318,6 @@ const Onboarding = () => {
                     className="w-full px-6 py-4 rounded-2xl text-[#8028f9] border-2 border-gray-200 focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 text-lg placeholder-gray-400"
                     autoFocus
                   />
-                  <div className="flex flex-wrap gap-2">
-                    {[
-                      "Project Planning",
-                      "Team Brainstorm",
-                      "Design Sprint",
-                      "Strategy Session",
-                    ].map((suggestion) => (
-                      <button
-                        key={suggestion}
-                        onClick={() =>
-                          setOnboardingData({
-                            ...onboardingData,
-                            name: suggestion,
-                          })
-                        }
-                        className="px-4 py-2 bg-gray-100 hover:bg-indigo-100 text-gray-700 hover:text-indigo-700 rounded-full text-sm transition-all duration-200"
-                      >
-                        {suggestion}
-                      </button>
-                    ))}
-                  </div>
                 </div>
               </div>
             )}
@@ -258,31 +338,31 @@ const Onboarding = () => {
                 <div className="grid grid-cols-1 gap-3">
                   {[
                     {
-                      value: "brainstorming",
-                      label: "Brainstorming",
+                      value: "Team Brainstorm",
+                      label: "Team Brainstorm",
                       desc: "Generate and organize ideas",
                       icon: "💡",
                     },
                     {
-                      value: "planning",
+                      value: "Project Planning",
                       label: "Project Planning",
                       desc: "Plan and track project progress",
                       icon: "📋",
                     },
                     {
-                      value: "design",
+                      value: "Design Sprint",
                       label: "Design & Wireframing",
                       desc: "Create mockups and prototypes",
                       icon: "🎨",
                     },
                     {
-                      value: "teaching",
-                      label: "Teaching & Education",
-                      desc: "Educational content and lessons",
+                      value: "Strategy Session",
+                      label: "Strategy Session",
+                      desc: "Plan strategic initiatives",
                       icon: "📚",
                     },
                     {
-                      value: "other",
+                      value: "Other",
                       label: "Other",
                       desc: "Custom use case",
                       icon: "⚡",
@@ -305,9 +385,7 @@ const Onboarding = () => {
                       <div className="flex items-center space-x-4">
                         <span className="text-2xl">{option.icon}</span>
                         <div>
-                          <h3 className="font-semibold text-gray-800">
-                            {option.label}
-                          </h3>
+                          <h3 className="font-semibold text-gray-800">{option.label}</h3>
                           <p className="text-sm text-gray-600">{option.desc}</p>
                         </div>
                       </div>
@@ -345,8 +423,7 @@ const Onboarding = () => {
                   />
                   <p className="text-sm text-gray-500 flex items-center">
                     <span className="mr-2">💡</span>
-                    Separate multiple emails with commas "<b>,</b>" you can always add
-                    more later
+                    Separate multiple emails with commas "<b>,</b>" you can always add more later
                   </p>
                 </div>
               </div>
@@ -355,9 +432,7 @@ const Onboarding = () => {
 
           <div className="mt-10 flex justify-between items-center">
             <div className="text-sm text-gray-500">
-              {onboardingStep === 3
-                ? "Ready to create!"
-                : `${3 - onboardingStep} steps remaining`}
+              {onboardingStep === 3 ? "Ready to create!" : `${3 - onboardingStep} steps remaining`}
             </div>
             <button
               onClick={handleOnboardingNext}
@@ -381,7 +456,6 @@ const Onboarding = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative overflow-hidden">
-      {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-purple-400/10 to-pink-400/10 rounded-full blur-3xl animate-pulse"></div>
         <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-blue-400/10 to-cyan-400/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
@@ -416,10 +490,7 @@ const Onboarding = () => {
                   }`}
                   aria-label="Show favorites only"
                 >
-                  <Star
-                    size={20}
-                    className={showFavoritesOnly ? "fill-white" : ""}
-                  />
+                  <Star size={20} className={showFavoritesOnly ? "fill-white" : ""} />
                 </button>
 
                 <button
@@ -469,12 +540,9 @@ const Onboarding = () => {
             </div>
             {searchTerm ? (
               <div className="text-center max-w-md">
-                <h2 className="text-2xl font-bold text-gray-800 mb-3">
-                  No matches found
-                </h2>
+                <h2 className="text-2xl font-bold text-gray-800 mb-3">No matches found</h2>
                 <p className="text-gray-600 text-lg">
-                  Try adjusting your search terms or clear filters to see all
-                  whiteboards
+                  Try adjusting your search terms or clear filters to see all whiteboards
                 </p>
                 <button
                   onClick={() => setSearchTerm("")}
@@ -489,8 +557,8 @@ const Onboarding = () => {
                   Start Your Creative Journey
                 </h2>
                 <p className="text-gray-600 text-xl mb-8 leading-relaxed">
-                  Create your first whiteboard and bring your ideas to life with
-                  our premium collaborative workspace designed for modern teams.
+                  Create your first whiteboard and bring your ideas to life with our premium
+                  collaborative workspace designed for modern teams.
                 </p>
                 <button
                   onClick={() => setIsOnboarding(true)}
@@ -512,11 +580,9 @@ const Onboarding = () => {
           >
             {filteredWhiteboards.map((whiteboard, index) => (
               <div
-                key={whiteboard.id}
+                key={whiteboard._id}
                 className={`group relative bg-white/70 backdrop-blur-sm rounded-3xl border border-white/30 transition-all duration-300 hover:scale-105 hover:bg-white/90 hover:shadow-2xl overflow-hidden animate-fade-in ${
-                  view === "grid"
-                    ? "shadow-lg hover:shadow-2xl"
-                    : "shadow-md hover:shadow-xl flex items-center"
+                  view === "grid" ? "shadow-lg hover:shadow-2xl" : "shadow-md hover:shadow-xl flex items-center"
                 }`}
                 style={{ animationDelay: `${index * 100}ms` }}
               >
@@ -543,61 +609,44 @@ const Onboarding = () => {
                     <button
                       onClick={(e) => {
                         e.preventDefault();
-                        toggleFavorite(whiteboard.id);
+                        toggleFavorite(whiteboard._id);
                       }}
                       className={`p-2.5 rounded-full transition-all duration-200 hover:scale-110 ${
                         whiteboard.isFavorite
                           ? "text-amber-500 bg-amber-50"
                           : "text-gray-400 hover:text-amber-500 hover:bg-amber-50"
                       }`}
-                      aria-label={
-                        whiteboard.isFavorite
-                          ? "Remove from favorites"
-                          : "Add to favorites"
-                      }
+                      aria-label={whiteboard.isFavorite ? "Remove from favorites" : "Add to favorites"}
                     >
-                      <Star
-                        size={18}
-                        className={
-                          whiteboard.isFavorite ? "fill-amber-500" : ""
-                        }
-                      />
+                      <Star size={18} className={whiteboard.isFavorite ? "fill-amber-500" : ""} />
                     </button>
                   </div>
 
-                  <div
-                    className={`flex items-center text-sm text-gray-500 ${
-                      view === "grid" ? "mb-6" : "mb-0"
-                    }`}
-                  >
+                  <div className={`flex items-center text-sm text-gray-500 ${view === "grid" ? "mb-6" : "mb-0"}`}>
                     <Clock size={16} className="mr-2" />
-                    <span className="font-medium">
-                      {formatDate(whiteboard.createdAt)}
-                    </span>
+                    <span className="font-medium">{formatDate(whiteboard.createdAt)}</span>
                   </div>
 
-                  {view === "grid" &&
-                    whiteboard.collaborators &&
-                    whiteboard.collaborators.length > 0 && (
-                      <div className="flex items-center mt-4">
-                        <Users size={16} className="mr-2 text-gray-400" />
-                        <span className="text-sm text-gray-500">
-                          {whiteboard.collaborators.length} collaborator
-                          {whiteboard.collaborators.length > 1 ? "s" : ""}
-                        </span>
-                      </div>
-                    )}
+                  {view === "grid" && whiteboard.collaborators && whiteboard.collaborators.length > 0 && (
+                    <div className="flex items-center mt-4">
+                      <Users size={16} className="mr-2 text-gray-400" />
+                      <span className="text-sm text-gray-500">
+                        {whiteboard.collaborators.length} collaborator
+                        {whiteboard.collaborators.length > 1 ? "s" : ""}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 <div
                   className={`${
                     view === "grid"
-                      ? "absolute inset-x-0 bottom-0 p-4  bg-gradient-to-t from-white/90 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300"
+                      ? "absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-white/90 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300"
                       : "flex items-center gap-3 p-4"
                   }`}
                 >
                   <button
-                    onClick={() => router.push(`/whiteboard/${whiteboard.id}`)}
+                    onClick={() => router.push(`/whiteboard/${whiteboard._id}`)}
                     className="flex-1 text-center px-4 py-3 mr-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 hover:scale-105 shadow-lg"
                     aria-label={`Open whiteboard ${whiteboard.name}`}
                   >
@@ -607,7 +656,7 @@ const Onboarding = () => {
                     className="px-4 py-3 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-xl font-semibold hover:from-red-600 hover:to-pink-600 transition-all duration-200 hover:scale-105 shadow-lg"
                     onClick={(e) => {
                       e.preventDefault();
-                      deleteWhiteboard(whiteboard.id);
+                      deleteWhiteboard(whiteboard._id);
                     }}
                   >
                     {view === "grid" ? "Delete" : "🗑️"}
@@ -622,4 +671,5 @@ const Onboarding = () => {
   );
 };
 
-export default Onboarding;
+export default withAuth(Onboarding);
+

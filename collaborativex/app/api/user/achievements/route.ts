@@ -2,10 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/app/api/_lib/db';
 import User from '@/app/models/User';
 import { authenticate } from '../../_lib/authMiddleware';
-import { v4 as uuidv4 } from 'uuid';
-import Whiteboard from '@/app/models/Whiteboard';
-import { ACHIEVEMENT_PRESETS } from "../../constants/achievements"
-
+import { ACHIEVEMENT_PRESETS } from "../../constants/achievements";
 
 type AuthenticatedUser = { userId: string };
 
@@ -25,15 +22,12 @@ export async function POST(req: NextRequest) {
 
   const alreadyUnlocked = new Set(user.achievements?.map((a: any) => a.id));
 
+  // Filter new achievements
   const newAchievements = ACHIEVEMENT_PRESETS.filter((achievement) => {
     return !alreadyUnlocked.has(achievement.id) && achievement.condition(user);
   });
 
-  if (newAchievements.length === 0) {
-    return NextResponse.json({ message: "No new achievements" }, { status: 200 });
-  }
-
-
+  // Prepare new achievement data
   const insertData = newAchievements.map((a) => ({
     id: a.id,
     title: a.title,
@@ -43,26 +37,29 @@ export async function POST(req: NextRequest) {
     date: new Date(),
   }));
 
-  // Make sure you're not inserting duplicates again
-  const updatedUser = await User.findByIdAndUpdate(
-    userId,
-    {
-      $addToSet: {
-        achievements: {
-          $each: insertData,
+  // Add to user if there are new achievements
+  let updatedUser = user;
+
+  if (insertData.length > 0) {
+    updatedUser = await User.findByIdAndUpdate(
+      userId,
+      {
+        $addToSet: {
+          achievements: { $each: insertData },
         },
+        $inc: { 'stats.achievements': insertData.length },
       },
-      $inc: { 'stats.achievements': insertData.length },
-    },
-    { new: true, projection: { achievements: 1 } }
-  );
+      { new: true, projection: { achievements: 1 } }
+    );
+  }
 
   return NextResponse.json(
     {
-      message: "Achievements updated successfully!",
-      isAchievements: updatedUser,
+      message: insertData.length > 0
+        ? "New achievements unlocked!"
+        : "No new achievements.",
+      achievements: updatedUser.achievements, // send full list
     },
     { status: 200 }
   );
 }
-
