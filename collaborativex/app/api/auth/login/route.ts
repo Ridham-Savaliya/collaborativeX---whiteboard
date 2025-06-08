@@ -4,8 +4,6 @@ import User from "@/app/models/User";
 import jwt from 'jsonwebtoken'
 import connectDB from "@/app/api/_lib/db";
 
-
-
 export async function POST(req: NextRequest) {
 
     await connectDB();
