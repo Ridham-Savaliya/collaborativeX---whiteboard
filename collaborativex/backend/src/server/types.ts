@@ -42,13 +42,15 @@ export interface StickyNote {
 }
 
 export interface ActivityUpdate {
-  user: string; // Username or user ID
+  userId?: string; // Username or user ID
+  email?: string; // Username or user ID
   action: string; // e.g., "drew a line", "added a sticky note"
   timestamp: string;
 }
 
 export interface UserPresence {
-  userId: string;
+  userId?: string;
+  email?: string;
   username: string;
   joined: boolean; // true for join, false for leave
 }

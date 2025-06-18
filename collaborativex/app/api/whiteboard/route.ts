@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/app/api/_lib/db";
-import Whiteboard from "@/app/models/Whiteboard";
-import User from "@/app/models/User";
+import Whiteboard from "@/models/Whiteboard";
+import User from "@/models/User";
 import { authenticate } from "../_lib/authMiddleware";
 
 

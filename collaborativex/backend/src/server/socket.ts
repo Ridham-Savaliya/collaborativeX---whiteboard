@@ -1,6 +1,7 @@
 import { Server, Socket } from 'socket.io';
 import connectDB from '../lib/db';
-import Whiteboard from '../models/whiteboard';
+import Whiteboard from "@models/Whiteboard"
+import User from "@models/User"
 import { verifyToken } from '../lib/auth';
 import { WhiteboardElement, StickyNote, ActivityUpdate, UserPresence } from './types';
 
@@ -15,13 +16,22 @@ export const setupSocket = (io: Server) => {
       return;
     }
 
-    let userId: string;
+    // Declare them here so you can use them later
+    let email: string = "";
+    let userId: string = "";
+
     try {
-      userId = verifyToken(token);
+      const decoded = verifyToken(token);
+      email = decoded.email || "";
+      userId = decoded.userId || "";
+
+      console.log(email, userId);
+
     } catch (error) {
       socket.disconnect();
       return;
     }
+
 
     // Join a whiteboard room
     socket.on('join_whiteboard', async (whiteboardId: string) => {
@@ -30,12 +40,12 @@ export const setupSocket = (io: Server) => {
 
         // Verify user has access to the whiteboard
         const whiteboard = await Whiteboard.findById(whiteboardId);
-        if (!whiteboard || (!whiteboard.collaborators.includes(userId) && whiteboard.owner.toString() !== userId)) {
+        if (!whiteboard || (!whiteboard.collaborators.includes(email) && whiteboard.owner.toString() !== userId)) {
           socket.emit('error', { message: 'Unauthorized access to whiteboard' });
           return;
         }
 
-        const user = await User.findById(userId).select('username');
+        const user = await User.findById(userId).select('name');
         if (!user) {
           socket.emit('error', { message: 'User not found' });
           return;
@@ -47,12 +57,12 @@ export const setupSocket = (io: Server) => {
 
         // Broadcast user presence (join)
         const presence: UserPresence = {
-          userId,
-          username: user.username,
+          email,
+          username: user,
           joined: true,
         };
         socket.to(room).emit('user_presence', presence);
-        console.log(`${user.username} joined whiteboard ${whiteboardId}`);
+        console.log(`${user} joined whiteboard ${whiteboardId}`);
 
         // Handle whiteboard updates
         socket.on('update_element', async (element: WhiteboardElement) => {
@@ -67,7 +77,7 @@ export const setupSocket = (io: Server) => {
 
             // Broadcast activity update
             const activity: ActivityUpdate = {
-              user: user.username,
+              userId: userId,
               action: `added a ${element.type}`,
               timestamp: new Date().toISOString(),
             };
@@ -89,7 +99,7 @@ export const setupSocket = (io: Server) => {
 
             // Broadcast activity update
             const activity: ActivityUpdate = {
-              user: user.username,
+              userId: userId,
               action: 'added a sticky note',
               timestamp: new Date().toISOString(),
             };
@@ -102,12 +112,12 @@ export const setupSocket = (io: Server) => {
         // Handle disconnection
         socket.on('disconnect', () => {
           const presence: UserPresence = {
-            userId,
-            username: user.username,
+            email,
+            username: user,
             joined: false,
           };
           socket.to(room).emit('user_presence', presence);
-          console.log(`${user.username} left whiteboard ${whiteboardId}`);
+          console.log(`${user} left whiteboard ${whiteboardId}`);
         });
       } catch (error) {
         socket.emit('error', { message: 'Failed to join whiteboard' });

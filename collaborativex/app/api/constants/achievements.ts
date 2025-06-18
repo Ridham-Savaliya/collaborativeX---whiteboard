@@ -1,5 +1,5 @@
 // app/constants/achievements.ts
-import User from "@/app/models/User";
+import User from "@/models/User";
 import { NextResponse, NextRequest } from "next/server";
 import connectDB from "@/app/api/_lib/db";
 import { authenticate } from "../_lib/authMiddleware";

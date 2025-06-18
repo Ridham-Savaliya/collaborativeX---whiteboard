@@ -2,8 +2,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import connectDB from "@/app/api/_lib/db";
-import OTP from "@/app/models/OTP";
-import User from "@/app/models/User";
+import OTP from "@/models/OTP";
+import User from "@/models/User";
 
 export async function POST(req: NextRequest) {
   await connectDB();

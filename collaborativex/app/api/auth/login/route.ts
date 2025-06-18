@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import User from "@/app/models/User";
+import User from "@/models/User";
 import jwt from 'jsonwebtoken'
 import connectDB from "@/app/api/_lib/db";
 
