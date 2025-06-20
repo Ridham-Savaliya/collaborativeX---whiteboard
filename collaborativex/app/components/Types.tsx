@@ -1,13 +1,3 @@
-export interface StickyNote {
-  id: string;
-  content: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  color: string;
-}
-
 export interface WhiteboardElement {
   id: string;
   type: 'pen' | 'eraser' | 'highlighter' | 'shape' | 'text';
@@ -39,4 +29,28 @@ export interface WhiteboardElement {
   bold?: boolean;
   italic?: boolean;
   underline?: boolean;
+}
+
+export interface StickyNote {
+  id: string;
+  content: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  color: string;
+}
+
+export interface ActivityUpdate {
+  userId?: string; // Username or user ID
+  email?: string; // Username or user ID
+  action: string; // e.g., "drew a line", "added a sticky note"
+  timestamp: string;
+}
+
+export interface UserPresence {
+  userId?: string;
+  email?: string;
+  username: string;
+  joined: boolean; // true for join, false for leave
 }

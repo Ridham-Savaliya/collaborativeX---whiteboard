@@ -17,6 +17,7 @@ import {
   FiHome,
 } from "react-icons/fi";
 import withAuth from "../api/_lib/withAuth";
+import { useSearchParams } from "next/navigation";
 
 interface UserProfile {
   name: string;
@@ -81,6 +82,8 @@ const Profile: React.FC = () => {
 
   const [mounted, setMounted] = useState(false);
   const [user, setUser] = useState<UserProfile>(defaultUser);
+  const searchParams = useSearchParams();
+  const currentTab = searchParams.get("activityTab");
   const [stats, setStats] = useState<UserStats>({
     whiteboards: 0,
     collaborations: 0,
@@ -107,6 +110,12 @@ const Profile: React.FC = () => {
       setToken(storedToken);
     }
   }, []);
+
+  useEffect(() => {
+    if (currentTab) {
+      setActiveTab(currentTab);
+    }
+  }, [currentTab]);
 
   useEffect(() => {
     setMounted(true);
@@ -229,7 +238,10 @@ const Profile: React.FC = () => {
     try {
       const imageData = new FormData();
       imageData.append("file", selectedFile);
-      imageData.append("upload_preset", process.env.NEXT_PUBLIC_CLOUDINARY_PRESET || "colloborativex");
+      imageData.append(
+        "upload_preset",
+        process.env.NEXT_PUBLIC_CLOUDINARY_PRESET || "colloborativex"
+      );
 
       const uploadRes = await fetch(
         "https://api.cloudinary.com/v1_1/dsqpc6sp6/image/upload",
@@ -398,7 +410,9 @@ const Profile: React.FC = () => {
               <div className="text-center p-8 bg-gradient-to-br from-purple-600 to-indigo-600">
                 <div className="relative inline-block">
                   <img
-                    src={user.profilePicture || "https://via.placeholder.com/150"}
+                    src={
+                      user.profilePicture || "https://via.placeholder.com/150"
+                    }
                     alt="Profile"
                     className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
                   />
@@ -421,7 +435,9 @@ const Profile: React.FC = () => {
                 <h2 className="text-xl font-bold text-white mt-4">
                   {user.name || "User"}
                 </h2>
-                <p className="text-purple-100">@{user.username || "username"}</p>
+                <p className="text-purple-100">
+                  @{user.username || "username"}
+                </p>
               </div>
 
               <nav className="p-4">
@@ -500,8 +516,12 @@ const Profile: React.FC = () => {
                             {stat.value}
                           </p>
                         </div>
-                        <div className={`p-3 rounded-full bg-${stat.color}-100`}>
-                          <stat.icon className={`w-6 h-6 text-${stat.color}-600`} />
+                        <div
+                          className={`p-3 rounded-full bg-${stat.color}-100`}
+                        >
+                          <stat.icon
+                            className={`w-6 h-6 text-${stat.color}-600`}
+                          />
                         </div>
                       </div>
                     </div>
@@ -864,4 +884,3 @@ const Profile: React.FC = () => {
 };
 
 export default withAuth(Profile);
-

@@ -9,7 +9,7 @@ export async function POST(req: NextRequest, res: NextResponse) {
   await connectDB();
 
   const authResult: any = await authenticate(req);
-  if (authResult instanceof NextResponse) return authResult;
+  if (authResult instanceof NextResponse) return authResult;  
 
   const user = authResult;
   const body = await req.json();
@@ -90,7 +90,7 @@ export async function GET(req: NextRequest) {
 
   const owner = authResult.userId;
 
-  const whiteboards = await Whiteboard.find({ owner: owner }).select('name purpose collaborators isFavorite createdAt updatedAt')
+  const whiteboards = await Whiteboard.find({ owner: owner })
 
   return NextResponse.json({ message: "Whiteboards for the user has been found!", whiteboards: whiteboards }, { status: 200 })
 

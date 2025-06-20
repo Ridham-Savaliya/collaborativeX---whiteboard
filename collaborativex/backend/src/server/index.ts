@@ -20,6 +20,7 @@ const io = new Server(httpServer, {
   cors: {
     origin: process.env.NEXT_PUBLIC_URL || 'http://localhost:3000',
     methods: ['GET', 'POST', 'PATCH'],
+    credentials:true
   }
 });
 

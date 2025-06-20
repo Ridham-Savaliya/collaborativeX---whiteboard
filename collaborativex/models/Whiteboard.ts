@@ -5,39 +5,26 @@ export interface IWhiteboard extends Document {
   purpose: string;
   collaborators: Array<string>;
   isFavorite: boolean;
-  isShared: boolean,
+  isShared: boolean;
   owner: mongoose.Types.ObjectId;
   elements: Array<{
     id: string;
-    type: 'pen' | 'eraser' | 'highlighter' | 'shape' | 'text';
-    points: Array<{ x: number; y: number }>;
+    type: 'path' | 'shape' | 'text';
+    points?: Array<{ x: number; y: number }>; // For paths
+    tool?: 'pen' | 'eraser' | 'highlighter'; // For paths
     color: string;
-    lineWidth: number;
-    shapeType?:
-    | 'rectangle'
-    | 'circle'
-    | 'line'
-    | 'triangle'
-    | 'diamond'
-    | 'star'
-    | 'arrowRight'
-    | 'arrowLeft'
-    | 'arrowUp'
-    | 'arrowDown'
-    | 'heart'
-    | 'pentagon'
-    | 'hexagon'
-    | 'heptagon'
-    | 'octagon'
-    | 'cross'
-    | 'smiley'
-    | 'cloud';
-    text?: string;
-    fontSize?: number;
-    fontFamily?: string;
-    bold?: boolean;
-    italic?: boolean;
-    underline?: boolean;
+    lineWidth?: number; // For paths and shapes
+    shapeType?: string; // For shapes
+    x?: number; // For shapes and text
+    y?: number; // For shapes and text
+    width?: number; // For shapes
+    height?: number; // For shapes
+    text?: string; // For text
+    fontSize?: number; // For text
+    fontFamily?: string; // For text
+    bold?: boolean; // For text
+    italic?: boolean; // For text
+    underline?: boolean; // For text
   }>;
   stickyNotes: Array<{
     id: string;
@@ -48,49 +35,7 @@ export interface IWhiteboard extends Document {
     height: number;
     color: string;
   }>;
-  history: Array<{
-    elements: Array<{
-      id: string;
-      type: 'pen' | 'eraser' | 'highlighter' | 'shape' | 'text';
-      points: Array<{ x: number; y: number }>;
-      color: string;
-      lineWidth: number;
-      shapeType?:
-      | 'rectangle'
-      | 'circle'
-      | 'line'
-      | 'triangle'
-      | 'diamond'
-      | 'star'
-      | 'arrowRight'
-      | 'arrowLeft'
-      | 'arrowUp'
-      | 'arrowDown'
-      | 'heart'
-      | 'pentagon'
-      | 'hexagon'
-      | 'heptagon'
-      | 'octagon'
-      | 'cross'
-      | 'smiley'
-      | 'cloud';
-      text?: string;
-      fontSize?: number;
-      fontFamily?: string;
-      bold?: boolean;
-      italic?: boolean;
-      underline?: boolean;
-    }>;
-    stickyNotes: Array<{
-      id: string;
-      content: string;
-      x: number;
-      y: number;
-      width: number;
-      height: number;
-      color: string;
-    }>;
-  }>;
+  history: Array<any>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -99,14 +44,9 @@ const WhiteboardSchema: Schema = new Schema(
   {
     name: { type: String, required: true },
     purpose: {
-      type: String, required: true,
-      enum: [
-        "Project Planning",
-        "Team Brainstorm",
-        "Design Sprint",
-        "Strategy Session",
-        "Other"
-      ]
+      type: String,
+      required: true,
+      enum: ["Project Planning", "Team Brainstorm", "Design Sprint", "Strategy Session", "Other"],
     },
     isShared: { type: Boolean, default: false },
     collaborators: [{ type: String }],
@@ -114,38 +54,24 @@ const WhiteboardSchema: Schema = new Schema(
     owner: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     elements: [
       {
-        id: { type: String, required: false },
-        type: {
-          type: String,
-          enum: ['pen', 'eraser', 'highlighter', 'shape', 'text'],
-          required: false,
-        },
-        points: [{ x: { type: Number, required: false }, y: { type: Number, required: false } }],
-        color: { type: String, required: false },
-        lineWidth: { type: Number, required: false },
+        id: { type: String, required: true },
+        type: { type: String, enum: ['path', 'shape', 'text'], required: true },
+        points: [{ x: Number, y: Number }],
+        tool: { type: String, enum: ['pen', 'eraser', 'highlighter'] },
+        color: { type: String },
+        lineWidth: { type: Number },
         shapeType: {
           type: String,
           enum: [
-            'rectangle',
-            'circle',
-            'line',
-            'triangle',
-            'diamond',
-            'star',
-            'arrowRight',
-            'arrowLeft',
-            'arrowUp',
-            'arrowDown',
-            'heart',
-            'pentagon',
-            'hexagon',
-            'heptagon',
-            'octagon',
-            'cross',
-            'smiley',
-            'cloud',
+            'rectangle', 'circle', 'line', 'triangle', 'diamond', 'star',
+            'arrowRight', 'arrowLeft', 'arrowUp', 'arrowDown', 'heart',
+            'pentagon', 'hexagon', 'heptagon', 'octagon', 'cross', 'smiley', 'cloud',
           ],
         },
+        x: { type: Number },
+        y: { type: Number },
+        width: { type: Number },
+        height: { type: Number },
         text: { type: String },
         fontSize: { type: Number },
         fontFamily: { type: String },
@@ -156,74 +82,16 @@ const WhiteboardSchema: Schema = new Schema(
     ],
     stickyNotes: [
       {
-        id: { type: String, required: false },
-        content: { type: String, required: false },
-        x: { type: Number, required: false },
-        y: { type: Number, required: false },
-        width: { type: Number, required: false },
-        height: { type: Number, required: false },
-        color: { type: String, required: false },
+        id: { type: String, required: true },
+        content: { type: String },
+        x: { type: Number },
+        y: { type: Number },
+        width: { type: Number },
+        height: { type: Number },
+        color: { type: String },
       },
     ],
-    history: [
-      {
-        elements: [
-          {
-            id: { type: String, required: false },
-            type: {
-              type: String,
-              enum: ['pen', 'eraser', 'highlighter', 'shape', 'text'],
-              required: false,
-            },
-            points: [
-              { x: { type: Number, required: false }, y: { type: Number, required: false } },
-            ],
-            color: { type: String, required: false },
-            lineWidth: { type: Number, required: false },
-            shapeType: {
-              type: String,
-              enum: [
-                'rectangle',
-                'circle',
-                'line',
-                'triangle',
-                'diamond',
-                'star',
-                'arrowRight',
-                'arrowLeft',
-                'arrowUp',
-                'arrowDown',
-                'heart',
-                'pentagon',
-                'hexagon',
-                'heptagon',
-                'octagon',
-                'cross',
-                'smiley',
-                'cloud',
-              ],
-            },
-            text: { type: String },
-            fontSize: { type: Number },
-            fontFamily: { type: String },
-            bold: { type: Boolean },
-            italic: { type: Boolean },
-            underline: { type: Boolean },
-          },
-        ],
-        stickyNotes: [
-          {
-            id: { type: String, required: false },
-            content: { type: String, required: false },
-            x: { type: Number, required: false },
-            y: { type: Number, required: false },
-            width: { type: Number, required: false },
-            height: { type: Number, required: false },
-            color: { type: String, required: false },
-          },
-        ],
-      },
-    ],
+    history: [{ elements: Array, stickyNotes: Array }],
   },
   { timestamps: true }
 );

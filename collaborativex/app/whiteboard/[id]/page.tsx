@@ -17,7 +17,7 @@ const WhiteboardPage: React.FC<PageProps> = ({ params }) => {
 
   console.log("Whiteboard ID:", id);
 
-  // Rest of your existing code...
+
   const [strokeColor, setStrokeColor] = useState<string>("#000000");
   const [lineWidth, setLineWidth] = useState<number>(5);
   const [tool, setTool] = useState<

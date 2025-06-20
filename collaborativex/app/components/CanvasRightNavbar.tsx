@@ -3,16 +3,25 @@ import React, { useReducer, useState } from "react";
 import { User, Home, Save, Download } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-const RightNavBar: React.FC = () => {
+
+// Define props interface
+interface RightNavBarProps {
+  saveWhiteboard: () => void;
+  exportAsPNG: () => void;
+  exportAsPDF: () => void;
+}
+
+const RightNavBar: React.FC<RightNavBarProps> = ({saveWhiteboard,exportAsPDF,exportAsPNG}) => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   const handleSave = () => {
 
-    alert("Saving whiteboard...");
+    saveWhiteboard()
+    
   };
 
   const handleExport = () => {
-
+    exportAsPNG()
     alert("Exporting whiteboard as PNG...");
   };
 
@@ -27,7 +36,7 @@ const RightNavBar: React.FC = () => {
   return (
     <div className="absolute top-5 right-5 flex items-center space-x-2 z-30">
       <button
-        onClick={handleSave}
+        onClick={saveWhiteboard}
         className="p-2 bg-gray-700/90 text-white rounded-full hover:bg-gray-600 transition-all duration-300"
         title="Save Whiteboard"
         aria-label="Save Whiteboard"
