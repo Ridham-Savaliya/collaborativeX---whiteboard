@@ -1,4 +1,3 @@
-// ```  typescript
 "use client";
 import React, { useState, useEffect } from "react";
 import {
@@ -10,8 +9,8 @@ import {
   FiEdit3,
   FiSave,
   FiX,
-  FiUpload,
   FiCamera,
+  FiUpload,
   FiGrid,
   FiClock,
   FiHome,
@@ -20,18 +19,18 @@ import withAuth from "../api/_lib/withAuth";
 import { useSearchParams } from "next/navigation";
 
 interface UserProfile {
-  name: string;
+  name?: string;
   email: string;
-  username: string;
-  profilePicture: string;
+  username?: string;
+  profilePicture?: string;
   createdAt: string;
-  bio: string;
-  location: string;
-  website: string;
+  bio?: string;
+  location?: string;
+  website?: string;
   preferences: {
     theme: "light" | "dark" | "system";
     notifications: boolean;
-    privacy: boolean;
+    dataSharing: boolean; // Replaced privacy
     language: string;
   };
 }
@@ -46,10 +45,10 @@ interface UserStats {
 interface Achievement {
   id: string;
   title: string;
-  description: string;
+  description?: string;
   icon: string;
   unlocked: boolean;
-  date?: string;
+  date?: number;
   _id: string;
 }
 
@@ -58,7 +57,7 @@ interface Activity {
   type: "created" | "edited" | "shared" | "collaborated";
   title: string;
   description: string;
-  timestamp: string;
+  timestamp: number;
   _id: string;
 }
 
@@ -75,7 +74,7 @@ const Profile: React.FC = () => {
     preferences: {
       theme: "system",
       notifications: true,
-      privacy: false,
+      dataSharing: false, // Replaced privacy
       language: "en",
     },
   };
@@ -93,7 +92,7 @@ const Profile: React.FC = () => {
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [activeTab, setActiveTab] = useState("overview");
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setEditing] = useState(false);
   const [formData, setFormData] = useState({
     name: defaultUser.name,
     bio: defaultUser.bio,
@@ -103,41 +102,43 @@ const Profile: React.FC = () => {
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const storedToken = localStorage.getItem("token");
-    if (storedToken) {
-      setToken(storedToken);
-    }
+    if (storedToken) setToken(storedToken);
   }, []);
 
   useEffect(() => {
-    if (currentTab) {
-      setActiveTab(currentTab);
-    }
+    if (currentTab) setActiveTab(currentTab);
   }, [currentTab]);
 
   useEffect(() => {
     setMounted(true);
-    const fetchUserProfile = async () => {
+    const fetchData = async () => {
       if (!token) return;
+
+      const headers = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      };
+
       try {
-        const response = await fetch("/api/user/profile", {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        if (response.ok) {
-          const userData = await response.json();
+        const [profileRes, achievementsRes, activitiesRes] = await Promise.all([
+          fetch("/api/user/profile", { method: "GET", headers }),
+          fetch("/api/user/achievements", { method: "POST", headers, body: JSON.stringify({}) }),
+          fetch("/api/user/activity", { method: "POST", headers, body: JSON.stringify({}) }),
+        ]);
+
+        if (profileRes.ok) {
+          const userData = await profileRes.json();
           setUser(userData);
           setFormData({
-            name: userData.name,
-            bio: userData.bio,
-            location: userData.location,
-            website: userData.website,
-            profilePicture: userData.profilePicture,
+            name: userData.name || "",
+            bio: userData.bio || "",
+            location: userData.location || "",
+            website: userData.website || "",
+            profilePicture: userData.profilePicture || "",
           });
           setStats(
             userData.stats || {
@@ -148,78 +149,33 @@ const Profile: React.FC = () => {
             }
           );
         } else {
-          console.error("Failed to fetch user profile");
-          setUser(defaultUser);
-          setStats({
-            whiteboards: 0,
-            collaborations: 0,
-            timeSpent: "0h",
-            achievements: 0,
-          });
+          throw new Error("Failed to fetch user profile");
         }
-      } catch (error) {
-        console.error("Error fetching user profile:", error);
-        setUser(defaultUser);
-        setStats({
-          whiteboards: 0,
-          collaborations: 0,
-          timeSpent: "0h",
-          achievements: 0,
-        });
-      }
-    };
 
-    const fetchAchievements = async () => {
-      if (!token) return;
-      try {
-        const response = await fetch("/api/user/achievements", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({}),
-        });
-        if (response.ok) {
-          const data = await response.json();
+        if (achievementsRes.ok) {
+          const data = await achievementsRes.json();
           setAchievements(data.achievements || []);
         } else {
-          console.error("Failed to fetch achievements");
-          setAchievements([]);
+          throw new Error("Failed to fetch achievements");
         }
-      } catch (error) {
-        console.error("Error fetching achievements:", error);
-        setAchievements([]);
-      }
-    };
 
-    const fetchActivities = async () => {
-      if (!token) return;
-      try {
-        const response = await fetch("/api/user/activity", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({}),
-        });
-        if (response.ok) {
-          const data = await response.json();
+        if (activitiesRes.ok) {
+          const data = await activitiesRes.json();
           setActivities(data.history || []);
         } else {
-          console.error("Failed to fetch activities");
-          setActivities([]);
+          throw new Error("Failed to fetch activities");
         }
-      } catch (error) {
-        console.error("Error fetching activities:", error);
+      } catch (err) {
+        console.error("Error fetching data:", err);
+        setUser(defaultUser);
+        setStats({ whiteboards: 0, collaborations: 0, timeSpent: "0h", achievements: 0 });
+        setAchievements([]);
         setActivities([]);
+        setError("Failed to load profile data.");
       }
     };
 
-    fetchUserProfile();
-    fetchAchievements();
-    fetchActivities();
+    fetchData();
   }, [token]);
 
   useEffect(() => {
@@ -234,7 +190,7 @@ const Profile: React.FC = () => {
   }, [user.preferences.theme, mounted]);
 
   const handleUpdateProfilePicture = async () => {
-    if (!selectedFile) return;
+    if (!selectedFile || !token) return;
     try {
       const imageData = new FormData();
       imageData.append("file", selectedFile);
@@ -245,38 +201,32 @@ const Profile: React.FC = () => {
 
       const uploadRes = await fetch(
         "https://api.cloudinary.com/v1_1/dsqpc6sp6/image/upload",
-        {
-          method: "POST",
-          body: imageData,
-        }
+        { method: "POST", body: imageData }
       );
-
       const uploadData = await uploadRes.json();
       if (!uploadRes.ok) throw new Error("Image upload failed");
 
       const profilePictureUrl = uploadData.secure_url;
-
       const response = await fetch("/api/user/profile", {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          ...formData,
-          profilePicture: profilePictureUrl,
-        }),
+        body: JSON.stringify({ ...formData, profilePicture: profilePictureUrl }),
       });
 
       if (response.ok) {
         const updatedUser = await response.json();
         setUser(updatedUser);
         setFormData((prev) => ({ ...prev, profilePicture: profilePictureUrl }));
+        setError(null);
       } else {
-        console.error("Failed to update profile picture");
+        throw new Error("Failed to update profile picture");
       }
-    } catch (error) {
-      console.error("Error updating profile picture:", error);
+    } catch (err) {
+      console.error("Error updating profile picture:", err);
+      setError("Failed to update profile picture.");
     }
   };
 
@@ -297,30 +247,37 @@ const Profile: React.FC = () => {
     key: keyof UserProfile["preferences"],
     value: any
   ) => {
+    if (!token) return;
     try {
-      const response = await fetch("/api/user/profile", {
+      const payload = { ...user.preferences, [key]: value };
+      const response = await fetch("/api/user/profile/settings", {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          preferences: { ...user.preferences, [key]: value },
-        }),
+        body: JSON.stringify(payload), // Flat payload as required
       });
 
       if (response.ok) {
-        const updatedUser = await response.json();
-        setUser(updatedUser);
+        const data = await response.json();
+        setUser((prev) => ({
+          ...prev,
+          preferences: data.preferences,
+        }));
+        setError(null);
       } else {
-        console.error("Failed to update preferences");
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to update preferences");
       }
-    } catch (error) {
-      console.error("Error updating preferences:", error);
+    } catch (err) {
+      console.error("Error updating preferences:", err);
+      setError(err instanceof Error ? err.message : "Failed to update preferences.");
     }
   };
 
   const handleSave = async () => {
+    if (!token) return;
     try {
       const response = await fetch("/api/user/profile", {
         method: "PATCH",
@@ -334,28 +291,31 @@ const Profile: React.FC = () => {
       if (response.ok) {
         const updatedUser = await response.json();
         setUser(updatedUser);
-        setIsEditing(false);
+        setEditing(false);
+        setError(null);
       } else {
-        console.error("Failed to update profile");
+        throw new Error("Failed to update profile");
       }
-    } catch (error) {
-      console.error("Error updating profile:", error);
+    } catch (err) {
+      console.error("Error updating profile:", err);
+      setError("Failed to update profile.");
     }
   };
 
   const handleCancel = () => {
     setFormData({
-      name: user.name,
-      bio: user.bio,
-      location: user.location,
-      website: user.website,
-      profilePicture: user.profilePicture,
+      name: user.name || "",
+      bio: user.bio || "",
+      location: user.location || "",
+      website: user.website || "",
+      profilePicture: user.profilePicture || "",
     });
-    setIsEditing(false);
+    setEditing(false);
+    setError(null);
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
+  const formatDate = (date: string | number) => {
+    return new Date(date).toLocaleDateString("en-US", {
       year: "numeric",
       month: "long",
       day: "numeric",
@@ -364,31 +324,21 @@ const Profile: React.FC = () => {
 
   const getActivityIcon = (type: string) => {
     switch (type) {
-      case "created":
-        return <FiGrid className="w-4 h-4" />;
-      case "edited":
-        return <FiEdit3 className="w-4 h-4" />;
-      case "shared":
-        return <FiUpload className="w-4 h-4" />;
-      case "collaborated":
-        return <FiUser className="w-4 h-4" />;
-      default:
-        return <FiActivity className="w-4 h-4" />;
+      case "created": return <FiGrid className="w-4 h-4" />;
+      case "edited": return <FiEdit3 className="w-4 h-4" />;
+      case "shared": return <FiUpload className="w-4 h-4" />;
+      case "collaborated": return <FiUser className="w-4 h-4" />;
+      default: return <FiActivity className="w-4 h-4" />;
     }
   };
 
   const getActivityColor = (type: string) => {
     switch (type) {
-      case "created":
-        return "bg-purple-100 text-purple-600";
-      case "edited":
-        return "bg-blue-100 text-blue-600";
-      case "shared":
-        return "bg-green-100 text-green-600";
-      case "collaborated":
-        return "bg-orange-100 text-orange-600";
-      default:
-        return "bg-gray-100 text-gray-600";
+      case "created": return "bg-purple-100 text-purple-600";
+      case "edited": return "bg-blue-100 text-blue-600";
+      case "shared": return "bg-green-100 text-green-600";
+      case "collaborated": return "bg-orange-100 text-orange-600";
+      default: return "bg-gray-100 text-gray-600";
     }
   };
 
@@ -403,16 +353,16 @@ const Profile: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100 dark:bg-gradient-to-br dark:from-gray-900 dark:to-gray-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {error && (
+          <div className="mb-4 p-4 bg-red-100 text-red-700 rounded-lg">{error}</div>
+        )}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Sidebar */}
           <div className="lg:col-span-1">
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden sticky top-8">
               <div className="text-center p-8 bg-gradient-to-br from-purple-600 to-indigo-600">
                 <div className="relative inline-block">
                   <img
-                    src={
-                      user.profilePicture || "https://via.placeholder.com/150"
-                    }
+                    src={user.profilePicture || "https://via.placeholder.com/150"}
                     alt="Profile"
                     className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
                   />
@@ -432,24 +382,15 @@ const Profile: React.FC = () => {
                 >
                   Upload Profile Picture
                 </button>
-                <h2 className="text-xl font-bold text-white mt-4">
-                  {user.name || "User"}
-                </h2>
-                <p className="text-purple-100">
-                  @{user.username || "username"}
-                </p>
+                <h2 className="text-xl font-bold text-white mt-4">{user.name || "User"}</h2>
+                <p className="text-purple-100">@{user.username || "username"}</p>
               </div>
-
               <nav className="p-4">
                 <ul className="space-y-2">
                   {[
                     { id: "overview", label: "Overview", icon: FiHome },
                     { id: "activity", label: "Activity", icon: FiActivity },
-                    {
-                      id: "achievements",
-                      label: "Achievements",
-                      icon: FiAward,
-                    },
+                    { id: "achievements", label: "Achievements", icon: FiAward },
                     { id: "settings", label: "Settings", icon: FiSettings },
                   ].map((item) => (
                     <li key={item.id}>
@@ -471,37 +412,15 @@ const Profile: React.FC = () => {
             </div>
           </div>
 
-          {/* Main Content */}
           <div className="lg:col-span-3">
             {activeTab === "overview" && (
               <div className="space-y-8">
-                {/* Stats Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   {[
-                    {
-                      label: "Whiteboards",
-                      value: stats.whiteboards,
-                      icon: FiGrid,
-                      color: "purple",
-                    },
-                    {
-                      label: "Collaborations",
-                      value: stats.collaborations,
-                      icon: FiUser,
-                      color: "blue",
-                    },
-                    {
-                      label: "Time Spent",
-                      value: stats.timeSpent,
-                      icon: FiClock,
-                      color: "green",
-                    },
-                    {
-                      label: "Achievements",
-                      value: stats.achievements,
-                      icon: FiAward,
-                      color: "orange",
-                    },
+                    { label: "Whiteboards", value: stats.whiteboards, icon: FiGrid, color: "purple" },
+                    { label: "Collaborations", value: stats.collaborations, icon: FiUser, color: "blue" },
+                    { label: "Time Spent", value: stats.timeSpent, icon: FiClock, color: "green" },
+                    { label: "Achievements", value: stats.achievements, icon: FiAward, color: "orange" },
                   ].map((stat, index) => (
                     <div
                       key={index}
@@ -509,33 +428,22 @@ const Profile: React.FC = () => {
                     >
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                            {stat.label}
-                          </p>
-                          <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
-                            {stat.value}
-                          </p>
+                          <p className="text-sm font-medium text-gray-600 dark:text-gray-300">{stat.label}</p>
+                          <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">{stat.value}</p>
                         </div>
-                        <div
-                          className={`p-3 rounded-full bg-${stat.color}-100`}
-                        >
-                          <stat.icon
-                            className={`w-6 h-6 text-${stat.color}-600`}
-                          />
+                        <div className={`p-3 rounded-full bg-${stat.color}-100`}>
+                          <stat.icon className={`w-6 h-6 text-${stat.color}-600`} />
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
 
-                {/* Profile Info */}
                 <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden">
                   <div className="px-8 py-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-                      Profile Information
-                    </h3>
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">Profile Information</h3>
                     <button
-                      onClick={() => setIsEditing(!isEditing)}
+                      onClick={() => setEditing(!isEditing)}
                       className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
                     >
                       <FiEdit3 className="w-4 h-4 mr-2" />
@@ -546,49 +454,41 @@ const Profile: React.FC = () => {
                     {isEditing ? (
                       <div className="space-y-6">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Name
-                          </label>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Name</label>
                           <input
                             type="text"
                             name="name"
-                            value={formData.name}
+                            value={formData.name || ""}
                             onChange={handleChange}
                             className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Bio
-                          </label>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Bio</label>
                           <input
                             type="text"
                             name="bio"
-                            value={formData.bio}
+                            value={formData.bio || ""}
                             onChange={handleChange}
                             className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Location
-                          </label>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Location</label>
                           <input
                             type="text"
                             name="location"
-                            value={formData.location}
+                            value={formData.location || ""}
                             onChange={handleChange}
                             className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Website
-                          </label>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Website</label>
                           <input
                             type="text"
                             name="website"
-                            value={formData.website}
+                            value={formData.website || ""}
                             onChange={handleChange}
                             className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                           />
@@ -613,56 +513,32 @@ const Profile: React.FC = () => {
                     ) : (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div>
-                          <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                            Contact
-                          </h4>
+                          <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Contact</h4>
                           <div className="mt-4 space-y-4">
                             <div>
-                              <p className="text-sm text-gray-600 dark:text-gray-300">
-                                Email
-                              </p>
-                              <p className="text-lg font-medium text-gray-900 dark:text-white">
-                                {user.email || "Not provided"}
-                              </p>
+                              <p className="text-sm text-gray-600 dark:text-gray-300">Email</p>
+                              <p className="text-lg font-medium text-gray-900 dark:text-white">{user.email || "Not provided"}</p>
                             </div>
                             <div>
-                              <p className="text-sm text-gray-600 dark:text-gray-300">
-                                Location
-                              </p>
-                              <p className="text-lg font-medium text-gray-900 dark:text-white">
-                                {user.location || "Not provided"}
-                              </p>
+                              <p className="text-sm text-gray-600 dark:text-gray-300">Location</p>
+                              <p className="text-lg font-medium text-gray-900 dark:text-white">{user.location || "Not provided"}</p>
                             </div>
                             <div>
-                              <p className="text-sm text-gray-600 dark:text-gray-300">
-                                Website
-                              </p>
-                              <p className="text-lg font-medium text-purple-600 dark:text-purple-400">
-                                {user.website || "Not provided"}
-                              </p>
+                              <p className="text-sm text-gray-600 dark:text-gray-300">Website</p>
+                              <p className="text-lg font-medium text-purple-600 dark:text-purple-400">{user.website || "Not provided"}</p>
                             </div>
                           </div>
                         </div>
                         <div>
-                          <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                            About
-                          </h4>
+                          <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">About</h4>
                           <div className="mt-4 space-y-4">
                             <div>
-                              <p className="text-sm text-gray-600 dark:text-gray-300">
-                                Bio
-                              </p>
-                              <p className="text-lg font-medium text-gray-900 dark:text-white">
-                                {user.bio || "Not provided"}
-                              </p>
+                              <p className="text-sm text-gray-600 dark:text-gray-300">Bio</p>
+                              <p className="text-lg font-medium text-gray-900 dark:text-white">{user.bio || "Not provided"}</p>
                             </div>
                             <div>
-                              <p className="text-sm text-gray-600 dark:text-gray-300">
-                                Member Since
-                              </p>
-                              <p className="text-lg font-medium text-gray-900 dark:text-white">
-                                {formatDate(user.createdAt)}
-                              </p>
+                              <p className="text-sm text-gray-600 dark:text-gray-300">Member Since</p>
+                              <p className="text-lg font-medium text-gray-900 dark:text-white">{formatDate(user.createdAt)}</p>
                             </div>
                           </div>
                         </div>
@@ -676,42 +552,25 @@ const Profile: React.FC = () => {
             {activeTab === "activity" && (
               <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden">
                 <div className="px-8 py-6 border-b border-gray-200 dark:border-gray-700">
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-                    Recent Activity
-                  </h3>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">Recent Activity</h3>
                 </div>
                 <div className="p-8">
                   <div className="space-y-6">
                     {activities.length > 0 ? (
                       activities.map((activity) => (
-                        <div
-                          key={activity._id}
-                          className="flex items-start space-x-4"
-                        >
-                          <div
-                            className={`flex-shrink-0 p-2 rounded-full ${getActivityColor(
-                              activity.type
-                            )}`}
-                          >
+                        <div key={activity._id} className="flex items-start space-x-4">
+                          <div className={`flex-shrink-0 p-2 rounded-full ${getActivityColor(activity.type)}`}>
                             {getActivityIcon(activity.type)}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-lg font-medium text-gray-900 dark:text-white">
-                              {activity.title}
-                            </p>
-                            <p className="text-gray-600 dark:text-gray-300">
-                              {activity.description}
-                            </p>
-                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                              {formatDate(activity.timestamp)}
-                            </p>
+                            <p className="text-lg font-medium text-gray-900 dark:text-white">{activity.title}</p>
+                            <p className="text-gray-600 dark:text-gray-300">{activity.description}</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{formatDate(activity.timestamp)}</p>
                           </div>
                         </div>
                       ))
                     ) : (
-                      <p className="text-gray-600 dark:text-gray-300">
-                        No activities found.
-                      </p>
+                      <p className="text-gray-600 dark:text-gray-300">No activities found.</p>
                     )}
                   </div>
                 </div>
@@ -721,9 +580,7 @@ const Profile: React.FC = () => {
             {activeTab === "achievements" && (
               <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden">
                 <div className="px-8 py-6 border-b border-gray-200 dark:border-gray-700">
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-                    Achievements
-                  </h3>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">Achievements</h3>
                 </div>
                 <div className="p-8">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -740,12 +597,8 @@ const Profile: React.FC = () => {
                           <div className="flex items-center space-x-4">
                             <div className="text-3xl">{achievement.icon}</div>
                             <div className="flex-1">
-                              <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                {achievement.title}
-                              </h4>
-                              <p className="text-gray-600 dark:text-gray-300">
-                                {achievement.description}
-                              </p>
+                              <h4 className="text-lg font-semibold text-gray-900 dark:text-white">{achievement.title}</h4>
+                              <p className="text-gray-600 dark:text-gray-300">{achievement.description || "No description"}</p>
                               {achievement.unlocked && achievement.date && (
                                 <p className="text-sm text-purple-600 dark:text-purple-400 mt-2">
                                   Unlocked on {formatDate(achievement.date)}
@@ -756,9 +609,7 @@ const Profile: React.FC = () => {
                         </div>
                       ))
                     ) : (
-                      <p className="text-gray-600 dark:text-gray-300">
-                        No achievements found.
-                      </p>
+                      <p className="text-gray-600 dark:text-gray-300">No achievements found.</p>
                     )}
                   </div>
                 </div>
@@ -768,31 +619,21 @@ const Profile: React.FC = () => {
             {activeTab === "settings" && (
               <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden">
                 <div className="px-8 py-6 border-b border-gray-200 dark:border-gray-700">
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-                    Settings
-                  </h3>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">Settings</h3>
                 </div>
                 <div className="p-8">
                   <div className="space-y-8">
                     <div>
-                      <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                        Preferences
-                      </h4>
+                      <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Preferences</h4>
                       <div className="space-y-6">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="font-medium text-gray-900 dark:text-white">
-                              Theme
-                            </p>
-                            <p className="text-sm text-gray-600 dark:text-gray-300">
-                              Choose your preferred theme
-                            </p>
+                            <p className="font-medium text-gray-900 dark:text-white">Theme</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-300">Choose your preferred theme</p>
                           </div>
                           <select
                             value={user.preferences.theme}
-                            onChange={(e) =>
-                              handlePreferenceChange("theme", e.target.value)
-                            }
+                            onChange={(e) => handlePreferenceChange("theme", e.target.value)}
                             className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                           >
                             <option value="light">Light</option>
@@ -802,23 +643,14 @@ const Profile: React.FC = () => {
                         </div>
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="font-medium text-gray-900 dark:text-white">
-                              Email Notifications
-                            </p>
-                            <p className="text-sm text-gray-600 dark:text-gray-300">
-                              Receive email updates about your activity
-                            </p>
+                            <p className="font-medium text-gray-900 dark:text-white">Email Notifications</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-300">Receive email updates about your activity</p>
                           </div>
                           <label className="relative inline-flex items-center cursor-pointer">
                             <input
                               type="checkbox"
                               checked={user.preferences.notifications}
-                              onChange={(e) =>
-                                handlePreferenceChange(
-                                  "notifications",
-                                  e.target.checked
-                                )
-                              }
+                              onChange={(e) => handlePreferenceChange("notifications", e.target.checked)}
                               className="sr-only peer"
                             />
                             <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 dark:peer-focus:ring-purple-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
@@ -826,23 +658,14 @@ const Profile: React.FC = () => {
                         </div>
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="font-medium text-gray-900 dark:text-white">
-                              Privacy Mode
-                            </p>
-                            <p className="text-sm text-gray-600 dark:text-gray-300">
-                              Hide your profile from search results
-                            </p>
+                            <p className="font-medium text-gray-900 dark:text-white">Data Sharing</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-300">Allow sharing data for analytics</p>
                           </div>
                           <label className="relative inline-flex items-center cursor-pointer">
                             <input
                               type="checkbox"
-                              checked={user.preferences.privacy}
-                              onChange={(e) =>
-                                handlePreferenceChange(
-                                  "privacy",
-                                  e.target.checked
-                                )
-                              }
+                              checked={user.preferences.dataSharing}
+                              onChange={(e) => handlePreferenceChange("dataSharing", e.target.checked)}
                               className="sr-only peer"
                             />
                             <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 dark:peer-focus:ring-purple-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
@@ -850,24 +673,19 @@ const Profile: React.FC = () => {
                         </div>
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="font-medium text-gray-900 dark:text-white">
-                              Language
-                            </p>
-                            <p className="text-sm text-gray-600 dark:text-gray-300">
-                              Select your preferred language
-                            </p>
+                            <p className="font-medium text-gray-900 dark:text-white">Language</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-300">Select your preferred language</p>
                           </div>
                           <select
                             value={user.preferences.language}
-                            onChange={(e) =>
-                              handlePreferenceChange("language", e.target.value)
-                            }
+                            onChange={(e) => handlePreferenceChange("language", e.target.value)}
                             className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                           >
                             <option value="en">English</option>
                             <option value="es">Spanish</option>
                             <option value="fr">French</option>
                             <option value="de">German</option>
+                            <option value="ru">Russian</option>
                           </select>
                         </div>
                       </div>

@@ -11,10 +11,12 @@ import DemoVideo from './components/DemoVideo';
 import AboutUs from './components/AboutUs';
 import AIFeatureAnimations from './components/AIFeatureAnimations';
 import WhiteboardFeatureDemo from './components/WhiteboardFeatureDemo';
+import { useGlobalLoader } from './hooks/useGlobalLoader';
 
 const LandingPage = () => {
   const pageRef = useRef<HTMLDivElement>(null);
-  const router = useRouter();
+    const router = useRouter();
+ const { navigateWithLoader } = useGlobalLoader();
     const handleRedirect = () => {
       
       router.push("/register");
@@ -65,7 +67,7 @@ const LandingPage = () => {
             understands you better than ever!
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-            <button onClick={handleRedirect} className="interactive-button bg-[var(--primary)] text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-semibold hover-lift">
+            <button onClick={()=> {navigateWithLoader(router,"/register")}} className="interactive-button bg-[var(--primary)] text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-semibold hover-lift">
               Get Started Free
             </button>
             <button className="interactive-button bg-transparent border-2 border-[var(--primary)] text-[var(--primary)] px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-semibold hover-lift">

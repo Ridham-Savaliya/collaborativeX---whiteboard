@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { jwtDecode } from "jwt-decode";
 import withAuth from "../api/_lib/withAuth";
+import { useGlobalLoader } from "../hooks/useGlobalLoader";
 
 interface Whiteboard {
   _id: string;
@@ -34,6 +35,7 @@ interface User {
 
 const Onboarding = () => {
   const router = useRouter();
+  const { navigateWithLoader } = useGlobalLoader();
   const [whiteboards, setWhiteboards] = useState<Whiteboard[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
@@ -140,7 +142,9 @@ const Onboarding = () => {
       if (response.ok) {
         setWhiteboards(
           whiteboards.map((board) =>
-            board._id === id ? { ...board, isFavorite: !board.isFavorite } : board
+            board._id === id
+              ? { ...board, isFavorite: !board.isFavorite }
+              : board
           )
         );
       }
@@ -187,7 +191,9 @@ const Onboarding = () => {
             name: onboardingData.name,
             purpose: onboardingData.purpose,
             collaborators: onboardingData.collaborators
-              ? onboardingData.collaborators.split(",").map((email) => email.trim())
+              ? onboardingData.collaborators
+                  .split(",")
+                  .map((email) => email.trim())
               : [],
           }),
         });
@@ -202,7 +208,9 @@ const Onboarding = () => {
             await router.push(`/whiteboard/${newWhiteboard._id}`); // Wait for redirect
           } else {
             console.error("Whiteboard ID not found in response:", data);
-            alert("Failed to redirect to whiteboard. Please select it from the list.");
+            alert(
+              "Failed to redirect to whiteboard. Please select it from the list."
+            );
           }
         } else {
           console.error("Failed to create whiteboard:", response.statusText);
@@ -301,7 +309,8 @@ const Onboarding = () => {
                     Name your whiteboard
                   </h2>
                   <p className="text-gray-600 text-lg">
-                    Give your whiteboard a descriptive name that inspires creativity
+                    Give your whiteboard a descriptive name that inspires
+                    creativity
                   </p>
                 </div>
                 <div className="space-y-4">
@@ -385,7 +394,9 @@ const Onboarding = () => {
                       <div className="flex items-center space-x-4">
                         <span className="text-2xl">{option.icon}</span>
                         <div>
-                          <h3 className="font-semibold text-gray-800">{option.label}</h3>
+                          <h3 className="font-semibold text-gray-800">
+                            {option.label}
+                          </h3>
                           <p className="text-sm text-gray-600">{option.desc}</p>
                         </div>
                       </div>
@@ -423,7 +434,8 @@ const Onboarding = () => {
                   />
                   <p className="text-sm text-gray-500 flex items-center">
                     <span className="mr-2">💡</span>
-                    Separate multiple emails with commas "<b>,</b>" you can always add more later
+                    Separate multiple emails with commas "<b>,</b>" you can
+                    always add more later
                   </p>
                 </div>
               </div>
@@ -432,7 +444,9 @@ const Onboarding = () => {
 
           <div className="mt-10 flex justify-between items-center">
             <div className="text-sm text-gray-500">
-              {onboardingStep === 3 ? "Ready to create!" : `${3 - onboardingStep} steps remaining`}
+              {onboardingStep === 3
+                ? "Ready to create!"
+                : `${3 - onboardingStep} steps remaining`}
             </div>
             <button
               onClick={handleOnboardingNext}
@@ -490,7 +504,10 @@ const Onboarding = () => {
                   }`}
                   aria-label="Show favorites only"
                 >
-                  <Star size={20} className={showFavoritesOnly ? "fill-white" : ""} />
+                  <Star
+                    size={20}
+                    className={showFavoritesOnly ? "fill-white" : ""}
+                  />
                 </button>
 
                 <button
@@ -540,9 +557,12 @@ const Onboarding = () => {
             </div>
             {searchTerm ? (
               <div className="text-center max-w-md">
-                <h2 className="text-2xl font-bold text-gray-800 mb-3">No matches found</h2>
+                <h2 className="text-2xl font-bold text-gray-800 mb-3">
+                  No matches found
+                </h2>
                 <p className="text-gray-600 text-lg">
-                  Try adjusting your search terms or clear filters to see all whiteboards
+                  Try adjusting your search terms or clear filters to see all
+                  whiteboards
                 </p>
                 <button
                   onClick={() => setSearchTerm("")}
@@ -557,8 +577,8 @@ const Onboarding = () => {
                   Start Your Creative Journey
                 </h2>
                 <p className="text-gray-600 text-xl mb-8 leading-relaxed">
-                  Create your first whiteboard and bring your ideas to life with our premium
-                  collaborative workspace designed for modern teams.
+                  Create your first whiteboard and bring your ideas to life with
+                  our premium collaborative workspace designed for modern teams.
                 </p>
                 <button
                   onClick={() => setIsOnboarding(true)}
@@ -582,7 +602,9 @@ const Onboarding = () => {
               <div
                 key={whiteboard._id}
                 className={`group relative bg-white/70 backdrop-blur-sm rounded-3xl border border-white/30 transition-all duration-300 hover:scale-105 hover:bg-white/90 hover:shadow-2xl overflow-hidden animate-fade-in ${
-                  view === "grid" ? "shadow-lg hover:shadow-2xl" : "shadow-md hover:shadow-xl flex items-center"
+                  view === "grid"
+                    ? "shadow-lg hover:shadow-2xl"
+                    : "shadow-md hover:shadow-xl flex items-center"
                 }`}
                 style={{ animationDelay: `${index * 100}ms` }}
               >
@@ -616,26 +638,43 @@ const Onboarding = () => {
                           ? "text-amber-500 bg-amber-50"
                           : "text-gray-400 hover:text-amber-500 hover:bg-amber-50"
                       }`}
-                      aria-label={whiteboard.isFavorite ? "Remove from favorites" : "Add to favorites"}
+                      aria-label={
+                        whiteboard.isFavorite
+                          ? "Remove from favorites"
+                          : "Add to favorites"
+                      }
                     >
-                      <Star size={18} className={whiteboard.isFavorite ? "fill-amber-500" : ""} />
+                      <Star
+                        size={18}
+                        className={
+                          whiteboard.isFavorite ? "fill-amber-500" : ""
+                        }
+                      />
                     </button>
                   </div>
 
-                  <div className={`flex items-center text-sm text-gray-500 ${view === "grid" ? "mb-6" : "mb-0"}`}>
+                  <div
+                    className={`flex items-center text-sm text-gray-500 ${
+                      view === "grid" ? "mb-6" : "mb-0"
+                    }`}
+                  >
                     <Clock size={16} className="mr-2" />
-                    <span className="font-medium">{formatDate(whiteboard.createdAt)}</span>
+                    <span className="font-medium">
+                      {formatDate(whiteboard.createdAt)}
+                    </span>
                   </div>
 
-                  {view === "grid" && whiteboard.collaborators && whiteboard.collaborators.length > 0 && (
-                    <div className="flex items-center mt-4">
-                      <Users size={16} className="mr-2 text-gray-400" />
-                      <span className="text-sm text-gray-500">
-                        {whiteboard.collaborators.length} collaborator
-                        {whiteboard.collaborators.length > 1 ? "s" : ""}
-                      </span>
-                    </div>
-                  )}
+                  {view === "grid" &&
+                    whiteboard.collaborators &&
+                    whiteboard.collaborators.length > 0 && (
+                      <div className="flex items-center mt-4">
+                        <Users size={16} className="mr-2 text-gray-400" />
+                        <span className="text-sm text-gray-500">
+                          {whiteboard.collaborators.length} collaborator
+                          {whiteboard.collaborators.length > 1 ? "s" : ""}
+                        </span>
+                      </div>
+                    )}
                 </div>
 
                 <div
@@ -646,7 +685,7 @@ const Onboarding = () => {
                   }`}
                 >
                   <button
-                    onClick={() => router.push(`/whiteboard/${whiteboard._id}`)}
+                    onClick={() => navigateWithLoader(router,`whiteboard/${whiteboard._id}`)}
                     className="flex-1 text-center px-4 py-3 mr-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 hover:scale-105 shadow-lg"
                     aria-label={`Open whiteboard ${whiteboard.name}`}
                   >
@@ -672,4 +711,3 @@ const Onboarding = () => {
 };
 
 export default withAuth(Onboarding);
-

@@ -54,7 +54,7 @@ const UserSchema: Schema = new Schema(
     },
     preferences: {
       theme: { type: String, enum: ['light', 'dark', 'system'], default: 'system' },
-      notifications: { type: Boolean, default: true },
+      notifications: { type: Boolean, default: false },
       privacy: { type: Boolean, default: false },
       language: { type: String, default: 'en' },
     },

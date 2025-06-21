@@ -12,6 +12,7 @@ import {
   Settings,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useGlobalLoader } from "../hooks/useGlobalLoader";
 
 // Define our own cn function to avoid the external import
 function cn(...inputs: (string | undefined | null | false | 0)[]) {
@@ -45,6 +46,7 @@ const CanvasToolbar: React.FC<ToolbarProps> = ({
   const [isExportingPDF, setisExportingPDF] = useState(false);
 
   const router = useRouter();
+  const { navigateWithLoader } = useGlobalLoader();
 
   const toggleToolGroup = (group: string) => {
     setActiveToolGroup(activeToolGroup === group ? null : group);
@@ -168,7 +170,9 @@ const CanvasToolbar: React.FC<ToolbarProps> = ({
 
             <button
               className="p-3 rounded-full bg-[#962aef] hover:bg-[#a576ce] transition-all duration-200"
-              onClick={handleSettings}
+              onClick={() =>
+                navigateWithLoader(router, "/profile?activityTab=settings")
+              }
               title="Settings"
             >
               <Settings size={22} />

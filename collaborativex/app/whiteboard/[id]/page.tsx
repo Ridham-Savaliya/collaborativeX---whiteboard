@@ -6,6 +6,8 @@ import Sidebar from "../../components/Sidebar";
 import { StickyNote, WhiteboardElement } from "../../components/Types";
 import { log } from "console";
 import withAuth from "@/app/api/_lib/withAuth";
+import { useGlobalLoader } from "@/app/hooks/useGlobalLoader";
+import { useRouter } from "next/navigation";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -52,6 +54,10 @@ const WhiteboardPage: React.FC<PageProps> = ({ params }) => {
     underline: false,
     fontFamily: "Arial",
   });
+
+
+  
+
   const [history, setHistory] = useState<
     { elements: WhiteboardElement[]; stickyNotes: StickyNote[] }[]
   >([{ elements: [], stickyNotes: [] }]);

@@ -5,9 +5,11 @@ import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
 import axios from "axios";
 import { toast } from "react-toastify";
+import { useGlobalLoader } from "../hooks/useGlobalLoader";
 
 const AuthPage = () => {
   const router = useRouter();
+  const { navigateWithLoader } = useGlobalLoader();
   const pathname = usePathname();
   const isLogin = pathname === "/login";
 
@@ -59,7 +61,7 @@ const AuthPage = () => {
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("userId", res.data.user.id);
       toast.success("Registered successfully!");
-      router.push("/onboarding");
+      navigateWithLoader(router, "/onboarding"); //
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Registration failed");
     } finally {
@@ -76,7 +78,7 @@ const AuthPage = () => {
       const res = await axios.post("/api/auth/login", { email, password });
       localStorage.setItem("token", res.data.token);
       toast.success(res.data.message);
-      router.push("/onboarding");
+    navigateWithLoader(router, "/onboarding"); // 
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Login failed");
     } finally {
@@ -156,7 +158,9 @@ const AuthPage = () => {
               {isLogin ? "Sign In" : "Create Account"}
             </h2>
             <p className="text-[var(--text)] opacity-70">
-              {isLogin ? "Don't have an account? " : "Already have an account? "}
+              {isLogin
+                ? "Don't have an account? "
+                : "Already have an account? "}
               <button
                 onClick={() => router.push(isLogin ? "/register" : "/login")}
                 className="text-[var(--primary)] hover:text-[var(--primary-dark)] font-semibold transition-colors"
@@ -270,14 +274,20 @@ const AuthPage = () => {
               onClick={() => {
                 setIsForgetPwd(false);
                 setStep(1);
-                setOtpDetails({ otp: "", newPassword: "", confirmNewPassword: "" });
+                setOtpDetails({
+                  otp: "",
+                  newPassword: "",
+                  confirmNewPassword: "",
+                });
               }}
               className="absolute top-4 right-4 text-xl font-bold text-[var(--text)] hover:text-[var(--primary)] transition-colors"
             >
               ×
             </button>
             <h3 className="text-2xl font-bold gradient-text mb-6 text-center">
-              {step === 1 ? "Reset Your Password" : "Enter OTP and New Password"}
+              {step === 1
+                ? "Reset Your Password"
+                : "Enter OTP and New Password"}
             </h3>
             <form onSubmit={handleResetSubmit} className="space-y-5">
               {step === 1 && (
