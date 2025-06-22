@@ -1,42 +1,50 @@
 @import "tailwindcss";
 
+ @custom-variant dark (&:where(.dark, .dark *));
+ 
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
 /* Define custom CSS variables for a premium look */
 :root {
-  --background: #f6f8fd;       /* Clean, modern white */
-  --foreground: #2d3748;       /* Rich slate for text */
-  --primary: #6366f1;          /* Modern indigo */
-  --primary-dark: #4f46e5;     /* Deep indigo for depth */
-  --primary-light: #818cf8;    /* Bright indigo for accents */
+  --background: #f6f8fd; /* Clean, modern white */
+  --foreground: #2d3748; /* Rich slate for text */
+  --primary: #6366f1; /* Modern indigo */
+  --primary-dark: #4f46e5; /* Deep indigo for depth */
+  --primary-light: #818cf8; /* Bright indigo for accents */
   --glass-bg: rgba(255, 255, 255, 0.1);
   --card-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0f172a;      /* Deep navy */
-    --foreground: #e2e8f0;      /* Soft white text */
-    --primary: #818cf8;         /* Bright indigo */
-    --primary-dark: #6366f1;    /* Rich indigo */
-    --primary-light: #a5b4fc;   /* Light indigo */
+    --background: #0f172a; /* Deep navy */
+    --foreground: #e2e8f0; /* Soft white text */
+    --primary: #818cf8; /* Bright indigo */
+    --primary-dark: #6366f1; /* Rich indigo */
+    --primary-light: #a5b4fc; /* Light indigo */
     --glass-bg: rgba(255, 255, 255, 0.05);
     --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   }
 }
 
- .scrollbar-custom::-webkit-scrollbar {
-          width: 8px;
-        }
-        .scrollbar-custom::-webkit-scrollbar-track {
-          background: rgba(255, 255, 255, 0.05);
-          border-radius: 4px;
-        }
-        .scrollbar-custom::-webkit-scrollbar-thumb {
-          background: linear-gradient(to bottom, #9333ea, #c084fc);
-          border-radius: 4px;
-        }
-        .scrollbar-custom::-webkit-scrollbar-thumb:hover {
-          background: linear-gradient(to bottom, #a855f7, #d8b4fe);
-        }
+.scrollbar-custom::-webkit-scrollbar {
+  width: 8px;
+}
+.scrollbar-custom::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+.scrollbar-custom::-webkit-scrollbar-thumb {
+  background: linear-gradient(to bottom, #9333ea, #c084fc);
+  border-radius: 4px;
+}
+.scrollbar-custom::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(to bottom, #a855f7, #d8b4fe);
+}
 
 /* index.css or globals.css */
 .custom-scroll {
@@ -48,11 +56,10 @@
   display: none; /* Chrome, Safari */
 }
 
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
 }
 
 /* Modern UI Elements */
@@ -85,7 +92,11 @@ body {
 
 /* Animated Gradients */
 .gradient-text {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--primary) 0%,
+    var(--primary-light) 100%
+  );
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -93,9 +104,15 @@ body {
 }
 
 @keyframes gradient {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 /* Smooth Transitions and Scrolling */
@@ -107,7 +124,9 @@ html {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-button, a, [role="button"] {
+button,
+a,
+[role="button"] {
   cursor: pointer;
 }
 
@@ -123,7 +142,7 @@ button, a, [role="button"] {
 }
 
 .interactive-button::after {
-  content: '';
+  content: "";
   position: absolute;
   width: 100%;
   height: 100%;
@@ -140,8 +159,12 @@ button, a, [role="button"] {
 
 /* Auto-scrolling Animation */
 @keyframes scroll {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
 }
 
 .animate-scroll {
@@ -150,8 +173,14 @@ button, a, [role="button"] {
 
 /* Animation for About Us section */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .animate-fade-in {
@@ -181,20 +210,20 @@ button, a, [role="button"] {
     padding-left: 1rem;
     padding-right: 1rem;
   }
-  
+
   .interactive-button {
     width: 100%;
     text-align: center;
   }
-   
+
   /* Mobile navigation hover effects */
   .md\:hidden a {
     position: relative;
     transition: all 0.3s ease;
   }
-  
+
   .md\:hidden a::after {
-    content: '';
+    content: "";
     position: absolute;
     width: 0;
     height: 2px;
@@ -203,33 +232,37 @@ button, a, [role="button"] {
     background-color: var(--primary);
     transition: width 0.3s ease;
   }
-  
+
   .md\:hidden a:hover {
     transform: translateX(5px);
     color: var(--primary);
   }
-  
+
   .md\:hidden a:hover::after {
     width: 100%;
   }
-  
+
   .mobile-nav-link {
     position: relative;
     overflow: hidden;
   }
-  
+
   .mobile-nav-link::before {
-    content: '';
+    content: "";
     position: absolute;
     top: 0;
     left: 0;
     width: 4px;
     height: 100%;
-    background: linear-gradient(to bottom, var(--primary-light), var(--primary));
+    background: linear-gradient(
+      to bottom,
+      var(--primary-light),
+      var(--primary)
+    );
     opacity: 0;
     transition: opacity 0.3s ease;
   }
-  
+
   .mobile-nav-link:hover::before {
     opacity: 1;
   }

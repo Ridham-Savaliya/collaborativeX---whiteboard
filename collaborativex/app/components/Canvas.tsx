@@ -14,6 +14,7 @@ import CanvasToolbar from "./CanvasToolbar";
 import { useParams } from "next/navigation";
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
+import { useTheme } from "../context/ThemeContext";
 
 interface CanvasProps {
   strokeColor: string;
@@ -1137,6 +1138,15 @@ const Canvas: React.FC<CanvasProps> = ({
     redrawContentCanvas();
   }, [canvasDimensions, zoomLevel, panOffset, gridContext, contentContext]);
 
+
+  const { theme } = useTheme(); // Get current theme
+  const [currentColor, setColor] = useState("#000000"); // Initial color
+
+  useEffect(() => {
+    // Set drawing color based on theme
+    setColor(theme === "dark" ? "#FFFFFF" : "#000000");
+  }, [theme]);
+  
   useEffect(() => {
     if (
       history.length > 0 &&
@@ -2024,223 +2034,211 @@ const exportAsPNG = () => {
   };
 
   return (
+ <div
+  ref={containerRef}
+  className="relative h-full w-full bg-gray-50 dark:bg-gray-400 overflow-hidden select-none"
+  onMouseUp={handleMouseUp}
+  onMouseLeave={handleMouseUp}
+  onClick={() => setColorPicker(null)}
+>
+  {toast && (
+    <Toast
+      message={toast.message}
+      type={toast.type}
+      onClose={() => setToast(null)}
+    />
+  )}
+  <canvas
+    ref={gridCanvasRef}
+    width={canvasDimensions.width}
+    height={canvasDimensions.height}
+    className="absolute top-0 left-0 touch-none"
+  />
+  <canvas
+    ref={contentCanvasRef}
+    width={canvasDimensions.width}
+    height={canvasDimensions.height}
+    className="absolute top-0 left-0 touch-none"
+    onMouseDown={handleMouseDown}
+    onMouseMove={handleMouseMove}
+  />
+  {uniqueStickyNotes.map((note) => (
+    <StickyNoteComponent
+      key={note.id}
+      note={note}
+      zoomLevel={zoomLevel}
+      panOffset={panOffset}
+      activeNoteId={activeNoteId}
+      editingNoteId={editingNoteId}
+      handleStickyNoteMouseDown={handleStickyNoteMouseDown}
+      handleStickyNoteDoubleClick={handleStickyNoteDoubleClick}
+      handleStickyNoteTextChange={handleStickyNoteTextChange}
+      handleFinishEditing={handleFinishEditing}
+      handleDeleteStickyNote={handleDeleteStickyNote}
+      handleResizeStart={handleResizeStart}
+      setStickyNotes={setStickyNotes}
+      showColorPicker={showColorPicker}
+      textStyles={textStyles}
+      textFontSize={textFontSize}
+    />
+  ))}
+  {elements.map((element) =>
+    element.type === "text" ? (
+      <TextComponent
+        key={element.id}
+        textElement={element as TextElement}
+        zoomLevel={zoomLevel}
+        panOffset={panOffset}
+        activeTextId={activeTextId}
+        editingTextId={editingTextId}
+        handleTextMouseDown={handleTextMouseDown}
+        handleTextDoubleClick={handleTextDoubleClick}
+        handleTextChange={handleTextChange}
+        handleFinishTextEditing={handleFinishTextEditing}
+        setElements={setElements}
+        textStyles={textStyles}
+        textFontSize={textFontSize}
+      />
+    ) : element.type !== "path" && !element.isFixed ? (
+      <div
+        key={element.id}
+        data-shape-id={element.id}
+        className={`absolute border border-dashed border-purple-400 dark:border-purple-600 rounded ${
+          activeShapeId === element.id
+            ? "z-20 ring-2 ring-purple-500 dark:ring-purple-700"
+            : "z-10"
+        }`}
+        style={{
+          left: `${element.x * zoomLevel + panOffset.x}px`,
+          top: `${element.y * zoomLevel + panOffset.y}px`,
+          width: `${Math.abs(element.width) * zoomLevel}px`,
+          height: `${Math.abs(element.height) * zoomLevel}px`,
+        }}
+        onMouseDown={(e) => handleShapeMouseDown(e, element.id)}
+      >
+        {activeShapeId === element.id && (
+          <>
+            <div
+              className="absolute bottom-0 right-0 w-5 h-5 bg-gradient-to-br from-purple-600 to-purple-700 dark:from-purple-700 dark:to-purple-800 rounded-full transform translate-x-1/2 translate-y-1/2 cursor-se-resize z-30 hover:bg-purple-500 dark:hover:bg-purple-600 hover:scale-125 transition-all duration-200"
+              onMouseDown={(e) => handleShapeResizeStart(e, element.id, "se")}
+            />
+            <div
+              className="absolute bottom-0 left-0 w-5 h-5 bg-gradient-to-br from-purple-600 to-purple-700 dark:from-purple-700 dark:to-purple-800 rounded-full transform -translate-x-1/2 translate-y-1/2 cursor-sw-resize z-30 hover:bg-purple-500 dark:hover:bg-purple-600 hover:scale-125 transition-all duration-200"
+              onMouseDown={(e) => handleShapeResizeStart(e, element.id, "sw")}
+            />
+            <div
+              className="absolute top-0 right-0 w-5 h-5 bg-gradient-to-br from-purple-600 to-purple-700 dark:from-purple-700 dark:to-purple-800 rounded-full transform translate-x-1/2 -translate-y-1/2 cursor-ne-resize z-30 hover:bg-purple-500 dark:hover:bg-purple-600 hover:scale-125 transition-all duration-200"
+              onMouseDown={(e) => handleShapeResizeStart(e, element.id, "ne")}
+            />
+            <div
+              className="absolute top-0 left-0 w-5 h-5 bg-gradient-to-br from-purple-600 to-purple-700 dark:from-purple-700 dark:to-purple-800 rounded-full transform -translate-x-1/2 -translate-y-1/2 cursor-nw-resize z-30 hover:bg-purple-500 dark:hover:bg-purple-600 hover:scale-125 transition-all duration-200"
+              onMouseDown={(e) => handleShapeResizeStart(e, element.id, "nw")}
+            />
+            <button
+              className="absolute top-0 right-0 w-6 h-6 bg-red-500 dark:bg-red-600 text-white rounded-full -translate-x-1/2 -translate-y-1/2 cursor-pointer z-30 hover:bg-red-400 dark:hover:bg-red-500 transition-all duration-200 transform hover:scale-105"
+              onClick={(e) => {
+                e.stopPropagation();
+                setElements((prev) => {
+                  const newElements = prev.filter((el) => el.id !== element.id);
+                  elementsRef.current = newElements;
+                  debouncedSaveToHistory(newElements, stickyNotes);
+                  return newElements;
+                });
+                if (activeShapeId === element.id) setActiveShapeId(null);
+              }}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="white"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </>
+        )}
+      </div>
+    ) : null
+  )}
+  {colorPicker && (
     <div
-      ref={containerRef}
-      className="relative h-full w-full bg-gray-50 overflow-hidden select-none"
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
-      onClick={() => setColorPicker(null)}
+      className="absolute z-50 flex flex-wrap gap-2 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700"
+      style={{ left: colorPicker.x, top: colorPicker.y }}
     >
-      {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(null)}
-        />
-      )}
-      <canvas
-        ref={gridCanvasRef}
-        width={canvasDimensions.width}
-        height={canvasDimensions.height}
-        className="absolute top-0 left-0 touch-none"
-      />
-      <canvas
-        ref={contentCanvasRef}
-        width={canvasDimensions.width}
-        height={canvasDimensions.height}
-        className="absolute top-0 left-0 touch-none"
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-      />
-      {uniqueStickyNotes.map((note) => (
-        <StickyNoteComponent
-          key={note.id}
-          note={note}
-          zoomLevel={zoomLevel}
-          panOffset={panOffset}
-          activeNoteId={activeNoteId}
-          editingNoteId={editingNoteId}
-          handleStickyNoteMouseDown={handleStickyNoteMouseDown}
-          handleStickyNoteDoubleClick={handleStickyNoteDoubleClick}
-          handleStickyNoteTextChange={handleStickyNoteTextChange}
-          handleFinishEditing={handleFinishEditing}
-          handleDeleteStickyNote={handleDeleteStickyNote}
-          handleResizeStart={handleResizeStart}
-          setStickyNotes={setStickyNotes}
-          showColorPicker={showColorPicker}
-          textStyles={textStyles}
-          textFontSize={textFontSize}
+      {colorPalette.map((color, index) => (
+        <button
+          key={index}
+          className="w-8 h-8 rounded-full border-2 border-gray-300 dark:border-gray-600 hover:border-purple-500 dark:hover:border-purple-400 focus:outline-none transition-all duration-200"
+          style={{ backgroundColor: color.bg }}
+          onClick={() => handleColorSelect(colorPicker.noteId, color.bg, color.text)}
+          title={`Background: ${color.bg}, Text: ${color.text}`}
         />
       ))}
-      {elements.map((element) =>
-        element.type === "text" ? (
-          <TextComponent
-            key={element.id}
-            textElement={element as TextElement}
-            zoomLevel={zoomLevel}
-            panOffset={panOffset}
-            activeTextId={activeTextId}
-            editingTextId={editingTextId}
-            handleTextMouseDown={handleTextMouseDown}
-            handleTextDoubleClick={handleTextDoubleClick}
-            handleTextChange={handleTextChange}
-            handleFinishTextEditing={handleFinishTextEditing}
-            setElements={setElements}
-            textStyles={textStyles}
-            textFontSize={textFontSize}
-          />
-        ) : element.type !== "path" && !element.isFixed ? (
-          <div
-            key={element.id}
-            data-shape-id={element.id}
-            className={`absolute border border-dashed border-purple-400 rounded ${
-              activeShapeId === element.id
-                ? "z-20 ring-2 ring-purple-500"
-                : "z-10"
-            }`}
-            style={{
-              left: `${element.x * zoomLevel + panOffset.x}px`,
-              top: `${element.y * zoomLevel + panOffset.y}px`,
-              width: `${Math.abs(element.width) * zoomLevel}px`,
-              height: `${Math.abs(element.height) * zoomLevel}px`,
-            }}
-            onMouseDown={(e) => handleShapeMouseDown(e, element.id)}
-          >
-            {activeShapeId === element.id && (
-              <>
-                <div
-                  className="absolute bottom-0 right-0 w-5 h-5 bg-gradient-to-br from-purple-600 to-purple-800 rounded-full transform translate-x-1/2 translate-y-1/2 cursor-se-resize z-30 hover:bg-purple-700 hover:scale-125 transition-all duration-200"
-                  onMouseDown={(e) =>
-                    handleShapeResizeStart(e, element.id, "se")
-                  }
-                />
-                <div
-                  className="absolute bottom-0 left-0 w-5 h-5 bg-gradient-to-br from-purple-600 to-purple-800 rounded-full transform -translate-x-1/2 translate-y-1/2 cursor-sw-resize z-30 hover:bg-purple-700 hover:scale-125 transition-all duration-200"
-                  onMouseDown={(e) =>
-                    handleShapeResizeStart(e, element.id, "sw")
-                  }
-                />
-                <div
-                  className="absolute top-0 right-0 w-5 h-5 bg-gradient-to-br from-purple-600 to-purple-800 rounded-full transform translate-x-1/2 -translate-y-1/2 cursor-ne-resize z-30 hover:bg-purple-700 hover:scale-125 transition-all duration-200"
-                  onMouseDown={(e) =>
-                    handleShapeResizeStart(e, element.id, "ne")
-                  }
-                />
-                <div
-                  className="absolute top-0 left-0 w-5 h-5 bg-gradient-to-br from-purple-600 to-purple-800 rounded-full transform -translate-x-1/2 -translate-y-1/2 cursor-nw-resize z-30 hover:bg-purple-700 hover:scale-125 transition-all duration-200"
-                  onMouseDown={(e) =>
-                    handleShapeResizeStart(e, element.id, "nw")
-                  }
-                />
-                <button
-                  className="absolute top-0 right-0 w-6 h-6 bg-red-500 text-white rounded-full -translate-x-1/2 -translate-y-1/2 cursor-pointer z-30 hover:bg-red-600 transition-all duration-200 transform hover:scale-105"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setElements((prev) => {
-                      const newElements = prev.filter(
-                        (el) => el.id !== element.id
-                      );
-                      elementsRef.current = newElements;
-                      debouncedSaveToHistory(newElements, stickyNotes);
-                      return newElements;
-                    });
-                    if (activeShapeId === element.id) setActiveShapeId(null);
-                  }}
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="white"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <line x1="18" y1="6" x2="6" y2="18" />
-                    <line x1="6" y1="6" x2="18" y2="18" />
-                  </svg>
-                </button>
-              </>
-            )}
-          </div>
-        ) : null
-      )}
-      {colorPicker && (
-        <div
-          className="absolute z-50 flex flex-wrap gap-2 p-2 bg-white rounded-lg shadow-xl border border-gray-200"
-          style={{ left: colorPicker.x, top: colorPicker.y }}
-        >
-          {colorPalette.map((color, index) => (
-            <button
-              key={index}
-              className="w-8 h-8 rounded-full border-2 border-gray-300 hover:border-purple-500 focus:outline-none transition-all duration-200"
-              style={{ backgroundColor: color.bg }}
-              onClick={() =>
-                handleColorSelect(colorPicker.noteId, color.bg, color.text)
-              }
-              title={`Background: ${color.bg}, Text: ${color.text}`}
-            />
-          ))}
-        </div>
-      )}
-      <div className="absolute bottom-5 right-5 flex items-center gap-2 bg-white rounded-full shadow-md p-2 z-50">
-        <button
-          className="w-8 h-8 flex items-center justify-center bg-[#a446f2] rounded-full hover:bg-[#cba0ee] transition-all duration-200"
-          onClick={handleZoomOut}
-          title="Zoom Out"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="white"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-            <line x1="8" y1="11" x2="14" y2="11" />
-          </svg>
-        </button>
-        <span className="text-sm font-medium text-[#a446f2]">
-          {Math.round(zoomLevel * 100)}%
-        </span>
-        <button
-          className="w-8 h-8 flex items-center justify-center bg-[#a446f2] rounded-full hover:bg-[#cba0ee] transition-all duration-200"
-          onClick={handleZoomIn}
-          title="Zoom In"
-        >
-          <svg
-            color="#f9fafb"
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="white"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-            <line x1="11" y1="8" x2="11" y2="14" />
-            <line x1="8" y1="11" x2="14" y2="11" />
-          </svg>
-        </button>
-      </div>
-      <CanvasToolbar exportAsPNG={exportAsPNG} exportAsPDF={exportAsPDF} />
-      <NavBar
-        saveWhiteboard={saveWhiteboard}
-        exportAsPNG={exportAsPNG}
-        exportAsPDF={exportAsPDF}
-      />
     </div>
+  )}
+  <div className="absolute bottom-5 right-5 flex items-center gap-2 bg-white dark:bg-gray-700 rounded-full shadow-md p-2 z-50">
+    <button
+      className="w-8 h-8 flex items-center justify-center bg-purple-600 dark:bg-purple-700 rounded-full hover:bg-purple-500 dark:hover:bg-purple-600 transition-all duration-200"
+      onClick={handleZoomOut}
+      title="Zoom Out"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="white"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <circle cx="11" cy="11" r="8" />
+        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        <line x1="8" y1="11" x2="14" y2="11" />
+      </svg>
+    </button>
+    <span className="text-sm font-medium text-purple-600 dark:text-purple-400">
+      {Math.round(zoomLevel * 100)}%
+    </span>
+    <button
+      className="w-8 h-8 flex items-center justify-center bg-purple-600 dark:bg-purple-700 rounded-full hover:bg-purple-500 dark:hover:bg-purple-600 transition-all duration-200"
+      onClick={handleZoomIn}
+      title="Zoom In"
+    >
+      <svg
+        color="#f9fafb"
+        xmlns="http://www.w3.org/2000/svg"
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="white"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <circle cx="11" cy="11" r="8" />
+        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        <line x1="11" y1="8" x2="11" y2="14" />
+        <line x1="8" y1="11" x2="14" y2="11" />
+      </svg>
+    </button>
+  </div>
+  <CanvasToolbar exportAsPNG={exportAsPNG} exportAsPDF={exportAsPDF} />
+  <NavBar
+    saveWhiteboard={saveWhiteboard}
+    exportAsPNG={exportAsPNG}
+    exportAsPDF={exportAsPDF}
+  />
+</div>
   );
 };
 

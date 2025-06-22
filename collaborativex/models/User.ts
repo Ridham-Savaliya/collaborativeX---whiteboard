@@ -53,7 +53,7 @@ const UserSchema: Schema = new Schema(
       default: "Enter your site here"
     },
     preferences: {
-      theme: { type: String, enum: ['light', 'dark', 'system'], default: 'system' },
+      theme: { type: String, enum: ['light', 'dark', 'system'], default: 'light' },
       notifications: { type: Boolean, default: false },
       privacy: { type: Boolean, default: false },
       language: { type: String, default: 'en' },

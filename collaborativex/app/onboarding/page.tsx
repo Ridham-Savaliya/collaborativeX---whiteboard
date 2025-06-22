@@ -1,7 +1,8 @@
-// ```tsx
+// app/components/Onboarding.tsx
 "use client";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslation } from "react-i18next";
 import {
   Search,
   Plus,
@@ -34,6 +35,7 @@ interface User {
 }
 
 const Onboarding = () => {
+const { t, i18n } = useTranslation();
   const router = useRouter();
   const { navigateWithLoader } = useGlobalLoader();
   const [whiteboards, setWhiteboards] = useState<Whiteboard[]>([]);
@@ -50,7 +52,6 @@ const Onboarding = () => {
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
 
-  // Initialize token and fetch user data
   useEffect(() => {
     const storedToken = localStorage.getItem("token");
     if (storedToken) {
@@ -60,13 +61,13 @@ const Onboarding = () => {
         const userId = decoded.userId;
         fetchUserData(userId, storedToken);
       } catch (e) {
-        console.error("Failed to decode token:", e);
+        console.error(t("errors.decodeToken"), e);
         router.push("/login");
       }
     } else {
       router.push("/login");
     }
-  }, [router]);
+  }, [router, t]);
 
   const fetchUserData = async (userId: string, token: string) => {
     try {
@@ -81,16 +82,15 @@ const Onboarding = () => {
         setUser({ userId, isOnboarded: userData.isOnboarded });
         setIsOnboarding(!userData.isOnboarded);
       } else {
-        console.error("Failed to fetch user data");
+        console.error(t("errors.fetchUserData"));
         router.push("/login");
       }
     } catch (e) {
-      console.error("Error fetching user data:", e);
+      console.error(t("errors.fetchUserData"), e);
       router.push("/login");
     }
   };
 
-  // Fetch whiteboards
   useEffect(() => {
     if (token) {
       fetchWhiteboards();
@@ -109,18 +109,18 @@ const Onboarding = () => {
         const data = await response.json();
         setWhiteboards(Array.isArray(data.whiteboards) ? data.whiteboards : []);
       } else {
-        console.error("Failed to fetch whiteboards");
+        console.error(t("errors.fetchWhiteboards"));
         setWhiteboards([]);
       }
     } catch (e) {
-      console.error("Error fetching whiteboards:", e);
+      console.error(t("errors.fetchWhiteboards"), e);
       setWhiteboards([]);
     }
   };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return new Intl.DateTimeFormat("en-US", {
+    return new Intl.DateTimeFormat(i18n.language, {
       month: "short",
       day: "numeric",
       year: "numeric",
@@ -149,12 +149,12 @@ const Onboarding = () => {
         );
       }
     } catch (e) {
-      console.error("Error toggling favorite:", e);
+      console.error(t("errors.toggleFavorite"), e);
     }
   };
 
   const deleteWhiteboard = async (id: string) => {
-    if (window.confirm("Are you sure you want to delete this whiteboard?")) {
+    if (window.confirm(t("deleteWhiteboardConfirm"))) {
       try {
         const response = await fetch("/api/whiteboard", {
           method: "DELETE",
@@ -168,7 +168,7 @@ const Onboarding = () => {
           setWhiteboards(whiteboards.filter((board) => board._id !== id));
         }
       } catch (e) {
-        console.error("Error deleting whiteboard:", e);
+        console.error(t("errors.deleteWhiteboard"), e);
       }
     }
   };
@@ -200,25 +200,23 @@ const Onboarding = () => {
 
         if (response.ok) {
           const data = await response.json();
-          const newWhiteboard = data.whiteboard || data; // Handle nested or flat response
+          const newWhiteboard = data.whiteboard || data;
           if (newWhiteboard._id) {
             setWhiteboards([newWhiteboard, ...whiteboards]);
             setOnboardingStep(1);
             setOnboardingData({ name: "", purpose: "", collaborators: "" });
-            await router.push(`/whiteboard/${newWhiteboard._id}`); // Wait for redirect
+            await router.push(`/whiteboard/${newWhiteboard._id}`);
           } else {
-            console.error("Whiteboard ID not found in response:", data);
-            alert(
-              "Failed to redirect to whiteboard. Please select it from the list."
-            );
+            console.error(t("errors.whiteboardIdNotFound"), data);
+            alert(t("errors.createWhiteboard"));
           }
         } else {
-          console.error("Failed to create whiteboard:", response.statusText);
-          alert("Failed to create whiteboard. Please try again.");
+          console.error(t("errors.createWhiteboard"), response.statusText);
+          alert(t("errors.createWhiteboard"));
         }
       } catch (e) {
-        console.error("Error creating whiteboard:", e);
-        alert("An error occurred. Please try again.");
+        console.error(t("errors.createWhiteboard"), e);
+        alert(t("errors.genericError"));
       }
     }
   };
@@ -233,13 +231,13 @@ const Onboarding = () => {
 
   if (isOnboarding) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-4 flex items-center justify-center relative overflow-hidden">
+      <div className="min-h-screen bg-gradient-to-br from-gray-100 dark:from-gray-900 via-blue-50 dark:via-gray-800 to-indigo-100 dark:to-gray-900 p-4 flex items-center justify-center relative overflow-hidden">
         <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-purple-400/20 to-pink-400/20 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-cyan-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
+          <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-purple-400/20 dark:from-purple-700/10 to-pink-400/20 dark:to-pink-700/10 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 dark:from-blue-700/10 to-cyan-400/20 dark:to-cyan-700/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
         </div>
 
-        <div className="w-full max-w-2xl bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 p-10 relative z-10 animate-fade-in">
+        <div className="w-full max-w-2xl bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 dark:border-gray-700 p-10 relative z-10 animate-fade-in">
           <div className="flex items-center justify-between mb-8">
             <button
               onClick={() => {
@@ -249,23 +247,23 @@ const Onboarding = () => {
                   setIsOnboarding(false);
                 }
               }}
-              className="p-3 hover:bg-gray-100/80 rounded-full transition-all duration-200 hover:scale-105"
+              className="p-3 hover:bg-gray-100/80 dark:hover:bg-gray-700/80 rounded-full transition-all duration-200 hover:scale-105"
             >
-              <ChevronLeft size={24} className="text-gray-600" />
+              <ChevronLeft size={24} className="text-gray-600 dark:text-gray-300" />
             </button>
             <div className="text-center">
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                Create Whiteboard
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 dark:from-indigo-400 to-purple-600 dark:to-purple-400 bg-clip-text text-transparent">
+                {t("createWhiteboard")}
               </h1>
-              <p className="text-sm text-gray-500 mt-1">
-                Step {onboardingStep} of 3
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                {t("stepNof3", { n: onboardingStep })}
               </p>
             </div>
             <button
               onClick={() => setIsOnboarding(false)}
-              className="p-3 hover:bg-gray-100/80 rounded-full transition-all duration-200 hover:scale-105"
+              className="p-3 hover:bg-gray-100/80 dark:hover:bg-gray-700/80 rounded-full transition-all duration-200 hover:scale-105"
             >
-              <X size={24} className="text-gray-600" />
+              <X size={24} className="text-gray-600 dark:text-gray-300" />
             </button>
           </div>
 
@@ -276,10 +274,10 @@ const Onboarding = () => {
                   <div
                     className={`w-12 h-12 rounded-full flex items-center justify-center font-semibold transition-all duration-300 ${
                       step === onboardingStep
-                        ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg scale-110"
+                        ? "bg-gradient-to-r from-indigo-600 dark:from-indigo-400 to-purple-600 dark:to-purple-400 text-white shadow-lg scale-110"
                         : step < onboardingStep
-                        ? "bg-gradient-to-r from-green-500 to-emerald-500 text-white"
-                        : "bg-gray-100 text-gray-400"
+                        ? "bg-gradient-to-r from-green-500 dark:from-green-600 to-emerald-500 dark:to-emerald-600 text-white"
+                        : "bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500"
                     }`}
                   >
                     {step < onboardingStep ? "✓" : step}
@@ -288,8 +286,8 @@ const Onboarding = () => {
                     <div
                       className={`w-16 h-1 mx-2 rounded-full transition-all duration-500 ${
                         step < onboardingStep
-                          ? "bg-gradient-to-r from-green-500 to-emerald-500"
-                          : "bg-gray-200"
+                          ? "bg-gradient-to-r from-green-500 dark:from-green-600 to-emerald-500 dark:to-emerald-600"
+                          : "bg-gray-200 dark:bg-gray-600"
                       }`}
                     />
                   )}
@@ -302,15 +300,14 @@ const Onboarding = () => {
             {onboardingStep === 1 && (
               <div className="space-y-6 animate-fade-in">
                 <div className="text-center">
-                  <div className="w-16 h-16 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Target size={28} className="text-indigo-600" />
+                  <div className="w-16 h-16 bg-gradient-to-br from-indigo-100 dark:from-indigo-900/20 to-purple-100 dark:to-purple-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Target size={28} className="text-indigo-600 dark:text-indigo-400" />
                   </div>
-                  <h2 className="text-3xl font-bold text-gray-800 mb-3">
-                    Name your whiteboard
+                  <h2 className="text-3xl font-bold text-gray-800 dark:text-gray-200 mb-3">
+                    {t("nameYourWhiteboard")}
                   </h2>
-                  <p className="text-gray-600 text-lg">
-                    Give your whiteboard a descriptive name that inspires
-                    creativity
+                  <p className="text-gray-600 dark:text-gray-400 text-lg">
+                    {t("nameYourWhiteboardDesc")}
                   </p>
                 </div>
                 <div className="space-y-4">
@@ -323,8 +320,8 @@ const Onboarding = () => {
                         name: e.target.value,
                       })
                     }
-                    placeholder="e.g., Product Strategy 2025"
-                    className="w-full px-6 py-4 rounded-2xl text-[#8028f9] border-2 border-gray-200 focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 text-lg placeholder-gray-400"
+                    placeholder={t("exampleWhiteboardName")}
+                    className="w-full px-6 py-4 rounded-2xl text-[#8028f9] border-2 border-gray-200 dark:border-gray-600 focus:ring-4 focus:ring-indigo-500/20 dark:focus:ring-indigo-400/20 focus:border-indigo-500 dark:focus:border-indigo-400 transition-all duration-200 text-lg placeholder-gray-400 dark:placeholder-gray-500"
                     autoFocus
                   />
                 </div>
@@ -334,48 +331,23 @@ const Onboarding = () => {
             {onboardingStep === 2 && (
               <div className="space-y-6 animate-fade-in">
                 <div className="text-center">
-                  <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-pink-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Compass size={28} className="text-purple-600" />
+                  <div className="w-16 h-16 bg-gradient-to-br from-purple-100 dark:from-purple-900/20 to-pink-100 dark:to-pink-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Compass size={28} className="text-purple-600 dark:text-purple-400" />
                   </div>
-                  <h2 className="text-3xl font-bold text-gray-800 mb-3">
-                    Choose your purpose
+                  <h2 className="text-3xl font-bold text-gray-800 dark:text-gray-200 mb-3">
+                    {t("chooseYourPurpose")}
                   </h2>
-                  <p className="text-gray-600 text-lg">
-                    What will you use this whiteboard for?
+                  <p className="text-gray-600 dark:text-gray-400 text-lg">
+                    {t("chooseYourPurposeDesc")}
                   </p>
                 </div>
                 <div className="grid grid-cols-1 gap-3">
                   {[
-                    {
-                      value: "Team Brainstorm",
-                      label: "Team Brainstorm",
-                      desc: "Generate and organize ideas",
-                      icon: "💡",
-                    },
-                    {
-                      value: "Project Planning",
-                      label: "Project Planning",
-                      desc: "Plan and track project progress",
-                      icon: "📋",
-                    },
-                    {
-                      value: "Design Sprint",
-                      label: "Design & Wireframing",
-                      desc: "Create mockups and prototypes",
-                      icon: "🎨",
-                    },
-                    {
-                      value: "Strategy Session",
-                      label: "Strategy Session",
-                      desc: "Plan strategic initiatives",
-                      icon: "📚",
-                    },
-                    {
-                      value: "Other",
-                      label: "Other",
-                      desc: "Custom use case",
-                      icon: "⚡",
-                    },
+                    { value: "Team Brainstorm", label: t("teamBrainstorm"), desc: t("teamBrainstormDesc"), icon: "💡" },
+                    { value: "Project Planning", label: t("projectPlanning"), desc: t("projectPlanningDesc"), icon: "📋" },
+                    { value: "Design Sprint", label: t("designSprint"), desc: t("designSprintDesc"), icon: "🎨" },
+                    { value: "Strategy Session", label: t("strategySession"), desc: t("strategySessionDesc"), icon: "📚" },
+                    { value: "Other", label: t("otherPurpose"), desc: t("otherPurposeDesc"), icon: "⚡" },
                   ].map((option) => (
                     <button
                       key={option.value}
@@ -387,17 +359,17 @@ const Onboarding = () => {
                       }
                       className={`p-4 rounded-2xl border-2 text-left transition-all duration-200 hover:scale-105 ${
                         onboardingData.purpose === option.value
-                          ? "border-indigo-500 bg-indigo-50 shadow-lg"
-                          : "border-gray-200 hover:border-indigo-300 hover:bg-gray-50"
+                          ? "border-indigo-500 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 shadow-lg"
+                          : "border-gray-200 dark:border-gray-600 hover:border-indigo-300 dark:hover:border-indigo-400 hover:bg-gray-50 dark:hover:bg-gray-700/20"
                       }`}
                     >
                       <div className="flex items-center space-x-4">
                         <span className="text-2xl">{option.icon}</span>
                         <div>
-                          <h3 className="font-semibold text-gray-800">
+                          <h3 className="font-semibold text-gray-800 dark:text-gray-200">
                             {option.label}
                           </h3>
-                          <p className="text-sm text-gray-600">{option.desc}</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">{option.desc}</p>
                         </div>
                       </div>
                     </button>
@@ -409,14 +381,14 @@ const Onboarding = () => {
             {onboardingStep === 3 && (
               <div className="space-y-6 animate-fade-in">
                 <div className="text-center">
-                  <div className="w-16 h-16 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Users size={28} className="text-green-600" />
+                  <div className="w-16 h-16 bg-gradient-to-br from-green-100 dark:from-green-900/20 to-emerald-100 dark:to-emerald-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Users size={28} className="text-green-600 dark:text-green-400" />
                   </div>
-                  <h2 className="text-3xl font-bold text-gray-800 mb-3">
-                    Invite collaborators
+                  <h2 className="text-3xl font-bold text-gray-800 dark:text-gray-200 mb-3">
+                    {t("inviteCollaborators")}
                   </h2>
-                  <p className="text-gray-600 text-lg">
-                    Add team members to collaborate (optional)
+                  <p className="text-gray-600 dark:text-gray-400 text-lg">
+                    {t("inviteCollaboratorsDesc")}
                   </p>
                 </div>
                 <div className="space-y-4">
@@ -429,36 +401,35 @@ const Onboarding = () => {
                         collaborators: e.target.value,
                       })
                     }
-                    placeholder="colleague@company.com, designer@company.com"
-                    className="w-full px-6 py-4 rounded-2xl text-[#8028f9] border-2 border-gray-200 focus:ring-4 focus:ring-green-500/20 focus:border-green-500 transition-all duration-200 text-lg placeholder-gray-400"
+                    placeholder={t("exampleCollaborators")}
+                    className="w-full px-6 py-4 rounded-2xl text-[#8028f9] border-2 border-gray-200 dark:border-gray-600 focus:ring-4 focus:ring-green-500/20 dark:focus:ring-green-400/20 focus:border-green-500 dark:focus:border-green-400 transition-all duration-200 text-lg placeholder-gray-400 dark:placeholder-gray-500"
                   />
-                  <p className="text-sm text-gray-500 flex items-center">
-                    <span className="mr-2">💡</span>
-                    Separate multiple emails with commas "<b>,</b>" you can
-                    always add more later
-                  </p>
+                  <p
+                    className="text-sm text-gray-500 dark:text-gray-400 flex items-center"
+                    dangerouslySetInnerHTML={{ __html: t("separateEmailsTip") }}
+                  />
                 </div>
               </div>
             )}
           </div>
 
           <div className="mt-10 flex justify-between items-center">
-            <div className="text-sm text-gray-500">
+            <div className="text-sm text-gray-500 dark:text-gray-400">
               {onboardingStep === 3
-                ? "Ready to create!"
-                : `${3 - onboardingStep} steps remaining`}
+                ? t("readyToCreate")
+                : t("stepsRemaining", { n: 3 - onboardingStep })}
             </div>
             <button
               onClick={handleOnboardingNext}
               disabled={onboardingStep === 1 && !onboardingData.name.trim()}
               className={`flex items-center gap-3 px-8 py-4 rounded-2xl text-white font-semibold transition-all duration-200 ${
                 onboardingStep === 1 && !onboardingData.name.trim()
-                  ? "bg-gray-300 cursor-not-allowed"
-                  : "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-lg hover:shadow-xl transform hover:scale-105"
+                  ? "bg-gray-300 dark:bg-gray-600 cursor-not-allowed"
+                  : "bg-gradient-to-r from-indigo-600 dark:from-indigo-400 to-purple-600 dark:to-purple-400 hover:from-indigo-700 dark:hover:from-indigo-300 hover:to-purple-700 dark:hover:to-purple-300 shadow-lg hover:shadow-xl transform hover:scale-105"
               }`}
             >
               <span className="text-lg">
-                {onboardingStep === 3 ? "🚀 Create Whiteboard" : "Continue"}
+                {onboardingStep === 3 ? t("createWhiteboard") : t("continue")}
               </span>
               <ChevronRight size={24} />
             </button>
@@ -469,40 +440,40 @@ const Onboarding = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-gray-100 dark:from-gray-900 via-blue-50 dark:via-gray-800 to-indigo-100 dark:to-gray-900 relative overflow-hidden">
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-purple-400/10 to-pink-400/10 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-blue-400/10 to-cyan-400/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-br from-indigo-400/5 to-purple-400/5 rounded-full blur-3xl animate-pulse delay-500"></div>
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-purple-400/10 dark:from-purple-700/5 to-pink-400/10 dark:to-pink-700/5 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-blue-400/10 dark:from-blue-700/5 to-cyan-400/10 dark:to-cyan-700/5 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-br from-indigo-400/5 dark:from-indigo-700/5 to-purple-400/5 dark:to-purple-700/5 rounded-full blur-3xl animate-pulse delay-500"></div>
       </div>
 
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-white/20 shadow-sm">
+      <header className="sticky top-0 z-50 bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border-b border-white/20 dark:border-gray-700 shadow-sm">
         <div className="container mx-auto px-6 py-6">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
+              <div className="w-12 h-12 bg-gradient-to-br from-indigo-600 dark:from-indigo-400 to-purple-600 dark:to-purple-400 rounded-2xl flex items-center justify-center shadow-lg">
                 <span className="text-white font-bold text-xl">C</span>
               </div>
               <div>
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                  CollaborativeX
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 dark:from-indigo-400 to-purple-600 dark:to-purple-400 bg-clip-text text-transparent">
+                  {t("collaborativeX")}
                 </h1>
-                <p className="text-sm text-gray-500 font-medium">
-                  Creative Workspace Dashboard
+                <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">
+                  {t("creativeWorkspaceDashboard")}
                 </p>
               </div>
             </div>
 
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 bg-white/60 backdrop-blur-sm rounded-2xl p-2 border border-white/20">
+              <div className="flex items-center gap-2 bg-white/60 dark:bg-gray-700/60 backdrop-blur-sm rounded-2xl p-2 border border-white/20 dark:border-gray-600">
                 <button
                   onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
                   className={`p-3 rounded-xl transition-all duration-200 hover:scale-105 ${
                     showFavoritesOnly
-                      ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg"
-                      : "bg-gray-100/80 text-gray-500 hover:bg-gray-200/80"
+                      ? "bg-gradient-to-r from-amber-500 dark:from-amber-600 to-orange-500 dark:to-orange-600 text-white shadow-lg"
+                      : "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600"
                   }`}
-                  aria-label="Show favorites only"
+                  aria-label={t("showFavoritesOnly")}
                 >
                   <Star
                     size={20}
@@ -512,8 +483,8 @@ const Onboarding = () => {
 
                 <button
                   onClick={() => setView(view === "grid" ? "list" : "grid")}
-                  className="p-3 rounded-xl bg-gray-100/80 text-gray-500 hover:bg-gray-200/80 transition-all duration-200 hover:scale-105"
-                  aria-label="Toggle view"
+                  className="p-3 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-200 hover:scale-105"
+                  aria-label={t("toggleView")}
                 >
                   <LayoutGrid size={20} />
                 </button>
@@ -522,23 +493,23 @@ const Onboarding = () => {
               <div className="relative">
                 <Search
                   size={20}
-                  className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"
+                  className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500"
                 />
                 <input
                   type="text"
-                  placeholder="Search whiteboards..."
+                  placeholder={t("searchWhiteboardsPlaceholder")}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-12 pr-6 py-4 rounded-2xl bg-white/60 backdrop-blur-sm border border-white/20 focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 focus:bg-white/80 w-full lg:w-80 transition-all duration-200 placeholder-gray-400"
+                  className="pl-12 pr-6 py-4 rounded-2xl bg-white/60 dark:bg-gray-700/60 backdrop-blur-sm border border-white/20 dark:border-gray-600 focus:ring-4 focus:ring-indigo-500/20 dark:focus:ring-indigo-400/20 focus:border-indigo-500 dark:focus:border-indigo-400 focus:bg-white/80 dark:focus:bg-gray-700/80 w-full lg:w-80 transition-all duration-200 placeholder-gray-400 dark:placeholder-gray-500"
                 />
               </div>
 
               <button
                 onClick={() => setIsOnboarding(true)}
-                className="flex items-center gap-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-6 py-4 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 font-semibold"
+                className="flex items-center gap-3 bg-gradient-to-r from-indigo-600 dark:from-indigo-400 to-purple-600 dark:to-purple-400 hover:from-indigo-700 dark:hover:from-indigo-300 hover:to-purple-700 dark:hover:to-purple-300 text-white px-6 py-4 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 font-semibold"
               >
                 <Plus size={20} />
-                <span className="hidden sm:inline">New Whiteboard</span>
+                <span className="hidden sm:inline">{t("newWhiteboard")}</span>
               </button>
             </div>
           </div>
@@ -549,43 +520,41 @@ const Onboarding = () => {
         {filteredWhiteboards.length === 0 ? (
           <div className="flex flex-col items-center justify-center min-h-[70vh] gap-8 animate-fade-in">
             <div className="relative">
-              <div className="w-32 h-32 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-3xl flex items-center justify-center shadow-2xl">
-                <Compass size={56} className="text-indigo-600" />
+              <div className="w-32 h-32 bg-gradient-to-br from-indigo-100 dark:from-indigo-900/20 to-purple-100 dark:to-purple-900/20 rounded-3xl flex items-center justify-center shadow-2xl">
+                <Compass size={56} className="text-indigo-600 dark:text-indigo-400" />
               </div>
-              <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full animate-pulse"></div>
-              <div className="absolute -bottom-2 -left-2 w-6 h-6 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full animate-pulse delay-500"></div>
+              <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-br from-purple-500 dark:from-purple-600 to-pink-500 dark:to-pink-600 rounded-full animate-pulse"></div>
+              <div className="absolute -bottom-2 -left-2 w-6 h-6 bg-gradient-to-br from-blue-500 dark:from-blue-600 to-cyan-500 dark:to-cyan-600 rounded-full animate-pulse delay-500"></div>
             </div>
             {searchTerm ? (
               <div className="text-center max-w-md">
-                <h2 className="text-2xl font-bold text-gray-800 mb-3">
-                  No matches found
+                <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-3">
+                  {t("noMatchesFound")}
                 </h2>
-                <p className="text-gray-600 text-lg">
-                  Try adjusting your search terms or clear filters to see all
-                  whiteboards
+                <p className="text-gray-600 dark:text-gray-400 text-lg">
+                  {t("noMatchesFoundDesc")}
                 </p>
                 <button
                   onClick={() => setSearchTerm("")}
-                  className="mt-4 px-6 py-3 bg-indigo-100 text-indigo-700 rounded-xl hover:bg-indigo-200 transition-all duration-200 font-medium"
+                  className="mt-4 px-6 py-3 bg-indigo-100 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 rounded-xl hover:bg-indigo-200 dark:hover:bg-indigo-900/30 transition-all duration-200 font-medium"
                 >
-                  Clear Search
+                  {t("clearSearch")}
                 </button>
               </div>
             ) : (
               <div className="text-center max-w-2xl">
-                <h2 className="text-4xl font-bold text-gray-800 mb-4">
-                  Start Your Creative Journey
+                <h2 className="text-4xl font-bold text-gray-800 dark:text-gray-200 mb-4">
+                  {t("startYourCreativeJourney")}
                 </h2>
-                <p className="text-gray-600 text-xl mb-8 leading-relaxed">
-                  Create your first whiteboard and bring your ideas to life with
-                  our premium collaborative workspace designed for modern teams.
+                <p className="text-gray-600 dark:text-gray-400 text-xl mb-8 leading-relaxed">
+                  {t("startYourCreativeJourneyDesc")}
                 </p>
                 <button
                   onClick={() => setIsOnboarding(true)}
-                  className="inline-flex items-center gap-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-8 py-4 rounded-2xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-xl hover:shadow-2xl hover:scale-105 text-lg font-semibold"
+                  className="inline-flex items-center gap-3 bg-gradient-to-r from-indigo-600 dark:from-indigo-400 to-purple-600 dark:to-purple-400 text-white px-8 py-4 rounded-2xl hover:from-indigo-700 dark:hover:from-indigo-300 hover:to-purple-700 dark:hover:to-purple-300 transition-all duration-200 shadow-xl hover:shadow-2xl hover:scale-105 text-lg font-semibold"
                 >
                   <Plus size={24} />
-                  <span>Create Your First Whiteboard</span>
+                  <span>{t("createYourFirstWhiteboard")}</span>
                 </button>
               </div>
             )}
@@ -601,7 +570,7 @@ const Onboarding = () => {
             {filteredWhiteboards.map((whiteboard, index) => (
               <div
                 key={whiteboard._id}
-                className={`group relative bg-white/70 backdrop-blur-sm rounded-3xl border border-white/30 transition-all duration-300 hover:scale-105 hover:bg-white/90 hover:shadow-2xl overflow-hidden animate-fade-in ${
+                className={`group relative bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-3xl border border-white/30 dark:border-gray-700 transition-all duration-300 hover:scale-105 hover:bg-white/90 dark:hover:bg-gray-800/90 hover:shadow-2xl overflow-hidden animate-fade-in ${
                   view === "grid"
                     ? "shadow-lg hover:shadow-2xl"
                     : "shadow-md hover:shadow-xl flex items-center"
@@ -609,22 +578,22 @@ const Onboarding = () => {
                 style={{ animationDelay: `${index * 100}ms` }}
               >
                 {view === "grid" && (
-                  <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-indigo-500 to-purple-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-indigo-500 dark:from-indigo-400 to-purple-500 dark:to-purple-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 )}
 
                 <div className={`${view === "grid" ? "p-8" : "p-6 flex-grow"}`}>
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-grow">
                       <h2
-                        className={`font-bold text-gray-800 group-hover:text-indigo-700 transition-colors duration-200 ${
+                        className={`font-bold text-gray-800 dark:text-gray-200 group-hover:text-indigo-700 dark:group-hover:text-indigo-400 transition-colors duration-200 ${
                           view === "grid" ? "text-xl mb-3" : "text-lg mb-2"
                         }`}
                       >
                         {whiteboard.name}
                       </h2>
                       {whiteboard.purpose && (
-                        <span className="inline-block text-sm text-gray-600 bg-gradient-to-r from-gray-100 to-gray-200 px-3 py-1.5 rounded-full border border-gray-200/50">
-                          {whiteboard.purpose}
+                        <span className="inline-block text-sm text-gray-600 dark:text-gray-400 bg-gradient-to-r from-gray-100 dark:from-gray-700 to-gray-200 dark:to-gray-800 px-3 py-1.5 rounded-full border border-gray-200/50 dark:border-gray-600/50">
+                          {t(whiteboard.purpose.toLowerCase().replace(/\s/g, ""))}
                         </span>
                       )}
                     </div>
@@ -635,26 +604,26 @@ const Onboarding = () => {
                       }}
                       className={`p-2.5 rounded-full transition-all duration-200 hover:scale-110 ${
                         whiteboard.isFavorite
-                          ? "text-amber-500 bg-amber-50"
-                          : "text-gray-400 hover:text-amber-500 hover:bg-amber-50"
+                          ? "text-amber-500 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20"
+                          : "text-gray-400 dark:text-gray-500 hover:text-amber-500 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20"
                       }`}
                       aria-label={
                         whiteboard.isFavorite
-                          ? "Remove from favorites"
-                          : "Add to favorites"
+                          ? t("removeFromFavorites")
+                          : t("addToFavorites")
                       }
                     >
                       <Star
                         size={18}
                         className={
-                          whiteboard.isFavorite ? "fill-amber-500" : ""
+                          whiteboard.isFavorite ? "fill-amber-500 dark:fill-amber-400" : ""
                         }
                       />
                     </button>
                   </div>
 
                   <div
-                    className={`flex items-center text-sm text-gray-500 ${
+                    className={`flex items-center text-sm text-gray-500 dark:text-gray-400 ${
                       view === "grid" ? "mb-6" : "mb-0"
                     }`}
                   >
@@ -668,10 +637,9 @@ const Onboarding = () => {
                     whiteboard.collaborators &&
                     whiteboard.collaborators.length > 0 && (
                       <div className="flex items-center mt-4">
-                        <Users size={16} className="mr-2 text-gray-400" />
-                        <span className="text-sm text-gray-500">
-                          {whiteboard.collaborators.length} collaborator
-                          {whiteboard.collaborators.length > 1 ? "s" : ""}
+                        <Users size={16} className="mr-2 text-gray-400 dark:text-gray-500" />
+                        <span className="text-sm text-gray-500 dark:text-gray-400">
+                          {whiteboard.collaborators.length} {t(whiteboard.collaborators.length > 1 ? "collaborators" : "collaborator")}
                         </span>
                       </div>
                     )}
@@ -680,25 +648,25 @@ const Onboarding = () => {
                 <div
                   className={`${
                     view === "grid"
-                      ? "absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-white/90 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300"
+                      ? "absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-white/90 dark:from-gray-800/90 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300"
                       : "flex items-center gap-3 p-4"
                   }`}
                 >
                   <button
-                    onClick={() => navigateWithLoader(router,`whiteboard/${whiteboard._id}`)}
-                    className="flex-1 text-center px-4 py-3 mr-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 hover:scale-105 shadow-lg"
-                    aria-label={`Open whiteboard ${whiteboard.name}`}
+                    onClick={() => navigateWithLoader(router, `/whiteboard/${whiteboard._id}`)}
+                    className="flex-1 text-center px-4 py-3 mr-2 bg-gradient-to-r from-indigo-600 dark:from-indigo-400 to-purple-600 dark:to-purple-400 text-white rounded-xl font-semibold hover:from-indigo-700 dark:hover:from-indigo-300 hover:to-purple-700 dark:hover:to-purple-300 transition-all duration-200 hover:scale-105 shadow-lg"
+                    aria-label={t("openBoard", { name: whiteboard.name })}
                   >
-                    Open Board
+                    {t("openBoard")}
                   </button>
                   <button
-                    className="px-4 py-3 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-xl font-semibold hover:from-red-600 hover:to-pink-600 transition-all duration-200 hover:scale-105 shadow-lg"
+                    className="px-4 py-3 bg-gradient-to-r from-red-500 dark:from-red-600 to-pink-500 dark:to-pink-600 text-white rounded-xl font-semibold hover:from-red-600 dark:hover:from-red-500 hover:to-pink-600 dark:hover:to-pink-500 transition-all duration-200 hover:scale-105 shadow-lg"
                     onClick={(e) => {
                       e.preventDefault();
                       deleteWhiteboard(whiteboard._id);
                     }}
                   >
-                    {view === "grid" ? "Delete" : "🗑️"}
+                    {view === "grid" ? t("delete") : "🗑️"}
                   </button>
                 </div>
               </div>

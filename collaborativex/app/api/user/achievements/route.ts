@@ -63,3 +63,22 @@ export async function POST(req: NextRequest) {
     { status: 200 }
   );
 }
+
+export async function GET(req: NextRequest) {
+
+  await connectDB();
+  const authResult = await authenticate(req);
+
+  if (authResult instanceof NextResponse) return authResult;
+
+  const { userId } = authResult as AuthenticatedUser;
+
+  const user = await User.findById(userId);
+
+  if (!user) {
+    return NextResponse.json({ message: "User is not authenticated!" })
+  }
+
+  return NextResponse.json({ success: true, message: "Achievements Fetched successfully!", ACHIEVEMENT_PRESETS })
+
+}
