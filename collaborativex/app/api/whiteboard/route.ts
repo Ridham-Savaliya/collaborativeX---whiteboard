@@ -90,7 +90,7 @@ export async function GET(req: NextRequest) {
 
   const owner = authResult.userId;
 
-  const whiteboards = await Whiteboard.find({ owner: owner })
+  const whiteboards = await Whiteboard.find({ owner: owner }).select("_id name purpose collaborators createdAt")
 
   return NextResponse.json({ message: "Whiteboards for the user has been found!", whiteboards: whiteboards }, { status: 200 })
 

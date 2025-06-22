@@ -1,11 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { User, Home, Save, Download } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-
-// Define props interface
 interface RightNavBarProps {
   saveWhiteboard: () => void;
   exportAsPNG: () => void;
@@ -15,10 +13,28 @@ interface RightNavBarProps {
 const RightNavBar: React.FC<RightNavBarProps> = ({ saveWhiteboard, exportAsPDF, exportAsPNG }) => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isDirty, setIsDirty] = useState(true); // Assume changes are not saved initially
   const router = useRouter();
+
+  // Warn on unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (!isDirty) return; // If no unsaved changes, do nothing
+
+      e.preventDefault();
+      e.returnValue = ""; // Required for Chrome
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [isDirty]);
 
   const handleSave = () => {
     saveWhiteboard();
+    setIsDirty(false); // Changes are saved now
   };
 
   const handleExport = () => {

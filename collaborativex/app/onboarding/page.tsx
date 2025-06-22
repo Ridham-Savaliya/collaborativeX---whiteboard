@@ -1,4 +1,3 @@
-// app/components/Onboarding.tsx
 "use client";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -15,6 +14,7 @@ import {
   Users,
   Target,
   Compass,
+  Loader2,
 } from "lucide-react";
 import { jwtDecode } from "jwt-decode";
 import withAuth from "../api/_lib/withAuth";
@@ -35,7 +35,7 @@ interface User {
 }
 
 const Onboarding = () => {
-const { t, i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const router = useRouter();
   const { navigateWithLoader } = useGlobalLoader();
   const [whiteboards, setWhiteboards] = useState<Whiteboard[]>([]);
@@ -51,6 +51,7 @@ const { t, i18n } = useTranslation();
   });
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const storedToken = localStorage.getItem("token");
@@ -98,6 +99,7 @@ const { t, i18n } = useTranslation();
   }, [token]);
 
   const fetchWhiteboards = async () => {
+    setIsLoading(true);
     try {
       const response = await fetch("/api/whiteboard", {
         method: "GET",
@@ -115,6 +117,8 @@ const { t, i18n } = useTranslation();
     } catch (e) {
       console.error(t("errors.fetchWhiteboards"), e);
       setWhiteboards([]);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -229,6 +233,57 @@ const { t, i18n } = useTranslation();
         .filter((board) => !showFavoritesOnly || board.isFavorite)
     : [];
 
+  const LoadingSkeleton = () => {
+    return (
+      <div
+        className={
+          view === "grid"
+            ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8"
+            : "flex flex-col gap-4"
+        }
+      >
+        {[...Array(4)].map((_, index) => (
+          <div
+            key={index}
+            className={`group relative bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-3xl border border-white/30 dark:border-gray-700 overflow-hidden ${
+              view === "grid" ? "p-8" : "p-6 flex items-center"
+            }`}
+          >
+            <div className="animate-pulse space-y-4 w-full">
+              <div className="flex items-start justify-between">
+                <div className="space-y-2 flex-grow">
+                  <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded-full w-3/4"></div>
+                  <div className="h-4 bg-gray-100 dark:bg-gray-600 rounded-full w-1/2"></div>
+                </div>
+                <div className="h-5 w-5 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+              </div>
+              <div className="flex items-center">
+                <div className="h-4 w-4 bg-gray-200 dark:bg-gray-700 rounded-full mr-2"></div>
+                <div className="h-3 bg-gray-100 dark:bg-gray-600 rounded-full w-1/3"></div>
+              </div>
+              {view === "grid" && (
+                <div className="flex items-center mt-4">
+                  <div className="h-4 w-4 bg-gray-200 dark:bg-gray-700 rounded-full mr-2"></div>
+                  <div className="h-3 bg-gray-100 dark:bg-gray-600 rounded-full w-1/4"></div>
+                </div>
+              )}
+              <div
+                className={`${
+                  view === "grid"
+                    ? "absolute inset-x-0 bottom-0 p-4"
+                    : "flex items-center gap-3 p-4"
+                }`}
+              >
+                <div className="h-10 bg-gradient-to-r from-indigo-500/20 dark:from-indigo-400/20 to-purple-500/20 dark:to-purple-400/20 rounded-xl w-full"></div>
+                <div className="h-10 bg-gradient-to-r from-red-500/20 dark:from-red-600/20 to-pink-500/20 dark:to-pink-600/20 rounded-xl w-1/4"></div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   if (isOnboarding) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-100 dark:from-gray-900 via-blue-50 dark:via-gray-800 to-indigo-100 dark:to-gray-900 p-4 flex items-center justify-center relative overflow-hidden">
@@ -249,7 +304,10 @@ const { t, i18n } = useTranslation();
               }}
               className="p-3 hover:bg-gray-100/80 dark:hover:bg-gray-700/80 rounded-full transition-all duration-200 hover:scale-105"
             >
-              <ChevronLeft size={24} className="text-gray-600 dark:text-gray-300" />
+              <ChevronLeft
+                size={24}
+                className="text-gray-600 dark:text-gray-300"
+              />
             </button>
             <div className="text-center">
               <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 dark:from-indigo-400 to-purple-600 dark:to-purple-400 bg-clip-text text-transparent">
@@ -301,7 +359,10 @@ const { t, i18n } = useTranslation();
               <div className="space-y-6 animate-fade-in">
                 <div className="text-center">
                   <div className="w-16 h-16 bg-gradient-to-br from-indigo-100 dark:from-indigo-900/20 to-purple-100 dark:to-purple-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Target size={28} className="text-indigo-600 dark:text-indigo-400" />
+                    <Target
+                      size={28}
+                      className="text-indigo-600 dark:text-indigo-400"
+                    />
                   </div>
                   <h2 className="text-3xl font-bold text-gray-800 dark:text-gray-200 mb-3">
                     {t("nameYourWhiteboard")}
@@ -332,7 +393,10 @@ const { t, i18n } = useTranslation();
               <div className="space-y-6 animate-fade-in">
                 <div className="text-center">
                   <div className="w-16 h-16 bg-gradient-to-br from-purple-100 dark:from-purple-900/20 to-pink-100 dark:to-pink-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Compass size={28} className="text-purple-600 dark:text-purple-400" />
+                    <Compass
+                      size={28}
+                      className="text-purple-600 dark:text-purple-400"
+                    />
                   </div>
                   <h2 className="text-3xl font-bold text-gray-800 dark:text-gray-200 mb-3">
                     {t("chooseYourPurpose")}
@@ -343,11 +407,36 @@ const { t, i18n } = useTranslation();
                 </div>
                 <div className="grid grid-cols-1 gap-3">
                   {[
-                    { value: "Team Brainstorm", label: t("teamBrainstorm"), desc: t("teamBrainstormDesc"), icon: "💡" },
-                    { value: "Project Planning", label: t("projectPlanning"), desc: t("projectPlanningDesc"), icon: "📋" },
-                    { value: "Design Sprint", label: t("designSprint"), desc: t("designSprintDesc"), icon: "🎨" },
-                    { value: "Strategy Session", label: t("strategySession"), desc: t("strategySessionDesc"), icon: "📚" },
-                    { value: "Other", label: t("otherPurpose"), desc: t("otherPurposeDesc"), icon: "⚡" },
+                    {
+                      value: "Team Brainstorm",
+                      label: t("teamBrainstorm"),
+                      desc: t("teamBrainstormDesc"),
+                      icon: "💡",
+                    },
+                    {
+                      value: "Project Planning",
+                      label: t("projectPlanning"),
+                      desc: t("projectPlanningDesc"),
+                      icon: "📋",
+                    },
+                    {
+                      value: "Design Sprint",
+                      label: t("designSprint"),
+                      desc: t("designSprintDesc"),
+                      icon: "🎨",
+                    },
+                    {
+                      value: "Strategy Session",
+                      label: t("strategySession"),
+                      desc: t("strategySessionDesc"),
+                      icon: "📚",
+                    },
+                    {
+                      value: "Other",
+                      label: t("otherPurpose"),
+                      desc: t("otherPurposeDesc"),
+                      icon: "⚡",
+                    },
                   ].map((option) => (
                     <button
                       key={option.value}
@@ -369,7 +458,9 @@ const { t, i18n } = useTranslation();
                           <h3 className="font-semibold text-gray-800 dark:text-gray-200">
                             {option.label}
                           </h3>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">{option.desc}</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            {option.desc}
+                          </p>
                         </div>
                       </div>
                     </button>
@@ -382,7 +473,10 @@ const { t, i18n } = useTranslation();
               <div className="space-y-6 animate-fade-in">
                 <div className="text-center">
                   <div className="w-16 h-16 bg-gradient-to-br from-green-100 dark:from-green-900/20 to-emerald-100 dark:to-emerald-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Users size={28} className="text-green-600 dark:text-green-400" />
+                    <Users
+                      size={28}
+                      className="text-green-600 dark:text-green-400"
+                    />
                   </div>
                   <h2 className="text-3xl font-bold text-gray-800 dark:text-gray-200 mb-3">
                     {t("inviteCollaborators")}
@@ -471,7 +565,7 @@ const { t, i18n } = useTranslation();
                   className={`p-3 rounded-xl transition-all duration-200 hover:scale-105 ${
                     showFavoritesOnly
                       ? "bg-gradient-to-r from-amber-500 dark:from-amber-600 to-orange-500 dark:to-orange-600 text-white shadow-lg"
-                      : "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600"
+                      : "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600"
                   }`}
                   aria-label={t("showFavoritesOnly")}
                 >
@@ -483,7 +577,7 @@ const { t, i18n } = useTranslation();
 
                 <button
                   onClick={() => setView(view === "grid" ? "list" : "grid")}
-                  className="p-3 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-200 hover:scale-105"
+                  className="p-3 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-white-400 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-200 hover:scale-105"
                   aria-label={t("toggleView")}
                 >
                   <LayoutGrid size={20} />
@@ -517,11 +611,35 @@ const { t, i18n } = useTranslation();
       </header>
 
       <main className="container mx-auto px-6 py-10 relative z-10">
-        {filteredWhiteboards.length === 0 ? (
-          <div className="flex flex-col items-center justify-center min-h-[70vh] gap-8 animate-fade-in">
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center min-h-[50vh] gap-8">
             <div className="relative">
               <div className="w-32 h-32 bg-gradient-to-br from-indigo-100 dark:from-indigo-900/20 to-purple-100 dark:to-purple-900/20 rounded-3xl flex items-center justify-center shadow-2xl">
-                <Compass size={56} className="text-indigo-600 dark:text-indigo-400" />
+                <Loader2
+                  className="w-16 h-16 text-indigo-600 dark:text-indigo-400 animate-spin"
+                />
+              </div>
+              <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-br from-purple-500 dark:from-purple-600 to-pink-500 dark:to-pink-600 rounded-full animate-pulse"></div>
+              <div className="absolute -bottom-2 -left-2 w-6 h-6 bg-gradient-to-br from-blue-500 dark:from-blue-600 to-cyan-500 dark:to-cyan-600 rounded-full animate-pulse delay-500"></div>
+            </div>
+            <div className="text-center max-w-md">
+              <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-3">
+                {t("loadingYourWhiteboards")}
+              </h2>
+              <p className="text-gray-600 dark:text-gray-400 text-lg">
+                {t("loadingYourWhiteboardsDesc")}
+              </p>
+            </div>
+            <LoadingSkeleton />
+          </div>
+        ) : filteredWhiteboards.length === 0 ? (
+          <div className="flex flex-col items-center justify-center min-h-[70vh] gap-8 animate-fade-in">
+            <div className="relative">
+              <div className="w-32 h-32 bg-gradient-to-br from-indigo-100 dark:from-indigo-900/20 to-purple-100 dark:to-purple-900/20 rounded-3xl flex items-center justify-center shadow-2">
+                <Compass
+                  size={56}
+                  className="text-indigo-600 dark:text-indigo-400"
+                />
               </div>
               <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-br from-purple-500 dark:from-purple-600 to-pink-500 dark:to-pink-600 rounded-full animate-pulse"></div>
               <div className="absolute -bottom-2 -left-2 w-6 h-6 bg-gradient-to-br from-blue-500 dark:from-blue-600 to-cyan-500 dark:to-cyan-600 rounded-full animate-pulse delay-500"></div>
@@ -536,7 +654,7 @@ const { t, i18n } = useTranslation();
                 </p>
                 <button
                   onClick={() => setSearchTerm("")}
-                  className="mt-4 px-6 py-3 bg-indigo-100 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 rounded-xl hover:bg-indigo-200 dark:hover:bg-indigo-900/30 transition-all duration-200 font-medium"
+                  className="mt-4 px-6 py-3 bg-indigo-100 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-xl hover:bg-indigo-200 dark:hover:bg-indigo-900/30 transition-all duration-200 font-medium"
                 >
                   {t("clearSearch")}
                 </button>
@@ -581,19 +699,25 @@ const { t, i18n } = useTranslation();
                   <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-indigo-500 dark:from-indigo-400 to-purple-500 dark:to-purple-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 )}
 
-                <div className={`${view === "grid" ? "p-8" : "p-6 flex-grow"}`}>
+                <div
+                  className={`${view === "grid" ? "p-8" : "p-6 flex-grow"}`}
+                >
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-grow">
                       <h2
-                        className={`font-bold text-gray-800 dark:text-gray-200 group-hover:text-indigo-700 dark:group-hover:text-indigo-400 transition-colors duration-200 ${
+                        className={`font-bold text-gray-800 dark:text-gray-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors duration-200 ${
                           view === "grid" ? "text-xl mb-3" : "text-lg mb-2"
                         }`}
                       >
                         {whiteboard.name}
                       </h2>
                       {whiteboard.purpose && (
-                        <span className="inline-block text-sm text-gray-600 dark:text-gray-400 bg-gradient-to-r from-gray-100 dark:from-gray-700 to-gray-200 dark:to-gray-800 px-3 py-1.5 rounded-full border border-gray-200/50 dark:border-gray-600/50">
-                          {t(whiteboard.purpose.toLowerCase().replace(/\s/g, ""))}
+                        <span className="inline-block text-sm text-gray-600 dark:text-gray-400 bg-gradient-to-r from-gray-100 dark:from-gray-700 to-gray-200 dark:to-gray-600 px-3 py-1.5 rounded-full border border-gray-200/50 dark:border-gray-600/50">
+                          {t(
+                            whiteboard.purpose
+                              .toLowerCase()
+                              .replace(/\s/g, "")
+                          )}
                         </span>
                       )}
                     </div>
@@ -616,7 +740,9 @@ const { t, i18n } = useTranslation();
                       <Star
                         size={18}
                         className={
-                          whiteboard.isFavorite ? "fill-amber-500 dark:fill-amber-400" : ""
+                          whiteboard.isFavorite
+                            ? "fill-amber-500 dark:fill-amber-400"
+                            : ""
                         }
                       />
                     </button>
@@ -633,13 +759,25 @@ const { t, i18n } = useTranslation();
                     </span>
                   </div>
 
-                  {view === "grid" &&
+                  {(view === "grid" || view === "list") &&
                     whiteboard.collaborators &&
                     whiteboard.collaborators.length > 0 && (
-                      <div className="flex items-center mt-4">
-                        <Users size={16} className="mr-2 text-gray-400 dark:text-gray-500" />
+                      <div
+                        className={`flex items-center ${
+                          view === "grid" ? "mt-4" : "ml-4"
+                        }`}
+                      >
+                        <Users
+                          size={16}
+                          className="mr-2 text-gray-400 dark:text-gray-500"
+                        />
                         <span className="text-sm text-gray-500 dark:text-gray-400">
-                          {whiteboard.collaborators.length} {t(whiteboard.collaborators.length > 1 ? "collaborators" : "collaborator")}
+                          {whiteboard.collaborators.length}{" "}
+                          {t(
+                            whiteboard.collaborators.length > 1
+                              ? "collaborators"
+                              : "collaborator"
+                          )}
                         </span>
                       </div>
                     )}
@@ -653,7 +791,12 @@ const { t, i18n } = useTranslation();
                   }`}
                 >
                   <button
-                    onClick={() => navigateWithLoader(router, `/whiteboard/${whiteboard._id}`)}
+                    onClick={() =>
+                      navigateWithLoader(
+                        router,
+                        `/whiteboard/${whiteboard._id}`
+                      )
+                    }
                     className="flex-1 text-center px-4 py-3 mr-2 bg-gradient-to-r from-indigo-600 dark:from-indigo-400 to-purple-600 dark:to-purple-400 text-white rounded-xl font-semibold hover:from-indigo-700 dark:hover:from-indigo-300 hover:to-purple-700 dark:hover:to-purple-300 transition-all duration-200 hover:scale-105 shadow-lg"
                     aria-label={t("openBoard", { name: whiteboard.name })}
                   >
@@ -665,6 +808,7 @@ const { t, i18n } = useTranslation();
                       e.preventDefault();
                       deleteWhiteboard(whiteboard._id);
                     }}
+                    aria-label={t("deleteBoard", { name: whiteboard.name })}
                   >
                     {view === "grid" ? t("delete") : "🗑️"}
                   </button>
