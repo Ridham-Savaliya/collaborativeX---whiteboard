@@ -17,9 +17,9 @@ useEffect(() => {
     const isDark =
       theme === "dark" ||
       (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
-    console.log("Applying theme:", theme, "isDark:", isDark);
+    // console.log("Applying theme:", theme, "isDark:", isDark);
     root.classList.toggle("dark", isDark);
-    console.log("Current classList:", root.classList.toString());
+    // console.log("Current classList:", root.classList.toString());
   };
 
   applyTheme();

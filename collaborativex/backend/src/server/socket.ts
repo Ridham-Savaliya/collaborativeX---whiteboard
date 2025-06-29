@@ -1,17 +1,21 @@
 import { Server, Socket } from 'socket.io';
+import User from 'src/models/User';
+import Whiteboard from 'src/models/Whiteboard';
 import connectDB from '../lib/db';
-import Whiteboard from "@models/Whiteboard";
-import User from "@models/User";
+
+
 import { verifyToken } from '../lib/auth';
 import { WhiteboardElement, StickyNote, ActivityUpdate, UserPresence } from './types';
+
+
 
 export const setupSocket = (io: Server) => {
   io.on('connection', async (socket: Socket) => {
     console.log('A user connected:', socket.id);
 
     // Authenticate the user
-    const token:any = socket.handshake.auth;
-    // console.log(socket.handshake.auth.token)
+    const token: any = socket.handshake.auth.token;
+
     if (!token) {
       console.log("invalid token")
       socket.disconnect();
@@ -21,29 +25,53 @@ export const setupSocket = (io: Server) => {
 
     let email: string = "";
     let userId: string = "";
+    let name: string = "";
 
     try {
+      if (typeof token !== "string") {
+        console.error("Invalid token format — expected string but got", typeof token);
+        socket.disconnect();
+        return;
+      }
       const decoded = verifyToken(token);
-      console.log(decoded)
+
       email = decoded.email || "";
       userId = decoded.userId || "";
-      console.log(`Authenticated user: ${email}, ${userId}`);
+      name = decoded.name || "";
+
+      // You can now store user info in socket for later use
+      socket.data.user = { email, userId, name };
     } catch (error) {
       socket.disconnect();
+      console.log("disconnected")
       return;
     }
 
     // Join a whiteboard room
     socket.on('join_whiteboard', async (whiteboardId: string) => {
+
+      if (!whiteboardId) {
+        socket.emit("error", { message: "whiteboardId is required" })
+      }
       try {
         await connectDB();
 
+
         // Verify user has access to the whiteboard
+        const _id = whiteboardId
         const whiteboard = await Whiteboard.findById(whiteboardId);
-        if (!whiteboard || (!whiteboard.collaborators.includes(email) && whiteboard.owner.toString() !== userId)) {
+
+        if (!whiteboard) {
+          console.log('Whiteboard not found:', whiteboardId);
+          socket.emit('error', { message: 'Whiteboard not found' });
+          return;
+        }
+        if (!whiteboard.collaborators.includes(email)) {
+          console.log('User not authorized:', email, 'Collaborators:', whiteboard.collaborators);
           socket.emit('error', { message: 'Unauthorized access to whiteboard' });
           return;
         }
+
 
         const user = await User.findById(userId).select('name');
         if (!user) {
@@ -65,6 +93,7 @@ export const setupSocket = (io: Server) => {
 
         // Send initial state to the joining user
         socket.emit('initial_state', {
+
           elements: whiteboard.elements || [],
           stickyNotes: whiteboard.stickyNotes || [],
         });
@@ -89,10 +118,16 @@ export const setupSocket = (io: Server) => {
 
         socket.on('drawUpdate', async (element: WhiteboardElement) => {
           try {
-            await Whiteboard.findByIdAndUpdate(whiteboardId, {
-              $pull: { elements: { id: element.id } },
-              $push: { elements: element },
-            });
+            // First, remove the old element
+            // await Whiteboard.findByIdAndUpdate(whiteboardId, {
+            //   $pull: { elements: { id: element.id } },
+            // });
+
+            // // Then, push the updated element
+            // await Whiteboard.findByIdAndUpdate(whiteboardId, {
+            //   $push: { elements: element },
+            // });
+
             io.to(room).emit('drawUpdate', element);
           } catch (error) {
             socket.emit('error', { message: 'Failed to update drawing' });
@@ -101,8 +136,13 @@ export const setupSocket = (io: Server) => {
 
         socket.on('drawEnd', async (element: WhiteboardElement) => {
           try {
+            // First, remove the old element
             await Whiteboard.findByIdAndUpdate(whiteboardId, {
               $pull: { elements: { id: element.id } },
+            });
+
+            // Then, push the updated element
+            await Whiteboard.findByIdAndUpdate(whiteboardId, {
               $push: { elements: element },
             });
             io.to(room).emit('drawEnd', element);
@@ -234,13 +274,14 @@ export const setupSocket = (io: Server) => {
         socket.on('disconnect', () => {
           const presence: UserPresence = {
             email,
-            username: user.name,
+            username: name,
             joined: false,
           };
           socket.to(room).emit('user_presence', presence);
           console.log(`${user.name} left whiteboard ${whiteboardId}`);
         });
-      } catch (error) {
+      } catch (error: any) {
+        console.error('Join whiteboard error:', error.message, 'Stack:', error.stack, 'WhiteboardId:', whiteboardId, 'UserId:', userId, 'Email:', email);
         socket.emit('error', { message: 'Failed to join whiteboard' });
       }
     });

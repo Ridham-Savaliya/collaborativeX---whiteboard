@@ -32,7 +32,9 @@ export interface WhiteboardElement {
 }
 
 export interface StickyNote {
+  text?: any;
   id: string;
+  type:string;
   content: string;
   x: number;
   y: number;

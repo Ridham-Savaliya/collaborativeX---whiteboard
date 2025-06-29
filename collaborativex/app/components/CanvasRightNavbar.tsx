@@ -53,7 +53,7 @@ const RightNavBar: React.FC<RightNavBarProps> = ({ saveWhiteboard, exportAsPDF, 
   };
 
   return (
-    <div className="absolute top-5 right-5 flex items-center space-x-2 z-30">
+    <div className="absolute top-5 right-16 flex items-center space-x-2 z-30">
       {isLoading && (
         <div className="fixed top-0 left-0 w-full h-1 bg-purple-500 animate-pulse z-50" />
       )}

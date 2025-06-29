@@ -1,7 +1,8 @@
-"use client"
+"use client";
 import React, { useRef, useEffect, useState, useCallback, memo } from "react";
 import { throttle, debounce } from "lodash";
 import NavBar from "./CanvasRightNavbar";
+import { io, Socket } from "socket.io-client";
 import {
   WhiteboardElement,
   PathElement,
@@ -11,22 +12,73 @@ import {
   Point,
 } from "./Types";
 import CanvasToolbar from "./CanvasToolbar";
-import { useParams } from "next/navigation";
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 import { useTheme } from "../context/ThemeContext";
+import {
+  Users,
+  Activity,
+  Wifi,
+  WifiOff,
+  RefreshCw,
+  AlertCircle,
+  Clock,
+  Eye,
+  MousePointer2,
+  ChevronDown,
+  ChevronUp,
+  User,
+  X
+} from "lucide-react";
+import { useParams } from "next/navigation";
+// Socket Types
+interface UserPresence {
+  email: string;
+  username: string;
+  joined: boolean;
+  socketId?: string;
+  color?: string;
+}
+
+interface ActivityUpdate {
+  userId: string;
+  username?: string;
+  action: string;
+  timestamp: string;
+}
+
+interface CursorPosition {
+  socketId: string;
+  x: number;
+  y: number;
+  username?: string;
+  color?: string;
+}
+
+interface ConnectionState {
+  status: 'connecting' | 'connected' | 'disconnected' | 'reconnecting' | 'error';
+  lastConnected?: Date;
+  reconnectAttempts?: number;
+  latency?: number;
+}
+
+interface SocketError {
+  message: string;
+  code?: string;
+  timestamp: Date;
+}
 
 interface CanvasProps {
   strokeColor: string;
   lineWidth: number;
   tool:
-    | "pen"
-    | "eraser"
-    | "highlighter"
-    | "shape"
-    | "stickyNote"
-    | "text"
-    | null;
+  | "pen"
+  | "eraser"
+  | "highlighter"
+  | "shape"
+  | "stickyNote"
+  | "text"
+  | null;
   shapeType: string | null;
   stickyNotes: StickyNote[];
   setStickyNotes: React.Dispatch<React.SetStateAction<StickyNote[]>>;
@@ -43,6 +95,9 @@ interface CanvasProps {
     underline: boolean;
     fontFamily: string;
   };
+  whiteboardId?: string;
+  token?: string;
+  currentUser?: string;
 }
 
 interface StickyNoteProps {
@@ -105,20 +160,22 @@ interface TextComponentProps {
     bold: boolean;
     italic: boolean;
     underline: boolean;
-    fontFamily: 10;
     fontFamily: string;
   };
   textFontSize: number;
 }
 
+// Utility function to generate unique IDs
 const generateUniqueId = (): string =>
   `id-${Date.now().toString(36)}-${Math.random()
     .toString(36)
     .substring(2, 10)}`;
 
+// Utility function to validate IDs
 const isValidId = (id: string | undefined): boolean =>
   id !== undefined && id !== null && id !== "";
 
+// Color palette for sticky notes
 const colorPalette = [
   { bg: "#FEF7CD", text: "#000000" },
   { bg: "#D3E4FD", text: "#000000" },
@@ -138,42 +195,510 @@ const colorPalette = [
   { bg: "#000000", text: "#FFFFFF" },
 ];
 
-const darkenColor = (hex: string | undefined, percent: number): string => {
-  if (!hex || !/^#[0-9A-F]{6}$/i.test(hex)) {
-    return "#000000";
-  }
-  const num = parseInt(hex.replace("#", ""), 16);
-  const amt = Math.round(2.55 * percent);
-  const R = Math.max(0, (num >> 16) - amt);
-  const G = Math.max(0, ((num >> 8) & 0x00ff) - amt);
-  const B = Math.max(0, (num & 0x0000ff) - amt);
-  return `#${(0x1000000 + R * 0x10000 + G * 0x100 + B)
-    .toString(16)
-    .slice(1)
-    .padStart(6, "0")}`;
-};
-
+// Toast notification component
 const Toast: React.FC<{
   message: string;
-  type: "success" | "error";
+  type: "success" | "error" | "info";
   onClose: () => void;
 }> = ({ message, type, onClose }) => {
   useEffect(() => {
-    const timer = setTimeout(onClose, 1000);
+    const timer = setTimeout(onClose, 3000);
     return () => clearTimeout(timer);
   }, [onClose]);
 
+  const bgColor = type === "success" ? "bg-green-500" : type === "error" ? "bg-red-500" : "bg-blue-500";
+
   return (
     <div
-      className={`fixed top-5 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-md shadow-lg z-50 text-white ${
-        type === "success" ? "bg-green-500" : "bg-red-500"
-      }`}
+      className={`fixed top-5 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-md shadow-lg z-50 text-white transition-all duration-300 ${bgColor}`}
     >
       {message}
     </div>
   );
 };
 
+// Connection Status Component
+const ConnectionStatus: React.FC<{
+  connectionState: ConnectionState;
+  onRetry?: () => void;
+}> = ({ connectionState, onRetry }) => {
+  const getStatusIcon = () => {
+    switch (connectionState.status) {
+      case 'connected':
+        return <Wifi className="w-4 h-4 text-green-500" />;
+      case 'connecting':
+      case 'reconnecting':
+        return <RefreshCw className="w-4 h-4 text-yellow-500 animate-spin" />;
+      case 'disconnected':
+        return <WifiOff className="w-4 h-4 text-gray-500" />;
+      case 'error':
+        return <AlertCircle className="w-4 h-4 text-red-500" />;
+      default:
+        return <WifiOff className="w-4 h-4 text-gray-500" />;
+    }
+  };
+
+  const getStatusText = () => {
+    switch (connectionState.status) {
+      case 'connected':
+        return 'Connected';
+      case 'connecting':
+        return 'Connecting...';
+      case 'reconnecting':
+        return `Reconnecting... (${connectionState.reconnectAttempts || 0}/5)`;
+      case 'disconnected':
+        return 'Disconnected';
+      case 'error':
+        return 'Connection Error';
+      default:
+        return 'Unknown';
+    }
+  };
+
+  const getStatusColor = () => {
+    switch (connectionState.status) {
+      case 'connected':
+        return 'bg-green-50 border-green-200 text-green-800 dark:bg-green-900/20 dark:border-green-800 dark:text-green-300';
+      case 'connecting':
+      case 'reconnecting':
+        return 'bg-yellow-50 border-yellow-200 text-yellow-800 dark:bg-yellow-900/20 dark:border-yellow-800 dark:text-yellow-300';
+      case 'disconnected':
+        return 'bg-gray-50 border-gray-200 text-gray-800 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300';
+      case 'error':
+        return 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300';
+      default:
+        return 'bg-gray-50 border-gray-200 text-gray-800 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300';
+    }
+  };
+
+  return (
+    <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-all duration-200 ${getStatusColor()}`}>
+      {getStatusIcon()}
+      <span>{getStatusText()}</span>
+
+      {connectionState.latency && connectionState.status === 'connected' && (
+        <div className="flex items-center gap-1 ml-2 text-xs opacity-70">
+          <Clock className="w-3 h-3" />
+          <span>{connectionState.latency}ms</span>
+        </div>
+      )}
+
+      {(connectionState.status === 'error' || connectionState.status === 'disconnected') && onRetry && (
+        <button
+          onClick={onRetry}
+          className="ml-2 px-2 py-1 text-xs bg-white dark:bg-gray-700 border border-current rounded hover:bg-opacity-80 transition-colors"
+        >
+          Retry
+        </button>
+      )}
+    </div>
+  );
+};
+
+// User Presence Component
+const UserPresence: React.FC<{
+  users: UserPresence[];
+  currentUser?: string;
+}> = ({ users, currentUser }) => {
+  const activeUsers = users.filter(user => user.joined);
+
+  return (
+    <div className="flex items-center gap-3 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 px-4 py-3">
+      <div className="flex items-center gap-2">
+        <Users className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          {activeUsers.length} {activeUsers.length === 1 ? 'user' : 'users'} online
+        </span>
+      </div>
+
+      <div className="flex items-center gap-1">
+        {activeUsers.slice(0, 5).map((user, index) => (
+          <div
+            key={user.email}
+            className="relative group"
+            title={user.username}
+          >
+            <div
+              className="w-8 h-8 rounded-full border-2 border-white dark:border-gray-700 flex items-center justify-center text-xs font-semibold text-white shadow-sm transition-transform hover:scale-110"
+              style={{ backgroundColor: user.color || '#6B7280' }}
+            >
+              {user.username.charAt(0).toUpperCase()}
+            </div>
+
+            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-black text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+              {user.username}
+              {user.email === currentUser && ' (You)'}
+            </div>
+
+            <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full"></div>
+          </div>
+        ))}
+
+        {activeUsers.length > 5 && (
+          <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-600 border-2 border-white dark:border-gray-700 flex items-center justify-center text-xs font-semibold text-gray-600 dark:text-gray-300">
+            +{activeUsers.length - 5}
+          </div>
+        )}
+      </div>
+
+      {activeUsers.length > 0 && (
+        <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+          <Eye className="w-3 h-3" />
+          <span>Live collaboration</span>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Activity Feed Component
+const ActivityFeed: React.FC<{
+  activities: ActivityUpdate[];
+}> = ({ activities }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const displayActivities = isExpanded ? activities.slice(0, 20) : activities.slice(0, 5);
+
+  const formatTime = (timestamp: string) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffSecs = Math.floor(diffMs / 1000);
+    const diffMins = Math.floor(diffSecs / 60);
+    const diffHours = Math.floor(diffMins / 60);
+
+    if (diffSecs < 60) {
+      return 'just now';
+    } else if (diffMins < 60) {
+      return `${diffMins}m ago`;
+    } else if (diffHours < 24) {
+      return `${diffHours}h ago`;
+    } else {
+      return date.toLocaleDateString();
+    }
+  };
+
+  if (activities.length === 0) {
+    return (
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Activity className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+          <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Recent Activity</h3>
+        </div>
+        <div className="text-center py-4 text-gray-500 dark:text-gray-400 text-sm">
+          No recent activity
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <Activity className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+          <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Recent Activity</h3>
+          <span className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-1 rounded-full">
+            {activities.length}
+          </span>
+        </div>
+
+        {activities.length > 5 && (
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+          >
+            {isExpanded ? (
+              <>
+                <span>Show less</span>
+                <ChevronUp className="w-3 h-3" />
+              </>
+            ) : (
+              <>
+                <span>Show more</span>
+                <ChevronDown className="w-3 h-3" />
+              </>
+            )}
+          </button>
+        )}
+      </div>
+
+      <div className="space-y-2 max-h-64 overflow-y-auto">
+        {displayActivities.map((activity, index) => (
+          <div
+            key={`${activity.timestamp}-${index}`}
+            className="flex items-start gap-3 p-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+          >
+            <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <User className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+            </div>
+
+            <div className="flex-1 min-w-0">
+              <div className="text-sm text-gray-700 dark:text-gray-300">
+                <span className="font-medium text-gray-900 dark:text-gray-100">
+                  {activity.username || 'A user'}
+                </span>
+                {' '}
+                <span>{activity.action}</span>
+              </div>
+
+              <div className="flex items-center gap-1 mt-1 text-xs text-gray-500 dark:text-gray-400">
+                <Clock className="w-3 h-3" />
+                <span>{formatTime(activity.timestamp)}</span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// Error Notifications Component
+const ErrorNotifications: React.FC<{
+  errors: SocketError[];
+  onDismiss: (index: number) => void;
+  onDismissAll: () => void;
+  onRetry?: () => void;
+}> = ({ errors, onDismiss, onDismissAll, onRetry }) => {
+  if (errors.length === 0) return null;
+
+  const getErrorIcon = (error: SocketError) => {
+    switch (error.code) {
+      case 'NETWORK_ERROR':
+      case 'CONNECTION_ERROR':
+        return <Wifi className="w-4 h-4" />;
+      case 'RECONNECT_FAILED':
+        return <RefreshCw className="w-4 h-4" />;
+      default:
+        return <AlertCircle className="w-4 h-4" />;
+    }
+  };
+
+  const getErrorSeverity = (error: SocketError) => {
+    const criticalCodes = ['CONNECTION_ERROR', 'RECONNECT_FAILED', 'SERVER_DISCONNECT'];
+    return criticalCodes.includes(error.code || '') ? 'critical' : 'warning';
+  };
+
+  return (
+    <div className="fixed bottom-4 left-20 z-50 max-w-sm space-y-2">
+      {errors.length > 1 && (
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-600 dark:text-gray-400">
+              {errors.length} connection issues
+            </span>
+            <button
+              onClick={onDismissAll}
+              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {errors.slice(0, 3).map((error, index) => {
+        const severity = getErrorSeverity(error);
+        const baseClasses = "bg-white dark:bg-gray-800 border rounded-lg shadow-lg p-4 animate-slide-in-right";
+        const severityClasses = severity === 'critical'
+          ? "border-red-200 dark:border-red-800"
+          : "border-yellow-200 dark:border-yellow-800";
+
+        return (
+          <div key={index} className={`${baseClasses} ${severityClasses}`}>
+            <div className="flex items-start gap-3">
+              <div className={`flex-shrink-0 ${severity === 'critical'
+                ? 'text-red-500 dark:text-red-400'
+                : 'text-yellow-500 dark:text-yellow-400'
+                }`}>
+                {getErrorIcon(error)}
+              </div>
+
+              <div className="flex-1 min-w-0">
+                <div className={`text-sm font-medium ${severity === 'critical'
+                  ? 'text-red-800 dark:text-red-200'
+                  : 'text-yellow-800 dark:text-yellow-200'
+                  }`}>
+                  Connection Issue
+                </div>
+                <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  {error.message}
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-500 mt-2">
+                  {error.timestamp.toLocaleTimeString()}
+                </div>
+
+                {(error.code === 'CONNECTION_ERROR' || error.code === 'RECONNECT_FAILED') && onRetry && (
+                  <button
+                    onClick={onRetry}
+                    className={`mt-2 text-xs px-2 py-1 rounded border transition-colors ${severity === 'critical'
+                      ? 'border-red-300 text-red-700 hover:bg-red-50 dark:border-red-700 dark:text-red-300 dark:hover:bg-red-900/20'
+                      : 'border-yellow-300 text-yellow-700 hover:bg-yellow-50 dark:border-yellow-700 dark:text-yellow-300 dark:hover:bg-yellow-900/20'
+                      }`}
+                  >
+                    Retry Connection
+                  </button>
+                )}
+              </div>
+
+              <button
+                onClick={() => onDismiss(index)}
+                className="flex-shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+// Cursor Overlay Component
+const CursorOverlay: React.FC<{
+  cursors: CursorPosition[];
+  zoomLevel: number;
+  panOffset: { x: number; y: number };
+}> = ({ cursors, zoomLevel, panOffset }) => {
+  return (
+    <div className="absolute inset-0 pointer-events-none z-40">
+      {cursors.map((cursor) => (
+        <div
+          key={cursor.socketId}
+          className="absolute transition-all duration-75 ease-out"
+          style={{
+            left: `${cursor.x * zoomLevel + panOffset.x}px`,
+            top: `${cursor.y * zoomLevel + panOffset.y}px`,
+            transform: 'translate(-2px, -2px)',
+          }}
+        >
+          <div className="relative">
+            <MousePointer2
+              className="w-5 h-5 drop-shadow-lg"
+              style={{
+                color: cursor.color || '#6B7280',
+                filter: 'drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3))'
+              }}
+            />
+
+            {cursor.username && (
+              <div
+                className="absolute top-6 left-0 px-2 py-1 text-xs font-medium text-white rounded shadow-lg whitespace-nowrap pointer-events-none animate-fade-in"
+                style={{
+                  backgroundColor: cursor.color || '#6B7280',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)'
+                }}
+              >
+                {cursor.username}
+              </div>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// Collaboration Panel Component
+const CollaborationPanel: React.FC<{
+  connectionState: ConnectionState;
+  connectedUsers: UserPresence[];
+  recentActivity: ActivityUpdate[];
+  errors: SocketError[];
+  currentUser?: string;
+  onRetryConnection?: () => void;
+  onDismissError: (index: number) => void;
+  onDismissAllErrors: () => void;
+}> = ({
+  connectionState,
+  connectedUsers,
+  recentActivity,
+  errors,
+  currentUser,
+  onRetryConnection,
+  onDismissError,
+  onDismissAllErrors
+}) => {
+    const [isCollapsed, setIsCollapsed] = useState(true);
+
+    const handleCollaborationCollapse = () => {
+      setIsCollapsed((prev) => !prev);
+    };
+
+
+
+    return (
+      <>
+        {/* Error Notifications */}
+        <ErrorNotifications
+          errors={errors}
+          onDismiss={onDismissError}
+          onDismissAll={onDismissAllErrors}
+          onRetry={onRetryConnection}
+        />
+
+        {/* Collaboration Panel */}
+        <div className={`fixed top-4 right-4 z-40 transition-all duration-300 ${isCollapsed ? 'w-12' : 'w-80'}`}>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+            
+            <div className="flex items-center justify-between p-1 border-b border-gray-00 dark:border-gray-700">
+              <div className="flex items-center gap-2">
+
+
+                <button
+                  onClick={handleCollaborationCollapse}
+                  className="p-2 pb- bg-gradient-to-br from-purple-500 to-purple-700 text-white rounded-full hover:from-purple-400 hover:to-purple-600 transition-all duration-300"
+                  title="Profile"
+                  aria-label="Profile"
+                >
+                  <Users size={20} />
+                </button>
+
+                {!isCollapsed && (
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                    Collaboration
+                  </h2>
+                )}
+              </div>
+              <button
+                onClick={() => setIsCollapsed(!isCollapsed)}
+                className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                {isCollapsed ? (
+                  <ChevronDown className="w-4 h-4" />
+                ) : (
+                  <ChevronUp className="w-4 h-4" />
+                )}
+              </button>
+            </div>
+
+            {/* Content */}
+            {!isCollapsed && (
+              <div className="p-4 space-y-4 max-h-96 overflow-y-auto">
+                {/* Connection Status */}
+                <ConnectionStatus
+                  connectionState={connectionState}
+                  onRetry={onRetryConnection}
+                />
+
+                {/* User Presence */}
+                <UserPresence
+                  users={connectedUsers}
+                  currentUser={currentUser}
+                />
+
+                {/* Activity Feed */}
+                <ActivityFeed activities={recentActivity} />
+              </div>
+            )}
+          </div>
+        </div>
+      </>
+    );
+  };
+
+// Sticky Note Component with animations
 const StickyNoteComponent = memo(
   ({
     note,
@@ -204,18 +729,18 @@ const StickyNoteComponent = memo(
     return (
       <div
         data-note-id={note.id}
-        className={`absolute rounded-lg overflow-hidden transition-all duration-300 ease-in-out ${
-          activeNoteId === note.id
-            ? "z-1 shadow-2xl ring-2 ring-purple-400 transform scale-105"
-            : "z-0 shadow-lg hover:shadow-xl"
-        }`}
+        className={`absolute rounded-lg overflow-hidden transition-all duration-300 ease-in-out ${activeNoteId === note.id
+          ? "z-30 shadow-2xl ring-2 ring-purple-400 transform scale-105"
+          : "z-20 shadow-lg hover:shadow-xl"
+          }`}
         style={{
           width: `${note.width * zoomLevel}px`,
           height: `${note.height * zoomLevel}px`,
-          background: darkenColor(bgColor, 10) ? `${bgColor}` : "#FEF7CD", // Fallback to hex
+          background: bgColor,
           left: `${adjustedX}px`,
           top: `${adjustedY}px`,
           border: "1px solid rgba(0,0,0,0.1)",
+          transform: activeNoteId === note.id ? 'scale(1.02)' : 'scale(1)',
         }}
         onMouseDown={(e) => handleStickyNoteMouseDown(e, note.id)}
         onDoubleClick={(e) => handleStickyNoteDoubleClick(e, note.id)}
@@ -243,9 +768,6 @@ const StickyNoteComponent = memo(
               >
                 <circle cx="12" cy="12" r="10" />
               </svg>
-              <span className="absolute hidden group-hover:block text-xs text-white bg-gray-800 rounded px-2 py-1 -top-8 left-1/2 transform -translate-x-1/2">
-                Change Color
-              </span>
             </button>
             <button
               className="relative group bg-gradient-to-br from-red-500 to-red-700 text-white rounded-full p-1.5 hover:from-red-600 hover:to-red-800 transition-all duration-200 transform hover:scale-110 focus:outline-none"
@@ -254,23 +776,7 @@ const StickyNoteComponent = memo(
                 handleDeleteStickyNote(note.id);
               }}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="white"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-              <span className="absolute hidden group-hover:block text-xs text-white bg-gray-800 rounded px-2 py-1 -top-8 left-1/2 transform -translate-x-1/2">
-                Delete
-              </span>
+              <X className="w-4 h-4" />
             </button>
           </div>
           <div className="flex-1 p-3">
@@ -309,22 +815,23 @@ const StickyNoteComponent = memo(
             )}
           </div>
         </div>
+        {/* Resize handles with animations */}
         {activeNoteId === note.id && !editingNoteId && (
           <>
             <div
-              className="absolute bottom-0 right-0 w-5 h-5 bg-gradient-to-br from-purple-600 to-purple-800 rounded-full transform translate-x-1/2 translate-y-1/2 cursor-se-resize z-30 hover:bg-purple-700 hover:scale-125 transition-all duration-200"
+              className="absolute bottom-0 right-0 w-4 h-4 bg-gradient-to-br from-purple-600 to-purple-800 rounded-full transform translate-x-1/2 translate-y-1/2 cursor-se-resize z-40 hover:bg-purple-700 hover:scale-125 transition-all duration-200 animate-pulse"
               onMouseDown={(e) => handleResizeStart(e, note.id, "se")}
             />
             <div
-              className="absolute bottom-0 left-0 w-5 h-5 bg-gradient-to-br from-purple-600 to-purple-800 rounded-full transform -translate-x-1/2 translate-y-1/2 cursor-sw-resize z-30 hover:bg-purple-700 hover:scale-125 transition-all duration-200"
+              className="absolute bottom-0 left-0 w-4 h-4 bg-gradient-to-br from-purple-600 to-purple-800 rounded-full transform -translate-x-1/2 translate-y-1/2 cursor-sw-resize z-40 hover:bg-purple-700 hover:scale-125 transition-all duration-200 animate-pulse"
               onMouseDown={(e) => handleResizeStart(e, note.id, "sw")}
             />
             <div
-              className="absolute top-0 right-0 w-5 h-5 bg-gradient-to-br from-purple-600 to-purple-800 rounded-full transform translate-x-1/2 -translate-y-1/2 cursor-ne-resize z-30 hover:bg-purple-700 hover:scale-125 transition-all duration-200"
+              className="absolute top-0 right-0 w-4 h-4 bg-gradient-to-br from-purple-600 to-purple-800 rounded-full transform translate-x-1/2 -translate-y-1/2 cursor-ne-resize z-40 hover:bg-purple-700 hover:scale-125 transition-all duration-200 animate-pulse"
               onMouseDown={(e) => handleResizeStart(e, note.id, "ne")}
             />
             <div
-              className="absolute top-0 left-0 w-5 h-5 bg-gradient-to-br from-purple-600 to-purple-800 rounded-full transform -translate-x-1/2 -translate-y-1/2 cursor-nw-resize z-30 hover:bg-purple-700 hover:scale-125 transition-all duration-200"
+              className="absolute top-0 left-0 w-4 h-4 bg-gradient-to-br from-purple-600 to-purple-800 rounded-full transform -translate-x-1/2 -translate-y-1/2 cursor-nw-resize z-40 hover:bg-purple-700 hover:scale-125 transition-all duration-200 animate-pulse"
               onMouseDown={(e) => handleResizeStart(e, note.id, "nw")}
             />
           </>
@@ -336,6 +843,7 @@ const StickyNoteComponent = memo(
 
 StickyNoteComponent.displayName = "StickyNoteComponent";
 
+// Text Component with animations
 const TextComponent = memo(
   ({
     textElement,
@@ -370,15 +878,15 @@ const TextComponent = memo(
     return (
       <div
         data-text-id={textElement.id}
-        className={`absolute shadow-md rounded-md overflow-visible transition-shadow duration-200 ${
-          activeTextId === textElement.id
-            ? "z-20 shadow-xl ring-2 ring-purple-500"
-            : "z-10"
-        }`}
+        className={`absolute shadow-md rounded-md overflow-visible transition-all duration-200 ${activeTextId === textElement.id
+          ? "z-30 shadow-xl ring-2 ring-purple-500 transform scale-105"
+          : "z-20"
+          }`}
         style={{
           left: `${adjustedX}px`,
           top: `${adjustedY}px`,
           cursor: editingTextId === textElement.id ? "text" : "move",
+          transform: activeTextId === textElement.id ? 'scale(1.02)' : 'scale(1)',
         }}
         onMouseDown={(e) => handleTextMouseDown(e, textElement.id)}
         onDoubleClick={(e) => handleTextDoubleClick(e, textElement.id)}
@@ -419,7 +927,7 @@ const TextComponent = memo(
         )}
         {activeTextId === textElement.id && !editingTextId && (
           <button
-            className="absolute top-0 right-0 w-6 h-6 bg-red-500 text-white rounded-full -translate-x-1/2 -translate-y-1/2 cursor-pointer z-30 hover:bg-red-600 transition-all duration-200 transform hover:scale-105"
+            className="absolute top-0 right-0 w-6 h-6 bg-red-500 text-white rounded-full -translate-x-1/2 -translate-y-1/2 cursor-pointer z-40 hover:bg-red-600 transition-all duration-200 transform hover:scale-105"
             onClick={(e) => {
               e.stopPropagation();
               setElements((prev) =>
@@ -427,20 +935,7 @@ const TextComponent = memo(
               );
             }}
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="white"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
+            <X className="w-4 h-4" />
           </button>
         )}
       </div>
@@ -450,6 +945,7 @@ const TextComponent = memo(
 
 TextComponent.displayName = "TextComponent";
 
+// Main Canvas Component
 const Canvas: React.FC<CanvasProps> = ({
   strokeColor,
   lineWidth,
@@ -462,28 +958,32 @@ const Canvas: React.FC<CanvasProps> = ({
   historyIndex,
   history,
   textStyles,
+
+  currentUser = "demo@example.com",
 }) => {
+  // Canvas references
   const gridCanvasRef = useRef<HTMLCanvasElement>(null);
   const contentCanvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [gridContext, setGridContext] =
-    useState<CanvasRenderingContext2D | null>(null);
-  const [contentContext, setContentContext] =
-    useState<CanvasRenderingContext2D | null>(null);
+
+  // Canvas contexts
+  const [gridContext, setGridContext] = useState<CanvasRenderingContext2D | null>(null);
+  const [contentContext, setContentContext] = useState<CanvasRenderingContext2D | null>(null);
+
+  // Drawing states
   const [isDrawing, setIsDrawing] = useState(false);
   const [elements, setElements] = useState<WhiteboardElement[]>([]);
   const elementsRef = useRef<WhiteboardElement[]>([]);
-  const [currentElement, setCurrentElement] =
-    useState<WhiteboardElement | null>(null);
-  const [canvasDimensions, setCanvasDimensions] = useState({
-    width: 0,
-    height: 0,
-  });
-  const params = useParams();
+  const [currentElement, setCurrentElement] = useState<WhiteboardElement | null>(null);
+  const [canvasDimensions, setCanvasDimensions] = useState({ width: 0, height: 0 });
+
+  // UI states
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   const [activeTextId, setActiveTextId] = useState<string | null>(null);
   const [activeShapeId, setActiveShapeId] = useState<string | null>(null);
+
+  // Interaction states
   const [isDraggingNote, setIsDraggingNote] = useState(false);
   const [isDraggingText, setIsDraggingText] = useState(false);
   const [isDraggingShape, setIsDraggingShape] = useState(false);
@@ -492,11 +992,15 @@ const Canvas: React.FC<CanvasProps> = ({
   const [resizeDirection, setResizeDirection] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [startPoint, setStartPoint] = useState<Point | null>(null);
+
+  // View states
   const [zoomLevel, setZoomLevel] = useState(1.0);
   const [editingTextId, setEditingTextId] = useState<string | null>(null);
   const [isPanning, setIsPanning] = useState(false);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [panStart, setPanStart] = useState<Point | null>(null);
+
+  // UI components states
   const [colorPicker, setColorPicker] = useState<{
     noteId: string;
     x: number;
@@ -504,8 +1008,20 @@ const Canvas: React.FC<CanvasProps> = ({
   } | null>(null);
   const [toast, setToast] = useState<{
     message: string;
-    type: "success" | "error";
+    type: "success" | "error" | "info";
   } | null>(null);
+
+  // Socket states
+  const socketRef = useRef<Socket | null>(null);
+  const [connectionState, setConnectionState] = useState<ConnectionState>({ status: 'disconnected' });
+  const [connectedUsers, setConnectedUsers] = useState<UserPresence[]>([]);
+  const [recentActivity, setRecentActivity] = useState<ActivityUpdate[]>([]);
+  const [cursors, setCursors] = useState<CursorPosition[]>([]);
+  const [errors, setErrors] = useState<SocketError[]>([]);
+  const latencyCheckRef = useRef<number | null>(null);
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Sticky note colors
   const stickyNoteColors = [
     "#FEF7CD",
     "#D3E4FD",
@@ -514,11 +1030,14 @@ const Canvas: React.FC<CanvasProps> = ({
     "#FFDEE2",
     "#FDE1D3",
   ];
+
+  // Temporary states for smooth interactions
   const tempNoteState = useRef<StickyNote | null>(null);
   const tempTextState = useRef<TextElement | null>(null);
   const tempShapeState = useRef<ShapeElement | null>(null);
   const newTextIdRef = useRef<string | null>(null);
 
+  // Debounced save function
   const debouncedSaveToHistory = useCallback(
     debounce((elements: WhiteboardElement[], stickyNotes: StickyNote[]) => {
       saveToHistory({ elements, stickyNotes });
@@ -526,6 +1045,300 @@ const Canvas: React.FC<CanvasProps> = ({
     [saveToHistory]
   );
 
+  // Socket error handling
+  const addError = useCallback((message: string, code?: string) => {
+    const error: SocketError = {
+      message,
+      code,
+      timestamp: new Date(),
+    };
+    setErrors(prev => [error, ...prev.slice(0, 9)]);
+  }, []);
+
+  const clearError = useCallback((index: number) => {
+    setErrors(prev => prev.filter((_, i) => i !== index));
+  }, []);
+
+  const clearAllErrors = useCallback(() => {
+    setErrors([]);
+  }, []);
+
+  // Socket latency measurement
+  const measureLatency = useCallback(() => {
+    if (socketRef.current?.connected) {
+      const start = Date.now();
+      socketRef.current.emit('ping', start);
+      latencyCheckRef.current = start;
+    }
+  }, []);
+
+  // Socket emit wrapper
+  const emit = useCallback((event: string, data: any) => {
+    if (socketRef.current?.connected) {
+      socketRef.current.emit(event, data);
+    } else {
+      addError('Cannot emit event: Socket not connected', 'SOCKET_DISCONNECTED');
+    }
+  }, [addError]);
+
+  // Retry connection
+  const retryConnection = useCallback(() => {
+    if (socketRef.current) {
+      socketRef.current.connect();
+    }
+  }, []);
+  const token = localStorage.getItem('token')
+  const params = useParams();
+  const whiteboardId = params.id;
+  // Socket initialization and management
+  useEffect(() => {
+
+    if (!whiteboardId || !token) return;
+
+
+    setConnectionState({ status: 'connecting' });
+
+    const socket = io('http://localhost:3001', {
+      auth: { token },
+      transports: ['websocket', 'polling'],
+      timeout: 10000,
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 5,
+      maxReconnectionDelay: 5000,
+    });
+
+    socketRef.current = socket;
+
+    // Connection event handlers
+    socket.on('connect', () => {
+      console.log('Socket connected:', socket.id);
+      setConnectionState({
+        status: 'connected',
+        lastConnected: new Date(),
+        reconnectAttempts: 0
+      });
+      clearAllErrors();
+
+      socket.emit('join_whiteboard', whiteboardId);
+
+      measureLatency();
+      const latencyInterval = setInterval(measureLatency, 30000);
+
+      setToast({ message: "Connected to collaborative session", type: "success" });
+
+      return () => clearInterval(latencyInterval);
+    });
+
+    socket.on('disconnect', (reason) => {
+      console.log('Socket disconnected:', reason);
+      setConnectionState(prev => ({
+        ...prev,
+        status: 'disconnected'
+      }));
+
+      if (reason === 'io server disconnect') {
+        addError('Server disconnected the connection', 'SERVER_DISCONNECT');
+      } else if (reason === 'transport close') {
+        addError('Connection lost due to network issues', 'NETWORK_ERROR');
+      }
+
+      setToast({ message: "Disconnected from collaborative session", type: "error" });
+    });
+
+    socket.on('connect_error', (error) => {
+      console.error('Socket connection error:', error);
+      setConnectionState(prev => ({
+        ...prev,
+        status: 'error',
+        reconnectAttempts: (prev.reconnectAttempts || 0) + 1
+      }));
+      addError(`Connection failed: ${error.message}`, 'CONNECTION_ERROR');
+    });
+
+    socket.on('reconnect', (attemptNumber) => {
+      console.log('Socket reconnected after', attemptNumber, 'attempts');
+      setConnectionState(prev => ({
+        ...prev,
+        status: 'connected',
+        lastConnected: new Date(),
+        reconnectAttempts: attemptNumber
+      }));
+      socket.emit('join_whiteboard', whiteboardId);
+      setToast({ message: "Reconnected to collaborative session", type: "success" });
+    });
+
+    socket.on('reconnect_attempt', (attemptNumber) => {
+      console.log('Reconnection attempt:', attemptNumber);
+      setConnectionState(prev => ({
+        ...prev,
+        status: 'reconnecting',
+        reconnectAttempts: attemptNumber
+      }));
+    });
+
+    socket.on('reconnect_failed', () => {
+      console.log('Reconnection failed');
+      setConnectionState(prev => ({
+        ...prev,
+        status: 'error'
+      }));
+      addError('Failed to reconnect to server', 'RECONNECT_FAILED');
+    });
+
+    // Latency response
+    socket.on('pong', (timestamp: number) => {
+      if (latencyCheckRef.current === timestamp) {
+        const latency = Date.now() - timestamp;
+        setConnectionState(prev => ({ ...prev, latency }));
+      }
+    });
+
+    // Whiteboard-specific event handlers
+    socket.on('initial_state', (data: { elements: WhiteboardElement[], stickyNotes: StickyNote[] }) => {
+      console.log('Received initial state:', data);
+      setElements(data.elements || []);
+      setStickyNotes(data.stickyNotes || []);
+      elementsRef.current = data.elements || [];
+    });
+
+    socket.on('user_presence', (presence: UserPresence) => {
+      console.log('User presence update:', presence);
+      setConnectedUsers(prev => {
+        if (presence.joined) {
+          const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8'];
+          const userColor = colors[Math.floor(Math.random() * colors.length)];
+          return [...prev.filter(u => u.email !== presence.email), { ...presence, color: userColor }];
+        } else {
+          return prev.filter(u => u.email !== presence.email);
+        }
+      });
+    });
+
+    socket.on('activity_update', (activity: ActivityUpdate) => {
+      console.log('Activity update:', activity);
+      setRecentActivity(prev => [activity, ...prev.slice(0, 49)]);
+    });
+
+    // Drawing event handlers
+    socket.on('drawStart', (element: WhiteboardElement) => {
+      console.log('Received drawStart:', element);
+      setElements(prev => {
+        const newElements = [...prev, element];
+        elementsRef.current = newElements;
+        return newElements;
+      });
+    });
+
+    socket.on('drawUpdate', (element: WhiteboardElement) => {
+      console.log('Received drawUpdate:', element);
+      setElements(prev => {
+        const newElements = prev.map(el => el.id === element.id ? element : el);
+        elementsRef.current = newElements;
+        return newElements;
+      });
+    });
+
+    socket.on('drawEnd', (element: WhiteboardElement) => {
+      console.log('Received drawEnd:', element);
+      setElements(prev => {
+        const filtered = prev.filter(el => el.id !== element.id);
+        const newElements = [...filtered, element];
+        elementsRef.current = newElements;
+        return newElements;
+      });
+    });
+
+    // Sticky note event handlers
+    socket.on('stickyNoteCreate', (stickyNote: StickyNote) => {
+      console.log('Received stickyNoteCreate:', stickyNote);
+      setStickyNotes(prev => [...prev.filter(note => note.id !== stickyNote.id), stickyNote]);
+    });
+
+    socket.on('stickyNoteUpdate', (stickyNote: Partial<StickyNote>) => {
+      console.log('Received stickyNoteUpdate:', stickyNote);
+      setStickyNotes(prev =>
+        prev.map(note => note.id === stickyNote.id ? { ...note, ...stickyNote } as StickyNote : note)
+      );
+    });
+
+    socket.on('stickyNoteDelete', (id: string) => {
+      console.log('Received stickyNoteDelete:', id);
+      setStickyNotes(prev => prev.filter(note => note.id !== id));
+    });
+
+    // Text event handlers
+    socket.on('textCreate', (element: WhiteboardElement) => {
+      console.log('Received textCreate:', element);
+      setElements(prev => {
+        const newElements = [...prev, element];
+        elementsRef.current = newElements;
+        return newElements;
+      });
+    });
+
+    socket.on('textUpdate', (element: Partial<WhiteboardElement>) => {
+      console.log('Received textUpdate:', element);
+      setElements(prev => {
+        const newElements = prev.map(el => el.id === element.id ? { ...el, ...element } : el);
+        elementsRef.current = newElements;
+        return newElements;
+      });
+    });
+
+    // Shape event handlers
+    socket.on('shapeUpdate', (element: Partial<WhiteboardElement>) => {
+      console.log('Received shapeUpdate:', element);
+      setElements(prev => {
+        const newElements = prev.map(el => el.id === element.id ? { ...el, ...element } : el);
+        elementsRef.current = newElements;
+        return newElements;
+      });
+    });
+
+    // Cursor event handlers
+    socket.on('cursorMove', (cursor: CursorPosition) => {
+      setCursors(prev => {
+        const filtered = prev.filter(c => c.socketId !== cursor.socketId);
+        return [...filtered, cursor];
+      });
+
+      setTimeout(() => {
+        setCursors(prev => prev.filter(c => c.socketId !== cursor.socketId));
+      }, 3000);
+    });
+
+    socket.on('error', (error: { message: string; code?: string }) => {
+      console.error('Socket error:', error);
+      addError(error.message, error.code);
+    });
+
+    return () => {
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+
+      setConnectionState({ status: 'disconnected' });
+      setConnectedUsers([]);
+      setRecentActivity([]);
+      setCursors([]);
+    };
+  }, [whiteboardId, token, addError, clearAllErrors, measureLatency]);
+
+  // Emit cursor movement
+  const emitCursorMove = useCallback(
+    throttle((x: number, y: number) => {
+      emit('cursorMove', { x, y });
+    }, 100),
+    [emit]
+  );
+
+  // Filter unique sticky notes
   const uniqueStickyNotes = React.useMemo(() => {
     const seenIds = new Set<string>();
     return (stickyNotes || []).filter((note) => {
@@ -536,6 +1349,9 @@ const Canvas: React.FC<CanvasProps> = ({
     });
   }, [stickyNotes]);
 
+  /**
+   * Enhanced shape drawing function with support for all shapes
+   */
   const drawElement = useCallback(
     (element: WhiteboardElement) => {
       if (
@@ -545,6 +1361,8 @@ const Canvas: React.FC<CanvasProps> = ({
         element.type === "text"
       )
         return;
+
+      // Handle path elements (pen, eraser, highlighter)
       if (
         element.type === "path" &&
         (element as PathElement).points?.length > 1
@@ -554,6 +1372,7 @@ const Canvas: React.FC<CanvasProps> = ({
         contentContext.moveTo(path.points[0].x, path.points[0].y);
         contentContext.strokeStyle = path.color;
         contentContext.lineWidth = path.width / zoomLevel;
+
         if (path.tool === "eraser") {
           contentContext.globalCompositeOperation = "destination-out";
         } else if (path.tool === "highlighter") {
@@ -563,26 +1382,32 @@ const Canvas: React.FC<CanvasProps> = ({
           contentContext.globalCompositeOperation = "source-over";
           contentContext.globalAlpha = 1.0;
         }
+
         for (let i = 1; i < path.points.length; i++) {
           contentContext.lineTo(path.points[i].x, path.points[i].y);
         }
         contentContext.stroke();
         contentContext.globalCompositeOperation = "source-over";
         contentContext.globalAlpha = 1.0;
-      } else if (element.type !== "path") {
+      }
+      // Handle shape elements
+      else if (element.type !== "path") {
         const shape = element as ShapeElement;
         contentContext.beginPath();
         contentContext.strokeStyle = shape.color;
         contentContext.lineWidth = shape.lineWidth / zoomLevel;
         contentContext.fillStyle = "transparent";
+
         const x = shape.x;
         const y = shape.y;
         const width = shape.width;
         const height = shape.height;
+
         switch (shape.type) {
           case "rectangle":
             contentContext.rect(x, y, width, height);
             break;
+
           case "circle":
             contentContext.ellipse(
               x + width / 2,
@@ -594,255 +1419,39 @@ const Canvas: React.FC<CanvasProps> = ({
               Math.PI * 2
             );
             break;
+
           case "line":
             contentContext.moveTo(x, y);
             contentContext.lineTo(x + width, y + height);
             break;
+
           case "triangle":
             contentContext.moveTo(x + width / 2, y);
             contentContext.lineTo(x, y + height);
             contentContext.lineTo(x + width, y + height);
             contentContext.closePath();
             break;
-          case "diamond":
-            contentContext.moveTo(x + width / 2, y);
-            contentContext.lineTo(x + width, y + height / 2);
-            contentContext.lineTo(x + width / 2, y + height);
-            contentContext.lineTo(x, y + height / 2);
-            contentContext.closePath();
-            break;
-          case "star":
-            const spikes = 5;
-            const outerRadius = Math.min(width, height) / 2;
-            const innerRadius = outerRadius / 2.5;
-            const cx = x + width / 2;
-            const cy = y + height / 2;
-            let rot = (Math.PI / 2) * 3;
-            contentContext.moveTo(cx, cy - outerRadius);
-            for (let i = 0; i < spikes; i++) {
-              contentContext.lineTo(
-                cx + Math.cos(rot) * outerRadius,
-                cy + Math.sin(rot) * outerRadius
-              );
-              rot += Math.PI / spikes;
-              contentContext.lineTo(
-                cx + Math.cos(rot) * innerRadius,
-                cy + Math.sin(rot) * innerRadius
-              );
-              rot += Math.PI / spikes;
-            }
-            contentContext.closePath();
-            break;
-          case "arrow":
-          case "arrowRight":
-          case "arrowLeft":
-          case "arrowUp":
-          case "arrowDown": {
-            let dx = width;
-            let dy = height;
-            switch (shape.type) {
-              case "arrowRight":
-                dx = width;
-                dy = 0;
-                break;
-              case "arrowLeft":
-                dx = -width;
-                dy = 0;
-                break;
-              case "arrowUp":
-                dx = 0;
-                dy = -height;
-                break;
-              case "arrowDown":
-                dx = 0;
-                dy = height;
-                break;
-              case "arrow":
-                break;
-            }
-            const endX = x + dx;
-            const endY = y + dy;
-            const angle = Math.atan2(dy, dx);
-            const arrowSize = 10 / zoomLevel;
-            contentContext.moveTo(x, y);
-            contentContext.lineTo(endX, endY);
-            contentContext.moveTo(endX, endY);
-            contentContext.lineTo(
-              endX - arrowSize * Math.cos(angle - Math.PI / 6),
-              endY - arrowSize * Math.sin(angle - Math.PI / 6)
-            );
-            contentContext.moveTo(endX, endY);
-            contentContext.lineTo(
-              endX - arrowSize * Math.cos(angle + Math.PI / 6),
-              endY - arrowSize * Math.sin(angle + Math.PI / 6)
-            );
-            break;
-          }
-          case "heart":
-            const cxh = x + width / 2;
-            const cyh = y + height / 4;
-            contentContext.moveTo(cxh, cyh + height / 2);
-            contentContext.bezierCurveTo(
-              cxh - width / 2,
-              cyh + height / 2,
-              cxh - width / 2,
-              cyh - height / 4,
-              cxh,
-              cyh - height / 4
-            );
-            contentContext.bezierCurveTo(
-              cxh + width / 2,
-              cyh - height / 4,
-              cxh + width / 2,
-              cyh + height / 2,
-              cxh,
-              cyh + height / 2
-            );
-            contentContext.closePath();
-            break;
-          case "pentagon":
-            contentContext.moveTo(x + width / 2, y);
-            for (let i = 1; i <= 5; i++) {
-              contentContext.lineTo(
-                x +
-                  (width / 2) *
-                    (1 + Math.cos((Math.PI * 2 * i) / 5 - Math.PI / 2)),
-                y +
-                  (height / 2) *
-                    (1 + Math.sin((Math.PI * 2 * i) / 5 - Math.PI / 2))
-              );
-            }
-            contentContext.closePath();
-            break;
-          case "hexagon":
-            contentContext.moveTo(x + width / 2, y);
-            for (let i = 1; i <= 6; i++) {
-              contentContext.lineTo(
-                x +
-                  (width / 2) *
-                    (1 + Math.cos((Math.PI * 2 * i) / 6 - Math.PI / 2)),
-                y +
-                  (height / 2) *
-                    (1 + Math.sin((Math.PI * 2 * i) / 6 - Math.PI / 2))
-              );
-            }
-            contentContext.closePath();
-            break;
-          case "heptagon":
-            contentContext.moveTo(x + width / 2, y);
-            for (let i = 1; i <= 7; i++) {
-              contentContext.lineTo(
-                x +
-                  (width / 2) *
-                    (1 + Math.cos((Math.PI * 2 * i) / 7 - Math.PI / 2)),
-                y +
-                  (height / 2) *
-                    (1 + Math.sin((Math.PI * 2 * i) / 7 - Math.PI / 2))
-              );
-            }
-            contentContext.closePath();
-            break;
-          case "octagon":
-            contentContext.moveTo(x + width / 2, y);
-            for (let i = 1; i <= 8; i++) {
-              contentContext.lineTo(
-                x +
-                  (width / 2) *
-                    (1 + Math.cos((Math.PI * 2 * i) / 8 - Math.PI / 2)),
-                y +
-                  (height / 2) *
-                    (1 + Math.sin((Math.PI * 2 * i) / 8 - Math.PI / 2))
-              );
-            }
-            contentContext.closePath();
-            break;
-          case "cross":
-            contentContext.moveTo(x + width / 2, y);
-            contentContext.lineTo(x + width / 2, y + height);
-            contentContext.moveTo(x, y + height / 2);
-            contentContext.lineTo(x + width, y + height / 2);
-            break;
-          case "smiley":
-            contentContext.arc(
-              x + width / 2,
-              y + height / 2,
-              Math.min(width, height) / 2,
-              0,
-              Math.PI * 2
-            );
-            contentContext.moveTo(x + width / 3, y + height / 3);
-            contentContext.arc(
-              x + width / 3,
-              y + height / 3,
-              width / 10,
-              0,
-              Math.PI * 2
-            );
-            contentContext.moveTo(x + (2 * width) / 3, y + height / 3);
-            contentContext.arc(
-              x + (2 * width) / 3,
-              y + height / 3,
-              width / 10,
-              0,
-              Math.PI * 2
-            );
-            contentContext.moveTo(x + width / 2, y + (2 * height) / 3);
-            contentContext.arc(
-              x + width / 2,
-              y + height / 2,
-              width / 4,
-              0,
-              Math.PI,
-              false
-            );
-            break;
-          case "cloud":
-            contentContext.moveTo(x + width / 4, y + height);
-            contentContext.bezierCurveTo(
-              x,
-              y + height,
-              x,
-              y + height / 2,
-              x + width / 4,
-              y + height / 2
-            );
-            contentContext.bezierCurveTo(
-              x + width / 8,
-              y + height / 4,
-              x + (3 * width) / 8,
-              y + height / 4,
-              x + width / 2,
-              y + height / 2
-            );
-            contentContext.bezierCurveTo(
-              x + (5 * width) / 8,
-              y + height / 4,
-              x + (7 * width) / 8,
-              y + height / 4,
-              x + (3 * width) / 4,
-              y + height / 2
-            );
-            contentContext.bezierCurveTo(
-              x + width,
-              y + height / 2,
-              x + width,
-              y + height,
-              x + (3 * width) / 4,
-              y + height
-            );
-            contentContext.closePath();
+
+          default:
+            contentContext.rect(x, y, width, height);
             break;
         }
+
         contentContext.stroke();
       }
     },
     [contentContext, zoomLevel]
   );
 
+  /**
+   * Draw grid background with proper scaling and panning
+   */
   const drawGrid = useCallback(() => {
     if (!gridContext || !gridCanvasRef.current) return;
+
     const canvas = gridCanvasRef.current;
     const dpr = window.devicePixelRatio || 1;
+
     gridContext.save();
     gridContext.setTransform(1, 0, 0, 1, 0, 0);
     gridContext.clearRect(0, 0, canvas.width, canvas.height);
@@ -861,6 +1470,7 @@ const Canvas: React.FC<CanvasProps> = ({
     const endX = startX + canvasWidth + gridSize;
     const endY = startY + canvasHeight + gridSize;
 
+    // Draw vertical lines
     for (let x = startX; x <= endX; x += gridSize) {
       gridContext.beginPath();
       gridContext.moveTo(x, startY);
@@ -868,6 +1478,7 @@ const Canvas: React.FC<CanvasProps> = ({
       gridContext.stroke();
     }
 
+    // Draw horizontal lines
     for (let y = startY; y <= endY; y += gridSize) {
       gridContext.beginPath();
       gridContext.moveTo(startX, y);
@@ -878,105 +1489,28 @@ const Canvas: React.FC<CanvasProps> = ({
     gridContext.restore();
   }, [gridContext, zoomLevel, panOffset]);
 
+  /**
+   * Redraw content canvas with all elements
+   */
   const redrawContentCanvas = useCallback(() => {
     if (!contentContext || !contentCanvasRef.current) return;
+
     const canvas = contentCanvasRef.current;
     const dpr = window.devicePixelRatio || 1;
+
     contentContext.save();
     contentContext.setTransform(1, 0, 0, 1, 0, 0);
     contentContext.clearRect(0, 0, canvas.width, canvas.height);
     contentContext.scale(dpr * zoomLevel, dpr * zoomLevel);
     contentContext.translate(panOffset.x, panOffset.y);
+
     elementsRef.current.forEach(drawElement);
     if (currentElement) drawElement(currentElement);
+
     contentContext.restore();
   }, [contentContext, drawElement, currentElement, zoomLevel, panOffset]);
 
-  useEffect(() => {
-    const id = params.id;
-    const fetchWhiteboard = async () => {
-      try {
-        const response = await fetch(`/api/whiteboard/saveWhiteboard/${id}`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
-          },
-          method: "GET",
-        });
-        if (!response.ok) throw new Error("Failed to fetch whiteboard");
-        const data = await response.json();
-
-        const mappedStickyNotes = (data.stickyNotes || []).map((note: any) => ({
-          id: note.id,
-          type: "stickyNote" as const,
-          x: note.x || 0,
-          y: note.y || 0,
-          width: note.width || 200,
-          height: note.height || 200,
-          text: note.content || "",
-          textColor: "#000000",
-          bgColor: note.color || "#FEF7CD",
-        }));
-
-        const mappedElements = (data.elements || [])
-          .map((el: any) => {
-            if (["pen", "eraser", "highlighter"].includes(el.type)) {
-              return {
-                id: el.id,
-                type: "path" as const,
-                points: el.points || [],
-                color: el.color || "#000000",
-                width: el.lineWidth || 1,
-                tool: el.type,
-              } as PathElement;
-            } else if (el.type === "text") {
-              return {
-                id: el.id,
-                type: "text" as const,
-                x: el.x || 0,
-                y: el.y || 0,
-                text: el.text || "",
-                color: el.color || "#000000",
-                fontSize: el.fontSize || 24,
-              } as TextElement;
-            } else if (el.type === "shape") {
-              return {
-                id: el.id,
-                type: el.shapeType,
-                x: el.x || 0,
-                y: el.y || 0,
-                width: el.width || 0,
-                height: el.height || 0,
-                color: el.color || "#000000",
-                lineWidth: el.lineWidth || 1,
-                isFixed:
-                  el.shapeType?.includes("line") ||
-                  el.shapeType?.includes("arrow"),
-              } as ShapeElement;
-            }
-            return null;
-          })
-          .filter(Boolean);
-
-        elementsRef.current = mappedElements;
-        setElements(mappedElements);
-        setStickyNotes(mappedStickyNotes);
-        debouncedSaveToHistory(mappedElements, mappedStickyNotes);
-        setToast({
-          message: "Whiteboard loaded successfully",
-          type: "success",
-        });
-      } catch (error) {
-        console.error("Error fetching whiteboard:", error);
-        elementsRef.current = [];
-        setElements([]);
-        setStickyNotes([]);
-        setToast({ message: "Failed to load whiteboard", type: "error" });
-      }
-    };
-    fetchWhiteboard();
-  }, []);
-
-  const saveWhiteboard = useCallback(async () => {
+   const saveWhiteboard = useCallback(async () => {
     const id = params.id;
     try {
       const mappedStickyNotes = uniqueStickyNotes.map((note) => ({
@@ -986,7 +1520,7 @@ const Canvas: React.FC<CanvasProps> = ({
         y: note.y,
         width: note.width,
         height: note.height,
-        color: note.bgColor,
+        color: note.color,
       }));
 
       const mappedElements = elementsRef.current.map((el) => {
@@ -1056,29 +1590,37 @@ const Canvas: React.FC<CanvasProps> = ({
     }
   }, [params.id, uniqueStickyNotes, textFontSize, textStyles]);
 
+  // Update elements ref when elements change
   useEffect(() => {
     elementsRef.current = elements;
   }, [elements]);
 
+  // Handle keyboard events for panning
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === "Space" && !editingTextId && !editingNoteId)
+      if (e.code === "Space" && !editingTextId && !editingNoteId) {
+        e.preventDefault();
         setIsPanning(true);
+      }
     };
+
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.code === "Space") {
         setIsPanning(false);
         setPanStart(null);
       }
     };
+
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
+
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
   }, [editingTextId, editingNoteId]);
 
+  // Handle window resize
   useEffect(() => {
     const handleResize = () => {
       if (containerRef.current) {
@@ -1088,17 +1630,21 @@ const Canvas: React.FC<CanvasProps> = ({
         });
       }
     };
+
     handleResize();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  // Initialize canvas contexts
   useEffect(() => {
     if (!gridCanvasRef.current || !contentCanvasRef.current) return;
+
     const gridCanvas = gridCanvasRef.current;
     const contentCanvas = contentCanvasRef.current;
     const gridCtx = gridCanvas.getContext("2d");
     const contentCtx = contentCanvas.getContext("2d");
+
     if (gridCtx && contentCtx) {
       gridCtx.lineCap = "round";
       gridCtx.lineJoin = "round";
@@ -1111,6 +1657,7 @@ const Canvas: React.FC<CanvasProps> = ({
     }
   }, [strokeColor, lineWidth]);
 
+  // Update canvas dimensions and redraw
   useEffect(() => {
     if (
       !gridCanvasRef.current ||
@@ -1119,34 +1666,34 @@ const Canvas: React.FC<CanvasProps> = ({
       !contentContext
     )
       return;
+
     const gridCanvas = gridCanvasRef.current;
     const contentCanvas = contentCanvasRef.current;
     const dpr = window.devicePixelRatio || 1;
+
     gridCanvas.width = canvasDimensions.width * dpr;
     gridCanvas.height = canvasDimensions.height * dpr;
     contentCanvas.width = canvasDimensions.width * dpr;
     contentCanvas.height = canvasDimensions.height * dpr;
+
     gridCanvas.style.width = `${canvasDimensions.width}px`;
     gridCanvas.style.height = `${canvasDimensions.height}px`;
     contentCanvas.style.width = `${canvasDimensions.width}px`;
     contentCanvas.style.height = `${canvasDimensions.height}px`;
-    gridContext.scale(dpr * zoomLevel, dpr * zoomLevel);
-    contentContext.scale(dpr * zoomLevel, dpr * zoomLevel);
-    gridContext.translate(panOffset.x, panOffset.y);
-    contentContext.translate(panOffset.x, panOffset.y);
+
     drawGrid();
     redrawContentCanvas();
-  }, [canvasDimensions, zoomLevel, panOffset, gridContext, contentContext]);
+  }, [canvasDimensions, zoomLevel, panOffset, gridContext, contentContext, drawGrid, redrawContentCanvas]);
 
-
-  const { theme } = useTheme(); // Get current theme
-  const [currentColor, setColor] = useState("#000000"); // Initial color
+  // Get theme for drawing color
+  const { theme } = useTheme();
+  const [currentColor, setColor] = useState("#000000");
 
   useEffect(() => {
-    // Set drawing color based on theme
     setColor(theme === "dark" ? "#FFFFFF" : "#000000");
   }, [theme]);
-  
+
+  // Handle history changes
   useEffect(() => {
     if (
       history.length > 0 &&
@@ -1158,20 +1705,20 @@ const Canvas: React.FC<CanvasProps> = ({
       setElements(elementsRef.current);
       setStickyNotes(Array.isArray(stickyNotes) ? stickyNotes : []);
     } else {
-      console.warn("Invalid history or historyIndex:", {
-        history,
-        historyIndex,
-      });
       elementsRef.current = [];
       setElements([]);
       setStickyNotes([]);
     }
   }, [history, historyIndex, setStickyNotes]);
 
+  // Redraw when elements change
   useEffect(() => {
     redrawContentCanvas();
   }, [elements, redrawContentCanvas]);
 
+  /**
+   * Convert client coordinates to canvas coordinates
+   */
   const getCanvasCoordinates = (clientX: number, clientY: number) => {
     if (!contentCanvasRef.current) return { x: 0, y: 0 };
     const rect = contentCanvasRef.current.getBoundingClientRect();
@@ -1181,6 +1728,9 @@ const Canvas: React.FC<CanvasProps> = ({
     };
   };
 
+  /**
+   * Convert client coordinates to screen coordinates
+   */
   const getScreenCoordinates = (clientX: number, clientY: number) => {
     if (!contentCanvasRef.current) return { x: 0, y: 0 };
     const rect = contentCanvasRef.current.getBoundingClientRect();
@@ -1190,10 +1740,16 @@ const Canvas: React.FC<CanvasProps> = ({
     };
   };
 
+  /**
+   * Show color picker for sticky notes
+   */
   const showColorPicker = (noteId: string, x: number, y: number) => {
     setColorPicker({ noteId, x, y });
   };
 
+  /**
+   * Handle color selection for sticky notes
+   */
   const handleColorSelect = (
     noteId: string,
     bgColor: string,
@@ -1206,11 +1762,21 @@ const Canvas: React.FC<CanvasProps> = ({
         )
         .filter((note) => isValidId(note.id));
       debouncedSaveToHistory(elementsRef.current, newNotes);
+
+      // Emit socket event
+      const updatedNote = newNotes.find(note => note.id === noteId);
+      if (updatedNote) {
+        emit('stickyNoteUpdate', updatedNote);
+      }
+
       return newNotes;
     });
     setColorPicker(null);
   };
 
+  /**
+   * Check if mouse is over a sticky note
+   */
   const isOverStickyNote = (
     e: React.MouseEvent<HTMLCanvasElement>
   ): string | null => {
@@ -1218,12 +1784,14 @@ const Canvas: React.FC<CanvasProps> = ({
       e.clientX,
       e.clientY
     );
+
     for (const note of uniqueStickyNotes) {
       if (!isValidId(note.id)) continue;
       const noteX = note.x * zoomLevel + panOffset.x;
       const noteY = note.y * zoomLevel + panOffset.y;
       const noteWidth = note.width * zoomLevel;
       const noteHeight = note.height * zoomLevel;
+
       if (
         screenX >= noteX &&
         screenX <= noteX + noteWidth &&
@@ -1236,6 +1804,9 @@ const Canvas: React.FC<CanvasProps> = ({
     return null;
   };
 
+  /**
+   * Check if mouse is over a text element
+   */
   const isOverTextElement = (
     e: React.MouseEvent<HTMLCanvasElement>
   ): string | null => {
@@ -1243,6 +1814,7 @@ const Canvas: React.FC<CanvasProps> = ({
       e.clientX,
       e.clientY
     );
+
     for (const element of elementsRef.current) {
       if (element.type === "text") {
         const textElement = element as TextElement;
@@ -1251,6 +1823,7 @@ const Canvas: React.FC<CanvasProps> = ({
         const textWidth =
           (textElement.text.length || 10) * (textFontSize * zoomLevel * 0.6);
         const textHeight = textFontSize * zoomLevel * 1.2;
+
         if (
           screenX >= adjustedX &&
           screenX <= adjustedX + textWidth &&
@@ -1264,6 +1837,9 @@ const Canvas: React.FC<CanvasProps> = ({
     return null;
   };
 
+  /**
+   * Handle mouse down events on canvas
+   */
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!contentContext || colorPicker) return;
     if (
@@ -1276,14 +1852,22 @@ const Canvas: React.FC<CanvasProps> = ({
       isResizingShape
     )
       return;
+
     const { x: canvasX, y: canvasY } = getCanvasCoordinates(
       e.clientX,
       e.clientY
     );
+
+    // Emit cursor movement
+    emitCursorMove(canvasX, canvasY);
+
+    // Handle panning
     if (isPanning) {
       setPanStart({ x: e.clientX, y: e.clientY });
       return;
     }
+
+    // Check for sticky note interaction
     const clickedNoteId = isOverStickyNote(e);
     if (clickedNoteId) {
       if (activeNoteId !== clickedNoteId) setActiveNoteId(clickedNoteId);
@@ -1292,6 +1876,8 @@ const Canvas: React.FC<CanvasProps> = ({
       setActiveNoteId(null);
       if (editingNoteId !== null) setEditingNoteId(null);
     }
+
+    // Check for text element interaction
     const clickedTextId = isOverTextElement(e);
     if (clickedTextId) {
       setActiveTextId(clickedTextId);
@@ -1310,29 +1896,8 @@ const Canvas: React.FC<CanvasProps> = ({
     } else {
       setActiveTextId(null);
     }
-    const clickedShape = elementsRef.current.find((el) => {
-      if (el.type === "text" || el.type === "path") return false;
-      const shape = el as ShapeElement;
-      return (
-        canvasX >= shape.x &&
-        canvasX <= shape.x + shape.width &&
-        canvasY >= shape.y &&
-        canvasY <= shape.y + shape.height &&
-        !shape.isFixed
-      );
-    });
-    if (clickedShape) {
-      setActiveShapeId(clickedShape.id);
-      tempShapeState.current = { ...clickedShape } as ShapeElement;
-      setDragOffset({
-        x: canvasX - clickedShape.x,
-        y: canvasY - clickedShape.y,
-      });
-      setIsDraggingShape(true);
-      return;
-    } else {
-      setActiveShapeId(null);
-    }
+
+    // Handle tool-specific actions
     if (tool === "stickyNote") {
       e.stopPropagation();
       const id = generateUniqueId();
@@ -1340,12 +1905,15 @@ const Canvas: React.FC<CanvasProps> = ({
         stickyNoteColors[Math.floor(Math.random() * stickyNoteColors.length)];
       const noteWidth = 200;
       const noteHeight = 200;
+
       let adjustedX = canvasX;
       let adjustedY = canvasY;
       const canvasWidth = canvasDimensions.width / zoomLevel;
       const canvasHeight = canvasDimensions.height / zoomLevel;
+
       adjustedX = Math.max(0, Math.min(adjustedX, canvasWidth - noteWidth));
       adjustedY = Math.max(0, Math.min(adjustedY, canvasHeight - noteHeight));
+
       const newNote: StickyNote = {
         id,
         type: "stickyNote",
@@ -1357,6 +1925,7 @@ const Canvas: React.FC<CanvasProps> = ({
         textColor: "#000000",
         bgColor: randomColor,
       };
+
       setStickyNotes((prev) => {
         const newNotes = [
           ...prev.filter((note) => isValidId(note.id)),
@@ -1365,15 +1934,21 @@ const Canvas: React.FC<CanvasProps> = ({
         debouncedSaveToHistory(elementsRef.current, newNotes);
         return newNotes;
       });
+
+      // Emit socket event
+      emit('stickyNoteCreate', newNote);
+
       setActiveNoteId(newNote.id);
       setEditingNoteId(newNote.id);
       return;
     }
+
     if (tool === "text") {
       e.stopPropagation();
       e.preventDefault();
       const newTextId = generateUniqueId();
       newTextIdRef.current = newTextId;
+
       const newElement: TextElement = {
         id: newTextId,
         type: "text",
@@ -1383,11 +1958,17 @@ const Canvas: React.FC<CanvasProps> = ({
         color: strokeColor,
         fontSize: textFontSize,
       };
+
       elementsRef.current = [...elementsRef.current, newElement];
       setElements(elementsRef.current);
       debouncedSaveToHistory(elementsRef.current, stickyNotes);
+
+      // Emit socket event
+      emit('textCreate', newElement);
+
       setEditingTextId(newTextId);
       setActiveTextId(newTextId);
+
       setTimeout(() => {
         const textarea = document.querySelector(
           `[data-text-id="${newTextId}"] textarea`
@@ -1399,6 +1980,8 @@ const Canvas: React.FC<CanvasProps> = ({
       }, 0);
       return;
     }
+
+    // Handle drawing tools
     if (tool === "pen" || tool === "eraser" || tool === "highlighter") {
       setIsDrawing(true);
       const newElement: PathElement = {
@@ -1410,6 +1993,9 @@ const Canvas: React.FC<CanvasProps> = ({
         tool,
       };
       setCurrentElement(newElement);
+
+      // Emit socket event
+      emit('drawStart', newElement);
     } else if (tool === "shape" && shapeType) {
       setIsDrawing(true);
       setStartPoint({ x: canvasX, y: canvasY });
@@ -1428,13 +2014,22 @@ const Canvas: React.FC<CanvasProps> = ({
     }
   };
 
+  /**
+   * Handle mouse move events
+   */
   const handleMouseMove = useCallback(
     throttle((e: React.MouseEvent<HTMLCanvasElement>) => {
       if (!contentContext || !contentCanvasRef.current) return;
+
       const { x: canvasX, y: canvasY } = getCanvasCoordinates(
         e.clientX,
         e.clientY
       );
+
+      // Emit cursor movement
+      emitCursorMove(canvasX, canvasY);
+
+      // Handle panning
       if (isPanning && panStart) {
         const dx = (e.clientX - panStart.x) / zoomLevel;
         const dy = (e.clientY - panStart.y) / zoomLevel;
@@ -1444,6 +2039,8 @@ const Canvas: React.FC<CanvasProps> = ({
         redrawContentCanvas();
         return;
       }
+
+      // Handle sticky note dragging
       if (isDraggingNote && activeNoteId && tempNoteState.current) {
         const canvasWidth = canvasDimensions.width / zoomLevel;
         const canvasHeight = canvasDimensions.height / zoomLevel;
@@ -1457,11 +2054,13 @@ const Canvas: React.FC<CanvasProps> = ({
           0,
           Math.min(newY, canvasHeight - tempNoteState.current.height)
         );
+
         tempNoteState.current = {
           ...tempNoteState.current,
           x: clampedX,
           y: clampedY,
         };
+
         setStickyNotes((prev) =>
           prev
             .map((note) =>
@@ -1471,6 +2070,8 @@ const Canvas: React.FC<CanvasProps> = ({
         );
         return;
       }
+
+      // Handle text dragging
       if (isDraggingText && activeTextId && tempTextState.current) {
         const canvasWidth = canvasDimensions.width / zoomLevel;
         const canvasHeight = canvasDimensions.height / zoomLevel;
@@ -1478,11 +2079,13 @@ const Canvas: React.FC<CanvasProps> = ({
         const newY = canvasY - dragOffset.y;
         const clampedX = Math.max(0, Math.min(newX, canvasWidth));
         const clampedY = Math.max(0, Math.min(newY, canvasHeight));
+
         tempTextState.current = {
           ...tempTextState.current,
           x: clampedX,
           y: clampedY,
         };
+
         elementsRef.current = elementsRef.current.map((el) =>
           el.id === activeTextId && el.type === "text"
             ? tempTextState.current!
@@ -1491,232 +2094,28 @@ const Canvas: React.FC<CanvasProps> = ({
         setElements(elementsRef.current);
         return;
       }
-      if (isDraggingShape && activeShapeId && tempShapeState.current) {
-        const canvasWidth = canvasDimensions.width / zoomLevel;
-        const canvasHeight = canvasDimensions.height / zoomLevel;
-        const newX = canvasX - dragOffset.x;
-        const newY = canvasY - dragOffset.y;
-        const clampedX = Math.max(
-          0,
-          Math.min(newX, canvasWidth - tempShapeState.current.width)
-        );
-        const clampedY = Math.max(
-          0,
-          Math.min(newY, canvasHeight - tempShapeState.current.height)
-        );
-        tempShapeState.current = {
-          ...tempShapeState.current,
-          x: clampedX,
-          y: clampedY,
-        };
-        redrawContentCanvas();
-        return;
-      }
-      if (
-        isResizingNote &&
-        activeNoteId &&
-        resizeDirection &&
-        tempNoteState.current
-      ) {
-        const MIN_SIZE = 50;
-        const MAX_SIZE =
-          Math.max(canvasDimensions.width, canvasDimensions.height) / zoomLevel;
-        const mouseX = canvasX;
-        const mouseY = canvasY;
-        let newX = tempNoteState.current.x;
-        let newY = tempNoteState.current.y;
-        let newWidth = tempNoteState.current.width;
-        let newHeight = tempNoteState.current.height;
-        switch (resizeDirection) {
-          case "se":
-            newWidth = Math.max(MIN_SIZE, Math.min(mouseX - newX, MAX_SIZE));
-            newHeight = Math.max(MIN_SIZE, Math.min(mouseY - newY, MAX_SIZE));
-            break;
-          case "sw":
-            newWidth = Math.max(
-              MIN_SIZE,
-              Math.min(
-                tempNoteState.current.x + tempNoteState.current.width - mouseX,
-                MAX_SIZE
-              )
-            );
-            newX =
-              tempNoteState.current.x + tempNoteState.current.width - newWidth;
-            newHeight = Math.max(MIN_SIZE, Math.min(mouseY - newY, MAX_SIZE));
-            break;
-          case "ne":
-            newWidth = Math.max(MIN_SIZE, Math.min(mouseX - newX, MAX_SIZE));
-            newHeight = Math.max(
-              MIN_SIZE,
-              Math.min(
-                tempNoteState.current.y + tempNoteState.current.height - mouseY,
-                MAX_SIZE
-              )
-            );
-            newY =
-              tempNoteState.current.y +
-              tempNoteState.current.height -
-              newHeight;
-            break;
-          case "nw":
-            newWidth = Math.max(
-              MIN_SIZE,
-              Math.min(
-                tempNoteState.current.x + tempNoteState.current.width - mouseX,
-                MAX_SIZE
-              )
-            );
-            newX =
-              tempNoteState.current.x + tempNoteState.current.width - newWidth;
-            newHeight = Math.max(
-              MIN_SIZE,
-              Math.min(
-                tempNoteState.current.y + tempNoteState.current.height - mouseY,
-                MAX_SIZE
-              )
-            );
-            newY =
-              tempNoteState.current.y +
-              tempNoteState.current.height -
-              newHeight;
-            break;
-        }
-        newX = Math.max(
-          0,
-          Math.min(newX, canvasDimensions.width / zoomLevel - newWidth)
-        );
-        newY = Math.max(
-          0,
-          Math.min(newY, canvasDimensions.height / zoomLevel - newHeight)
-        );
-        tempNoteState.current = {
-          ...tempNoteState.current,
-          x: newX,
-          y: newY,
-          width: newWidth,
-          height: newHeight,
-        };
-        setStickyNotes((prev) =>
-          prev
-            .map((note) =>
-              note.id === activeNoteId ? { ...tempNoteState.current! } : note
-            )
-            .filter((note) => isValidId(note.id))
-        );
-        return;
-      }
-      if (
-        isResizingShape &&
-        activeShapeId &&
-        resizeDirection &&
-        tempShapeState.current
-      ) {
-        const MIN_SIZE = 50;
-        const MAX_SIZE =
-          Math.max(canvasDimensions.width, canvasDimensions.height) / zoomLevel;
-        const mouseX = canvasX;
-        const mouseY = canvasY;
-        let newX = tempShapeState.current.x;
-        let newY = tempShapeState.current.y;
-        let newWidth = tempShapeState.current.width;
-        let newHeight = tempShapeState.current.height;
-        switch (resizeDirection) {
-          case "se":
-            newWidth = Math.max(MIN_SIZE, Math.min(mouseX - newX, MAX_SIZE));
-            newHeight = Math.max(MIN_SIZE, Math.min(mouseY - newY, MAX_SIZE));
-            break;
-          case "sw":
-            newWidth = Math.max(
-              MIN_SIZE,
-              Math.min(
-                tempShapeState.current.x +
-                  tempShapeState.current.width -
-                  mouseX,
-                MAX_SIZE
-              )
-            );
-            newX =
-              tempShapeState.current.x +
-              tempShapeState.current.width -
-              newWidth;
-            newHeight = Math.max(MIN_SIZE, Math.min(mouseY - newY, MAX_SIZE));
-            break;
-          case "ne":
-            newWidth = Math.max(MIN_SIZE, Math.min(mouseX - newX, MAX_SIZE));
-            newHeight = Math.max(
-              MIN_SIZE,
-              Math.min(
-                tempShapeState.current.y +
-                  tempShapeState.current.height -
-                  mouseY,
-                MAX_SIZE
-              )
-            );
-            newY =
-              tempShapeState.current.y +
-              tempShapeState.current.height -
-              newHeight;
-            break;
-          case "nw":
-            newWidth = Math.max(
-              MIN_SIZE,
-              Math.min(
-                tempShapeState.current.x +
-                  tempShapeState.current.width -
-                  mouseX,
-                MAX_SIZE
-              )
-            );
-            newX =
-              tempShapeState.current.x +
-              tempShapeState.current.width -
-              newWidth;
-            newHeight = Math.max(
-              MIN_SIZE,
-              Math.min(
-                tempShapeState.current.y +
-                  tempShapeState.current.height -
-                  mouseY,
-                MAX_SIZE
-              )
-            );
-            newY =
-              tempShapeState.current.y +
-              tempShapeState.current.height -
-              newHeight;
-            break;
-        }
-        newX = Math.max(
-          0,
-          Math.min(newX, canvasDimensions.width / zoomLevel - newWidth)
-        );
-        newY = Math.max(
-          0,
-          Math.min(newY, canvasDimensions.height / zoomLevel - newHeight)
-        );
-        tempShapeState.current = {
-          ...tempShapeState.current,
-          x: newX,
-          y: newY,
-          width: newWidth,
-          height: newHeight,
-        };
-        redrawContentCanvas();
-        return;
-      }
+
+      // Handle drawing
       if (!isDrawing || !currentElement) return;
+
       if ("points" in currentElement) {
-        setCurrentElement({
+        const updatedElement = {
           ...currentElement,
           points: [...currentElement.points, { x: canvasX, y: canvasY }],
-        });
+        };
+        setCurrentElement(updatedElement);
+
+        // Emit socket event
+        emit('drawUpdate', updatedElement);
       } else if (startPoint && "width" in currentElement) {
-        setCurrentElement({
+        const updatedElement = {
           ...currentElement,
           width: canvasX - startPoint.x,
           height: canvasY - startPoint.y,
-        });
+        };
+        setCurrentElement(updatedElement);
       }
+
       redrawContentCanvas();
     }, 4),
     [
@@ -1725,13 +2124,8 @@ const Canvas: React.FC<CanvasProps> = ({
       panStart,
       isDraggingNote,
       isDraggingText,
-      isDraggingShape,
-      isResizingNote,
-      isResizingShape,
       activeNoteId,
       activeTextId,
-      activeShapeId,
-      resizeDirection,
       dragOffset,
       isDrawing,
       currentElement,
@@ -1740,14 +2134,22 @@ const Canvas: React.FC<CanvasProps> = ({
       panOffset,
       redrawContentCanvas,
       canvasDimensions,
+      drawGrid,
+      emitCursorMove,
+      emit,
     ]
   );
 
+  /**
+   * Handle mouse up events
+   */
   const handleMouseUp = () => {
     if (isPanning) {
       setPanStart(null);
       return;
     }
+
+    // Handle sticky note interactions
     if (isDraggingNote || isResizingNote) {
       if (tempNoteState.current && activeNoteId) {
         const updatedNote = { ...tempNoteState.current };
@@ -1758,6 +2160,9 @@ const Canvas: React.FC<CanvasProps> = ({
           debouncedSaveToHistory(elementsRef.current, newNotes);
           return newNotes;
         });
+
+        // Emit socket event
+        emit('stickyNoteUpdate', updatedNote);
       }
       setIsDraggingNote(false);
       setIsResizingNote(false);
@@ -1765,6 +2170,8 @@ const Canvas: React.FC<CanvasProps> = ({
       tempNoteState.current = null;
       return;
     }
+
+    // Handle text interactions
     if (isDraggingText && activeTextId && tempTextState.current) {
       const updatedText = { ...tempTextState.current };
       elementsRef.current = elementsRef.current.map((el) =>
@@ -1772,39 +2179,31 @@ const Canvas: React.FC<CanvasProps> = ({
       );
       setElements(elementsRef.current);
       debouncedSaveToHistory(elementsRef.current, stickyNotes);
+
+      // Emit socket event
+      emit('textUpdate', updatedText);
+
       setIsDraggingText(false);
       tempTextState.current = null;
       return;
     }
-    if (isDraggingShape || isResizingShape) {
-      if (tempShapeState.current && activeShapeId) {
-        const updatedShape = { ...tempShapeState.current };
-        elementsRef.current = elementsRef.current.map((el) =>
-          el.id === activeShapeId ? updatedShape : el
-        );
-        setElements(elementsRef.current);
-        debouncedSaveToHistory(elementsRef.current, stickyNotes);
-      }
-      setIsDraggingShape(false);
-      setIsResizingShape(false);
-      setResizeDirection(null);
-      tempShapeState.current = null;
-      redrawContentCanvas();
-      return;
-    }
-    if (tool === "text" && editingTextId) {
-      return;
-    }
+
+    // Handle drawing completion
     if (!isDrawing || !currentElement) return;
+
     setIsDrawing(false);
     setStartPoint(null);
+
     if ("points" in currentElement && currentElement.points.length > 1) {
       elementsRef.current = [...elementsRef.current, currentElement];
       setElements(elementsRef.current);
       debouncedSaveToHistory(elementsRef.current, stickyNotes);
+
+      // Emit socket event
+      emit('drawEnd', currentElement);
     } else if ("width" in currentElement) {
       const shape = currentElement as ShapeElement;
-      if (shape.width !== 0 || shape.height !== 0) {
+      if (Math.abs(shape.width) > 5 || Math.abs(shape.height) > 5) {
         const fixedShape = {
           ...shape,
           x: shape.width < 0 ? shape.x + shape.width : shape.x,
@@ -1815,21 +2214,28 @@ const Canvas: React.FC<CanvasProps> = ({
         elementsRef.current = [...elementsRef.current, fixedShape];
         setElements(elementsRef.current);
         debouncedSaveToHistory(elementsRef.current, stickyNotes);
+
+        // Emit socket event
+        emit('drawEnd', fixedShape);
       }
     }
+
     setCurrentElement(null);
     redrawContentCanvas();
   };
 
+  // Sticky note event handlers
   const handleStickyNoteMouseDown = (
     e: React.MouseEvent<HTMLDivElement>,
     noteId: string
   ) => {
     e.stopPropagation();
     if (!isValidId(noteId)) return;
+
     setActiveNoteId(noteId);
     const note = uniqueStickyNotes.find((n) => n.id === noteId);
     if (!note) return;
+
     const { x: canvasX, y: canvasY } = getCanvasCoordinates(
       e.clientX,
       e.clientY
@@ -1837,6 +2243,7 @@ const Canvas: React.FC<CanvasProps> = ({
     setDragOffset({ x: canvasX - note.x, y: canvasY - note.y });
     tempNoteState.current = { ...note };
     setIsDraggingNote(true);
+
     if (editingNoteId === noteId) setEditingNoteId(null);
   };
 
@@ -1848,51 +2255,15 @@ const Canvas: React.FC<CanvasProps> = ({
     e.stopPropagation();
     e.preventDefault();
     if (!isValidId(noteId)) return;
+
     setActiveNoteId(noteId);
     setIsResizingNote(true);
     setResizeDirection(direction);
     const note = uniqueStickyNotes.find((n) => n.id === noteId);
     if (!note) return;
+
     tempNoteState.current = { ...note };
     if (editingNoteId === noteId) setEditingNoteId(null);
-  };
-
-  const handleShapeResizeStart = (
-    e: React.MouseEvent<HTMLDivElement>,
-    shapeId: string,
-    direction: string
-  ) => {
-    e.stopPropagation();
-    e.preventDefault();
-    if (!isValidId(shapeId)) return;
-    setActiveShapeId(shapeId);
-    setIsResizingShape(true);
-    setResizeDirection(direction);
-    const shape = elementsRef.current.find(
-      (el) => el.id === shapeId && el.type !== "path" && el.type !== "text"
-    ) as ShapeElement;
-    if (!shape) return;
-    tempShapeState.current = { ...shape };
-  };
-
-  const handleShapeMouseDown = (
-    e: React.MouseEvent<HTMLDivElement>,
-    shapeId: string
-  ) => {
-    e.stopPropagation();
-    if (!isValidId(shapeId)) return;
-    setActiveShapeId(shapeId);
-    const shape = elementsRef.current.find(
-      (el) => el.id === shapeId && el.type !== "path" && el.type !== "text"
-    ) as ShapeElement;
-    if (!shape || shape.isFixed) return;
-    const { x: canvasX, y: canvasY } = getCanvasCoordinates(
-      e.clientX,
-      e.clientY
-    );
-    setDragOffset({ x: canvasX - shape.x, y: canvasY - shape.y });
-    tempShapeState.current = { ...shape };
-    setIsDraggingShape(true);
   };
 
   const handleStickyNoteDoubleClick = (
@@ -1901,6 +2272,7 @@ const Canvas: React.FC<CanvasProps> = ({
   ) => {
     e.stopPropagation();
     if (!isValidId(noteId)) return;
+
     setEditingNoteId(noteId);
     setTimeout(() => {
       const textarea = document.querySelector(
@@ -1918,6 +2290,7 @@ const Canvas: React.FC<CanvasProps> = ({
     noteId: string
   ) => {
     if (!isValidId(noteId)) return;
+
     setStickyNotes((prev) => {
       const newNotes = prev
         .map((note) =>
@@ -1925,6 +2298,13 @@ const Canvas: React.FC<CanvasProps> = ({
         )
         .filter((note) => isValidId(note.id));
       debouncedSaveToHistory(elementsRef.current, newNotes);
+
+      // Emit socket event
+      const updatedNote = newNotes.find(note => note.id === noteId);
+      if (updatedNote) {
+        emit('stickyNoteUpdate', updatedNote);
+      }
+
       return newNotes;
     });
   };
@@ -1934,17 +2314,20 @@ const Canvas: React.FC<CanvasProps> = ({
     debouncedSaveToHistory(elementsRef.current, stickyNotes);
   };
 
+  // Text event handlers
   const handleTextMouseDown = (
     e: React.MouseEvent<HTMLDivElement>,
     textId: string
   ) => {
     e.stopPropagation();
     if (!isValidId(textId) || editingTextId === textId) return;
+
     setActiveTextId(textId);
     const textElement = elementsRef.current.find(
       (el) => el.id === textId && el.type === "text"
     ) as TextElement;
     if (!textElement) return;
+
     const { x: canvasX, y: canvasY } = getCanvasCoordinates(
       e.clientX,
       e.clientY
@@ -1968,6 +2351,7 @@ const Canvas: React.FC<CanvasProps> = ({
     textId: string
   ) => {
     if (!isValidId(textId)) return;
+
     setElements((prev) => {
       const newElements = prev.map((el) =>
         el.id === textId && el.type === "text"
@@ -1976,6 +2360,13 @@ const Canvas: React.FC<CanvasProps> = ({
       );
       elementsRef.current = newElements;
       debouncedSaveToHistory(newElements, stickyNotes);
+
+      // Emit socket event
+      const updatedElement = newElements.find(el => el.id === textId);
+      if (updatedElement) {
+        emit('textUpdate', updatedElement);
+      }
+
       return newElements;
     });
   };
@@ -1993,22 +2384,29 @@ const Canvas: React.FC<CanvasProps> = ({
     });
   };
 
+  // Zoom handlers
   const handleZoomIn = () => setZoomLevel((prev) => Math.min(prev + 0.25, 4.0));
   const handleZoomOut = () =>
     setZoomLevel((prev) => Math.max(prev - 0.25, 0.25));
 
   const handleDeleteStickyNote = (noteId: string) => {
     if (!isValidId(noteId)) return;
+
     setStickyNotes((prev) => {
       const newNotes = prev.filter((note) => note.id !== noteId);
       debouncedSaveToHistory(elementsRef.current, newNotes);
       return newNotes;
     });
+
+    // Emit socket event
+    emit('stickyNoteDelete', noteId);
+
     if (activeNoteId === noteId) setActiveNoteId(null);
     if (editingNoteId === noteId) setEditingNoteId(null);
   };
 
-const exportAsPNG = () => {
+  // Export functions
+  const exportAsPNG = () => {
     if (contentCanvasRef.current) {
       const link = document.createElement("a");
       link.download = `whiteboard_${new Date().toISOString().slice(0, 10)}.png`;
@@ -2020,7 +2418,7 @@ const exportAsPNG = () => {
   const exportAsPDF = async () => {
     if (contentCanvasRef.current) {
       const canvas = await html2canvas(contentCanvasRef.current, {
-        scale: 2, // Higher resolution
+        scale: 2,
       });
       const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF({
@@ -2034,211 +2432,183 @@ const exportAsPNG = () => {
   };
 
   return (
- <div
-  ref={containerRef}
-  className="relative h-full w-full bg-gray-50 dark:bg-gray-400 overflow-hidden select-none"
-  onMouseUp={handleMouseUp}
-  onMouseLeave={handleMouseUp}
-  onClick={() => setColorPicker(null)}
->
-  {toast && (
-    <Toast
-      message={toast.message}
-      type={toast.type}
-      onClose={() => setToast(null)}
-    />
-  )}
-  <canvas
-    ref={gridCanvasRef}
-    width={canvasDimensions.width}
-    height={canvasDimensions.height}
-    className="absolute top-0 left-0 touch-none"
-  />
-  <canvas
-    ref={contentCanvasRef}
-    width={canvasDimensions.width}
-    height={canvasDimensions.height}
-    className="absolute top-0 left-0 touch-none"
-    onMouseDown={handleMouseDown}
-    onMouseMove={handleMouseMove}
-  />
-  {uniqueStickyNotes.map((note) => (
-    <StickyNoteComponent
-      key={note.id}
-      note={note}
-      zoomLevel={zoomLevel}
-      panOffset={panOffset}
-      activeNoteId={activeNoteId}
-      editingNoteId={editingNoteId}
-      handleStickyNoteMouseDown={handleStickyNoteMouseDown}
-      handleStickyNoteDoubleClick={handleStickyNoteDoubleClick}
-      handleStickyNoteTextChange={handleStickyNoteTextChange}
-      handleFinishEditing={handleFinishEditing}
-      handleDeleteStickyNote={handleDeleteStickyNote}
-      handleResizeStart={handleResizeStart}
-      setStickyNotes={setStickyNotes}
-      showColorPicker={showColorPicker}
-      textStyles={textStyles}
-      textFontSize={textFontSize}
-    />
-  ))}
-  {elements.map((element) =>
-    element.type === "text" ? (
-      <TextComponent
-        key={element.id}
-        textElement={element as TextElement}
+    <div
+      ref={containerRef}
+      className="relative h-full w-full bg-gray-50 dark:bg-gray-500 overflow-hidden select-none"
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
+      onClick={() => setColorPicker(null)}
+    >
+      {/* Toast notifications */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+
+      {/* Collaboration Panel */}
+      <div className="className=absolute top-0 right-0">
+        <CollaborationPanel
+
+          connectionState={connectionState}
+          connectedUsers={connectedUsers}
+          recentActivity={recentActivity}
+          errors={errors}
+          currentUser={currentUser}
+          onRetryConnection={retryConnection}
+          onDismissError={clearError}
+          onDismissAllErrors={clearAllErrors}
+        />
+      </div>
+
+      {/* Grid canvas */}
+      <canvas
+        ref={gridCanvasRef}
+        width={canvasDimensions.width}
+        height={canvasDimensions.height}
+        className="absolute top-0 left-0 touch-none"
+      />
+
+      {/* Content canvas */}
+      <canvas
+        ref={contentCanvasRef}
+        width={canvasDimensions.width}
+        height={canvasDimensions.height}
+        className="absolute top-0 left-0 touch-none"
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+      />
+
+      {/* Cursor Overlay */}
+      <CursorOverlay
+        cursors={cursors}
         zoomLevel={zoomLevel}
         panOffset={panOffset}
-        activeTextId={activeTextId}
-        editingTextId={editingTextId}
-        handleTextMouseDown={handleTextMouseDown}
-        handleTextDoubleClick={handleTextDoubleClick}
-        handleTextChange={handleTextChange}
-        handleFinishTextEditing={handleFinishTextEditing}
-        setElements={setElements}
-        textStyles={textStyles}
-        textFontSize={textFontSize}
       />
-    ) : element.type !== "path" && !element.isFixed ? (
-      <div
-        key={element.id}
-        data-shape-id={element.id}
-        className={`absolute border border-dashed border-purple-400 dark:border-purple-600 rounded ${
-          activeShapeId === element.id
-            ? "z-20 ring-2 ring-purple-500 dark:ring-purple-700"
-            : "z-10"
-        }`}
-        style={{
-          left: `${element.x * zoomLevel + panOffset.x}px`,
-          top: `${element.y * zoomLevel + panOffset.y}px`,
-          width: `${Math.abs(element.width) * zoomLevel}px`,
-          height: `${Math.abs(element.height) * zoomLevel}px`,
-        }}
-        onMouseDown={(e) => handleShapeMouseDown(e, element.id)}
-      >
-        {activeShapeId === element.id && (
-          <>
-            <div
-              className="absolute bottom-0 right-0 w-5 h-5 bg-gradient-to-br from-purple-600 to-purple-700 dark:from-purple-700 dark:to-purple-800 rounded-full transform translate-x-1/2 translate-y-1/2 cursor-se-resize z-30 hover:bg-purple-500 dark:hover:bg-purple-600 hover:scale-125 transition-all duration-200"
-              onMouseDown={(e) => handleShapeResizeStart(e, element.id, "se")}
-            />
-            <div
-              className="absolute bottom-0 left-0 w-5 h-5 bg-gradient-to-br from-purple-600 to-purple-700 dark:from-purple-700 dark:to-purple-800 rounded-full transform -translate-x-1/2 translate-y-1/2 cursor-sw-resize z-30 hover:bg-purple-500 dark:hover:bg-purple-600 hover:scale-125 transition-all duration-200"
-              onMouseDown={(e) => handleShapeResizeStart(e, element.id, "sw")}
-            />
-            <div
-              className="absolute top-0 right-0 w-5 h-5 bg-gradient-to-br from-purple-600 to-purple-700 dark:from-purple-700 dark:to-purple-800 rounded-full transform translate-x-1/2 -translate-y-1/2 cursor-ne-resize z-30 hover:bg-purple-500 dark:hover:bg-purple-600 hover:scale-125 transition-all duration-200"
-              onMouseDown={(e) => handleShapeResizeStart(e, element.id, "ne")}
-            />
-            <div
-              className="absolute top-0 left-0 w-5 h-5 bg-gradient-to-br from-purple-600 to-purple-700 dark:from-purple-700 dark:to-purple-800 rounded-full transform -translate-x-1/2 -translate-y-1/2 cursor-nw-resize z-30 hover:bg-purple-500 dark:hover:bg-purple-600 hover:scale-125 transition-all duration-200"
-              onMouseDown={(e) => handleShapeResizeStart(e, element.id, "nw")}
-            />
-            <button
-              className="absolute top-0 right-0 w-6 h-6 bg-red-500 dark:bg-red-600 text-white rounded-full -translate-x-1/2 -translate-y-1/2 cursor-pointer z-30 hover:bg-red-400 dark:hover:bg-red-500 transition-all duration-200 transform hover:scale-105"
-              onClick={(e) => {
-                e.stopPropagation();
-                setElements((prev) => {
-                  const newElements = prev.filter((el) => el.id !== element.id);
-                  elementsRef.current = newElements;
-                  debouncedSaveToHistory(newElements, stickyNotes);
-                  return newElements;
-                });
-                if (activeShapeId === element.id) setActiveShapeId(null);
-              }}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="white"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </button>
-          </>
-        )}
-      </div>
-    ) : null
-  )}
-  {colorPicker && (
-    <div
-      className="absolute z-50 flex flex-wrap gap-2 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700"
-      style={{ left: colorPicker.x, top: colorPicker.y }}
-    >
-      {colorPalette.map((color, index) => (
-        <button
-          key={index}
-          className="w-8 h-8 rounded-full border-2 border-gray-300 dark:border-gray-600 hover:border-purple-500 dark:hover:border-purple-400 focus:outline-none transition-all duration-200"
-          style={{ backgroundColor: color.bg }}
-          onClick={() => handleColorSelect(colorPicker.noteId, color.bg, color.text)}
-          title={`Background: ${color.bg}, Text: ${color.text}`}
+
+      {/* Sticky notes */}
+      {uniqueStickyNotes.map((note) => (
+        <StickyNoteComponent
+          key={note.id}
+          note={note}
+          zoomLevel={zoomLevel}
+          panOffset={panOffset}
+          activeNoteId={activeNoteId}
+          editingNoteId={editingNoteId}
+          handleStickyNoteMouseDown={handleStickyNoteMouseDown}
+          handleStickyNoteDoubleClick={handleStickyNoteDoubleClick}
+          handleStickyNoteTextChange={handleStickyNoteTextChange}
+          handleFinishEditing={handleFinishEditing}
+          handleDeleteStickyNote={handleDeleteStickyNote}
+          handleResizeStart={handleResizeStart}
+          setStickyNotes={setStickyNotes}
+          showColorPicker={showColorPicker}
+          textStyles={textStyles}
+          textFontSize={textFontSize}
         />
       ))}
+
+      {/* Text elements */}
+      {elements.map((element) =>
+        element.type === "text" ? (
+          <TextComponent
+            key={element.id}
+            textElement={element as TextElement}
+            zoomLevel={zoomLevel}
+            panOffset={panOffset}
+            activeTextId={activeTextId}
+            editingTextId={editingTextId}
+            handleTextMouseDown={handleTextMouseDown}
+            handleTextDoubleClick={handleTextDoubleClick}
+            handleTextChange={handleTextChange}
+            handleFinishTextEditing={handleFinishTextEditing}
+            setElements={setElements}
+            textStyles={textStyles}
+            textFontSize={textFontSize}
+          />
+        ) : null
+      )}
+
+      {/* Color picker */}
+      {colorPicker && (
+        <div
+          className="absolute z-50 flex flex-wrap gap-2 p-3 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 animate-fadeIn"
+          style={{ left: colorPicker.x, top: colorPicker.y }}
+        >
+          {colorPalette.map((color, index) => (
+            <button
+              key={index}
+              className="w-8 h-8 rounded-full border-2 border-gray-300 dark:border-gray-600 hover:border-purple-500 dark:hover:border-purple-400 focus:outline-none transition-all duration-200 hover:scale-110"
+              style={{ backgroundColor: color.bg }}
+              onClick={() =>
+                handleColorSelect(colorPicker.noteId, color.bg, color.text)
+              }
+              title={`Background: ${color.bg}, Text: ${color.text}`}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Zoom controls */}
+      <div className="absolute bottom-5 right-5 flex items-center gap-2 bg-white dark:bg-gray-800 rounded-full shadow-lg p-2 z-50">
+        <button
+          className="w-10 h-10 flex items-center justify-center bg-purple-600 dark:bg-purple-700 rounded-full hover:bg-purple-500 dark:hover:bg-purple-600 transition-all duration-200 transform hover:scale-105"
+          onClick={handleZoomOut}
+          title="Zoom Out"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="white"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            <line x1="8" y1="11" x2="14" y2="11" />
+          </svg>
+        </button>
+        <span className="text-sm font-medium text-purple-600 dark:text-purple-400 min-w-[50px] text-center">
+          {Math.round(zoomLevel * 100)}%
+        </span>
+        <button
+          className="w-10 h-10 flex items-center justify-center bg-purple-600 dark:bg-purple-700 rounded-full hover:bg-purple-500 dark:hover:bg-purple-600 transition-all duration-200 transform hover:scale-105"
+          onClick={handleZoomIn}
+          title="Zoom In"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="white"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            <line x1="11" y1="8" x2="11" y2="14" />
+            <line x1="8" y1="11" x2="14" y2="11" />
+          </svg>
+        </button>
+      </div>
+
+      {/* Toolbar and navbar */}
+      <CanvasToolbar exportAsPNG={exportAsPNG} exportAsPDF={exportAsPDF} />
+      <NavBar
+        saveWhiteboard={saveWhiteboard}
+        exportAsPNG={exportAsPNG}
+        exportAsPDF={exportAsPDF}
+      />
     </div>
-  )}
-  <div className="absolute bottom-5 right-5 flex items-center gap-2 bg-white dark:bg-gray-700 rounded-full shadow-md p-2 z-50">
-    <button
-      className="w-8 h-8 flex items-center justify-center bg-purple-600 dark:bg-purple-700 rounded-full hover:bg-purple-500 dark:hover:bg-purple-600 transition-all duration-200"
-      onClick={handleZoomOut}
-      title="Zoom Out"
-    >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="white"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <circle cx="11" cy="11" r="8" />
-        <line x1="21" y1="21" x2="16.65" y2="16.65" />
-        <line x1="8" y1="11" x2="14" y2="11" />
-      </svg>
-    </button>
-    <span className="text-sm font-medium text-purple-600 dark:text-purple-400">
-      {Math.round(zoomLevel * 100)}%
-    </span>
-    <button
-      className="w-8 h-8 flex items-center justify-center bg-purple-600 dark:bg-purple-700 rounded-full hover:bg-purple-500 dark:hover:bg-purple-600 transition-all duration-200"
-      onClick={handleZoomIn}
-      title="Zoom In"
-    >
-      <svg
-        color="#f9fafb"
-        xmlns="http://www.w3.org/2000/svg"
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="white"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <circle cx="11" cy="11" r="8" />
-        <line x1="21" y1="21" x2="16.65" y2="16.65" />
-        <line x1="11" y1="8" x2="11" y2="14" />
-        <line x1="8" y1="11" x2="14" y2="11" />
-      </svg>
-    </button>
-  </div>
-  <CanvasToolbar exportAsPNG={exportAsPNG} exportAsPDF={exportAsPDF} />
-  <NavBar
-    saveWhiteboard={saveWhiteboard}
-    exportAsPNG={exportAsPNG}
-    exportAsPDF={exportAsPDF}
-  />
-</div>
   );
 };
 

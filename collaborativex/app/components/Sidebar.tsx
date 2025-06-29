@@ -145,7 +145,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   }, [isCollapsed, setIsCollapsed]);
 
   return (
-    <div className="fixed top-0 left-0 h-full z-10 overflow-hidden">
+    <div className="fixed top-0 left-0 h-full z-30 overflow-hidden">
       <div
         className={`
           h-full bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200

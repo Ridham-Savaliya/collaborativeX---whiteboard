@@ -159,7 +159,7 @@ const WhiteboardPage: React.FC<PageProps> = ({ params }) => {
   );
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50 font-sans">
+    <div className="flex h-screen overflow-hidden  font-sans">
       <Sidebar
         setColor={setStrokeColor}
         setLineWidth={setLineWidth}

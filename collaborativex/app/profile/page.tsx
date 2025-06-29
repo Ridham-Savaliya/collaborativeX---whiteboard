@@ -216,7 +216,7 @@ const Profile: React.FC = () => {
     };
 
     fetchData();
-  }, [token, setTheme, i18n, t]);
+  }, [token ]);
 
   const handleUpdateProfilePicture = async () => {
     if (!selectedFile || !token) return;
