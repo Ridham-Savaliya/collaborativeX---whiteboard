@@ -44,6 +44,7 @@ export interface StickyNote {
 export interface ActivityUpdate {
   userId?: string; // Username or user ID
   email?: string; // Username or user ID
+  username?:string,
   action: string; // e.g., "drew a line", "added a sticky note"
   timestamp: string;
 }

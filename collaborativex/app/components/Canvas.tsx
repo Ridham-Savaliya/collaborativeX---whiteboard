@@ -12,6 +12,7 @@ import {
   Point,
 } from "./Types";
 import CanvasToolbar from "./CanvasToolbar";
+import { FaArrowRight } from "react-icons/fa";
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 import { useTheme } from "../context/ThemeContext";
@@ -31,6 +32,7 @@ import {
   X
 } from "lucide-react";
 import { useParams } from "next/navigation";
+
 // Socket Types
 interface UserPresence {
   email: string;
@@ -165,15 +167,44 @@ interface TextComponentProps {
   textFontSize: number;
 }
 
+interface ShapeComponentProps {
+  shape: ShapeElement;
+  zoomLevel: number;
+  panOffset: { x: number; y: number };
+  activeShapeId: string | null;
+  handleShapeMouseDown: (
+    e: React.MouseEvent<HTMLDivElement>,
+    shapeId: string
+  ) => void;
+  handleDeleteShape: (shapeId: string) => void;
+  handleShapeResizeStart: (
+    e: React.MouseEvent<HTMLDivElement>,
+    shapeId: string,
+    direction: string
+  ) => void;
+}
+
 // Utility function to generate unique IDs
 const generateUniqueId = (): string =>
   `id-${Date.now().toString(36)}-${Math.random()
     .toString(36)
-    .substring(2, 10)}`;
+    .substring(2, 15)}`;
 
 // Utility function to validate IDs
 const isValidId = (id: string | undefined): boolean =>
   id !== undefined && id !== null && id !== "";
+
+// Utility function to ensure unique IDs without mutation
+const ensureUniqueIds = <T extends { id: string }>(items: T[]): T[] => {
+  const seenIds = new Set<string>();
+  return items.map((item) => {
+    if (!item || !isValidId(item.id) || seenIds.has(item.id)) {
+      return { ...item, id: generateUniqueId() };
+    }
+    seenIds.add(item.id);
+    return item;
+  });
+};
 
 // Color palette for sticky notes
 const colorPalette = [
@@ -202,7 +233,7 @@ const Toast: React.FC<{
   onClose: () => void;
 }> = ({ message, type, onClose }) => {
   useEffect(() => {
-    const timer = setTimeout(onClose, 3000);
+    const timer = setTimeout(onClose, 1500);
     return () => clearTimeout(timer);
   }, [onClose]);
 
@@ -626,8 +657,6 @@ const CollaborationPanel: React.FC<{
       setIsCollapsed((prev) => !prev);
     };
 
-
-
     return (
       <>
         {/* Error Notifications */}
@@ -641,14 +670,12 @@ const CollaborationPanel: React.FC<{
         {/* Collaboration Panel */}
         <div className={`fixed top-4 right-4 z-40 transition-all duration-300 ${isCollapsed ? 'w-12' : 'w-80'}`}>
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-            
+
             <div className="flex items-center justify-between p-1 border-b border-gray-00 dark:border-gray-700">
               <div className="flex items-center gap-2">
-
-
                 <button
                   onClick={handleCollaborationCollapse}
-                  className="p-2 pb- bg-gradient-to-br from-purple-500 to-purple-700 text-white rounded-full hover:from-purple-400 hover:to-purple-600 transition-all duration-300"
+                  className="p-2 bg-gradient-to-br from-purple-500 to-purple-700 text-white rounded-full hover:from-purple-400 hover:to-purple-600 transition-all duration-300"
                   title="Profile"
                   aria-label="Profile"
                 >
@@ -663,12 +690,9 @@ const CollaborationPanel: React.FC<{
               </div>
               <button
                 onClick={() => setIsCollapsed(!isCollapsed)}
-                className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                className=" rounded-md bg-gray-400 hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors"
               >
-                {isCollapsed ? (
-                  <ChevronDown className="w-4 h-4" />
-                ) : (
-                  <ChevronUp className="w-4 h-4" />
+                {!isCollapsed && (<FaArrowRight className="w-6 h-6 p-1" />
                 )}
               </button>
             </div>
@@ -945,6 +969,340 @@ const TextComponent = memo(
 
 TextComponent.displayName = "TextComponent";
 
+// Shape Component with proper shape rendering
+const ShapeComponent = memo(
+  ({
+    shape,
+    zoomLevel,
+    panOffset,
+    activeShapeId,
+    handleShapeMouseDown,
+    handleDeleteShape,
+    handleShapeResizeStart,
+  }: ShapeComponentProps) => {
+    if (!isValidId(shape.id)) {
+      console.error("Invalid shape ID", shape);
+      return null;
+    }
+
+    const adjustedX = shape.x * zoomLevel + panOffset.x;
+    const adjustedY = shape.y * zoomLevel + panOffset.y;
+    const adjustedWidth = shape.width * zoomLevel;
+    const adjustedHeight = shape.height * zoomLevel;
+
+    // Create SVG path based on shape type
+ const renderShape = () => {
+  const strokeWidth = (shape.lineWidth || 2) / zoomLevel;
+
+  switch (shape.type) {
+    case "rectangle":
+      return (
+        <rect
+          x={strokeWidth / 2}
+          y={strokeWidth / 2}
+          width={Math.max(0, adjustedWidth - strokeWidth)}
+          height={Math.max(0, adjustedHeight - strokeWidth)}
+          fill="transparent"
+          stroke={shape.color}
+          strokeWidth={strokeWidth}
+        />
+      );
+
+    case "circle":
+      return (
+        <ellipse
+          cx={adjustedWidth / 2}
+          cy={adjustedHeight / 2}
+          rx={Math.max(0, (adjustedWidth - strokeWidth) / 2)}
+          ry={Math.max(0, (adjustedHeight - strokeWidth) / 2)}
+          fill="transparent"
+          stroke={shape.color}
+          strokeWidth={strokeWidth}
+        />
+      );
+
+    case "triangle":
+      const trianglePoints = `${adjustedWidth / 2},${strokeWidth / 2} ${strokeWidth / 2},${adjustedHeight - strokeWidth / 2} ${adjustedWidth - strokeWidth / 2},${adjustedHeight - strokeWidth / 2}`;
+      return (
+        <polygon
+          points={trianglePoints}
+          fill="transparent"
+          stroke={shape.color}
+          strokeWidth={strokeWidth}
+        />
+      );
+
+    case "diamond":
+      const dX = adjustedWidth / 2;
+      const dY = adjustedHeight / 2;
+      return (
+        <polygon
+          points={`${dX},${strokeWidth / 2} ${adjustedWidth - strokeWidth / 2},${dY} ${dX},${adjustedHeight - strokeWidth / 2} ${strokeWidth / 2},${dY}`}
+          fill="transparent"
+          stroke={shape.color}
+          strokeWidth={strokeWidth}
+        />
+      );
+
+    case "star":
+      const starPoints = 5;
+      const outerRadius = Math.min(adjustedWidth, adjustedHeight) / 2 - strokeWidth;
+      const innerRadius = outerRadius / 2.5;
+      const cx = adjustedWidth / 2;
+      const cy = adjustedHeight / 2;
+      const starPath = Array.from({ length: starPoints * 2 }, (_, i) => {
+        const angle = (Math.PI / starPoints) * i;
+        const r = i % 2 === 0 ? outerRadius : innerRadius;
+        return `${cx + r * Math.sin(angle)},${cy - r * Math.cos(angle)}`;
+      }).join(" ");
+      return (
+        <polygon
+          points={starPath}
+          fill="transparent"
+          stroke={shape.color}
+          strokeWidth={strokeWidth}
+        />
+      );
+
+    case "arrowUp":
+      return (
+        <polygon
+          points={`${adjustedWidth / 2},${strokeWidth} ${strokeWidth},${adjustedHeight - strokeWidth} ${adjustedWidth - strokeWidth},${adjustedHeight - strokeWidth}`}
+          fill="transparent"
+          stroke={shape.color}
+          strokeWidth={strokeWidth}
+        />
+      );
+
+    case "arrowDown":
+      return (
+        <polygon
+          points={`${adjustedWidth / 2},${adjustedHeight - strokeWidth} ${strokeWidth},${strokeWidth} ${adjustedWidth - strokeWidth},${strokeWidth}`}
+          fill="transparent"
+          stroke={shape.color}
+          strokeWidth={strokeWidth}
+        />
+      );
+
+    case "arrowLeft":
+      return (
+        <polygon
+          points={`${strokeWidth},${adjustedHeight / 2} ${adjustedWidth - strokeWidth},${strokeWidth} ${adjustedWidth - strokeWidth},${adjustedHeight - strokeWidth}`}
+          fill="transparent"
+          stroke={shape.color}
+          strokeWidth={strokeWidth}
+        />
+      );
+
+    case "arrowRight":
+      return (
+        <polygon
+          points={`${adjustedWidth - strokeWidth},${adjustedHeight / 2} ${strokeWidth},${strokeWidth} ${strokeWidth},${adjustedHeight - strokeWidth}`}
+          fill="transparent"
+          stroke={shape.color}
+          strokeWidth={strokeWidth}
+        />
+      );
+
+    case "heart":
+      const path = `
+        M ${adjustedWidth / 2} ${adjustedHeight - strokeWidth}
+        C ${adjustedWidth * 0.8} ${adjustedHeight * 0.75}, ${adjustedWidth} ${adjustedHeight * 0.4}, ${adjustedWidth / 2} ${adjustedHeight * 0.2}
+        C ${0} ${adjustedHeight * 0.4}, ${adjustedWidth * 0.2} ${adjustedHeight * 0.75}, ${adjustedWidth / 2} ${adjustedHeight - strokeWidth}
+      `;
+      return (
+        <path
+          d={path}
+          fill="transparent"
+          stroke={shape.color}
+          strokeWidth={strokeWidth}
+        />
+      );
+
+    case "pentagon":
+    case "heptagon":
+    case "octagon":
+      const sides = shape.type === "pentagon" ? 5 : shape.type === "heptagon" ? 7 : 8;
+      const radius = Math.min(adjustedWidth, adjustedHeight) / 2 - strokeWidth;
+      const polyPath = Array.from({ length: sides }, (_, i) => {
+        const angle = (2 * Math.PI * i) / sides - Math.PI / 2;
+        const x = adjustedWidth / 2 + radius * Math.cos(angle);
+        const y = adjustedHeight / 2 + radius * Math.sin(angle);
+        return `${x},${y}`;
+      }).join(" ");
+      return (
+        <polygon
+          points={polyPath}
+          fill="transparent"
+          stroke={shape.color}
+          strokeWidth={strokeWidth}
+        />
+      );
+
+    case "hexagon":
+      const hexRadius = Math.min(adjustedWidth, adjustedHeight) / 2 - strokeWidth;
+      const hexPath = Array.from({ length: 6 }, (_, i) => {
+        const angle = (Math.PI / 3) * i - Math.PI / 2;
+        const x = adjustedWidth / 2 + hexRadius * Math.cos(angle);
+        const y = adjustedHeight / 2 + hexRadius * Math.sin(angle);
+        return `${x},${y}`;
+      }).join(" ");
+      return (
+        <polygon
+          points={hexPath}
+          fill="transparent"
+          stroke={shape.color}
+          strokeWidth={strokeWidth}
+        />
+      );
+
+    case "cross":
+      const crossSize = Math.min(adjustedWidth, adjustedHeight) / 3;
+      const offset = crossSize / 3;
+      return (
+        <>
+          <rect
+            x={(adjustedWidth - offset) / 2}
+            y={(adjustedHeight - crossSize) / 2}
+            width={offset}
+            height={crossSize}
+            fill="transparent"
+            stroke={shape.color}
+            strokeWidth={strokeWidth}
+          />
+          <rect
+            x={(adjustedWidth - crossSize) / 2}
+            y={(adjustedHeight - offset) / 2}
+            width={crossSize}
+            height={offset}
+            fill="transparent"
+            stroke={shape.color}
+            strokeWidth={strokeWidth}
+          />
+        </>
+      );
+
+    case "smiley":
+      return (
+        <>
+          <circle
+            cx={adjustedWidth / 2}
+            cy={adjustedHeight / 2}
+            r={(Math.min(adjustedWidth, adjustedHeight) - strokeWidth) / 2}
+            fill="transparent"
+            stroke={shape.color}
+            strokeWidth={strokeWidth}
+          />
+          <circle
+            cx={adjustedWidth * 0.35}
+            cy={adjustedHeight * 0.4}
+            r={strokeWidth}
+            fill={shape.color}
+          />
+          <circle
+            cx={adjustedWidth * 0.65}
+            cy={adjustedHeight * 0.4}
+            r={strokeWidth}
+            fill={shape.color}
+          />
+          <path
+            d={`M${adjustedWidth * 0.35},${adjustedHeight * 0.65} Q${adjustedWidth / 2},${adjustedHeight * 0.8} ${adjustedWidth * 0.65},${adjustedHeight * 0.65}`}
+            fill="transparent"
+            stroke={shape.color}
+            strokeWidth={strokeWidth}
+          />
+        </>
+      );
+
+    case "cloud":
+      const cloudPath = `
+        M ${adjustedWidth * 0.25},${adjustedHeight * 0.6}
+        C ${adjustedWidth * 0.2},${adjustedHeight * 0.5}, ${adjustedWidth * 0.3},${adjustedHeight * 0.4}, ${adjustedWidth * 0.4},${adjustedHeight * 0.5}
+        C ${adjustedWidth * 0.5},${adjustedHeight * 0.3}, ${adjustedWidth * 0.7},${adjustedHeight * 0.4}, ${adjustedWidth * 0.65},${adjustedHeight * 0.6}
+        Z
+      `;
+      return (
+        <path
+          d={cloudPath}
+          fill="transparent"
+          stroke={shape.color}
+          strokeWidth={strokeWidth}
+        />
+      );
+
+    default:
+   return null;
+  }
+};
+
+
+    return (
+      <div
+        data-shape-id={shape.id}
+        className={`absolute transition-all duration-200 ${
+          activeShapeId === shape.id
+            ? "z-30 ring-2 ringpurple-500"
+            : "z-20"
+        }`}
+        style={{
+          left: `${adjustedX}px`,
+          top: `${adjustedY}px`,
+          width: `${Math.abs(adjustedWidth)}px`,
+          height: `${Math.abs(adjustedHeight)}px`,
+          cursor: "move",
+        }}
+        onMouseDown={(e) => handleShapeMouseDown(e, shape.id)}
+      >
+        <svg
+          width="100%"
+          height="100%"
+          className="pointer-events-none"
+          style={{ overflow: "visible" }}
+        >
+          {renderShape()}
+        </svg>
+
+        {/* Delete button */}
+        {activeShapeId === shape.id && (
+          <button
+            className="absolute top-0 right-0 w-6 h-6 bg-red-500 text-white rounded-full -translate-x-1/2 -translate-y-1/2 cursor-pointer z-40 hover:bg-red-600 transition-all duration-200 transform hover:scale-105"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDeleteShape(shape.id);
+            }}
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
+
+        {/* Resize handles */}
+        {activeShapeId === shape.id && (
+          <>
+            <div
+              className="absolute bottom-0 right-0 w-4 h-4 bg-gradient-to-br from-purple-600 to-purple-800 rounded-full transform translate-x-1/2 translate-y-1/2 cursor-se-resize z-40 hover:bg-purple-700 hover:scale-125 transition-all duration-200"
+              onMouseDown={(e) => handleShapeResizeStart(e, shape.id, "se")}
+            />
+            <div
+              className="absolute bottom-0 left-0 w-4 h-4 bg-gradient-to-br from-purple-600 to-purple-800 rounded-full transform -translate-x-1/2 translate-y-1/2 cursor-sw-resize z-40 hover:bg-purple-700 hover:scale-125 transition-all duration-200"
+              onMouseDown={(e) => handleShapeResizeStart(e, shape.id, "sw")}
+            />
+            <div
+              className="absolute top-0 right-0 w-4 h-4 bg-gradient-to-br from-purple-600 to-purple-800 rounded-full transform translate-x-1/2 -translate-y-1/2 cursor-ne-resize z-40 hover:bg-purple-700 hover:scale-125 transition-all duration-200"
+              onMouseDown={(e) => handleShapeResizeStart(e, shape.id, "ne")}
+            />
+            <div
+              className="absolute top-0 left-0 w-4 h-4 bg-gradient-to-br from-purple-600 to-purple-800 rounded-full transform -translate-x-1/2 -translate-y-1/2 cursor-nw-resize z-40 hover:bg-purple-700 hover:scale-125 transition-all duration-200"
+              onMouseDown={(e) => handleShapeResizeStart(e, shape.id, "nw")}
+            />
+          </>
+        )}
+      </div>
+    );
+  }
+);
+
+ShapeComponent.displayName = "ShapeComponent";
+
 // Main Canvas Component
 const Canvas: React.FC<CanvasProps> = ({
   strokeColor,
@@ -958,7 +1316,6 @@ const Canvas: React.FC<CanvasProps> = ({
   historyIndex,
   history,
   textStyles,
-
   currentUser = "demo@example.com",
 }) => {
   // Canvas references
@@ -1087,14 +1444,14 @@ const Canvas: React.FC<CanvasProps> = ({
       socketRef.current.connect();
     }
   }, []);
+
   const token = localStorage.getItem('token')
   const params = useParams();
   const whiteboardId = params.id;
+
   // Socket initialization and management
   useEffect(() => {
-
     if (!whiteboardId || !token) return;
-
 
     setConnectionState({ status: 'connecting' });
 
@@ -1204,6 +1561,13 @@ const Canvas: React.FC<CanvasProps> = ({
 
     socket.on('user_presence', (presence: UserPresence) => {
       console.log('User presence update:', presence);
+      if (presence.joined) {
+        setToast({ message: `${presence.username} has joined whiteboard.`, type: "info" })
+      }
+      else {
+        setToast({ message: `${presence.username} has left whiteboard.`, type: "info" })
+      }
+
       setConnectedUsers(prev => {
         if (presence.joined) {
           const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8'];
@@ -1338,16 +1702,14 @@ const Canvas: React.FC<CanvasProps> = ({
     [emit]
   );
 
-  // Filter unique sticky notes
+  // Filter unique sticky notes and elements
   const uniqueStickyNotes = React.useMemo(() => {
-    const seenIds = new Set<string>();
-    return (stickyNotes || []).filter((note) => {
-      if (!note || !isValidId(note.id)) return false;
-      if (seenIds.has(note.id)) note.id = generateUniqueId();
-      seenIds.add(note.id);
-      return true;
-    });
+    return ensureUniqueIds(stickyNotes || []);
   }, [stickyNotes]);
+
+  const uniqueElements = React.useMemo(() => {
+    return ensureUniqueIds(elements || []);
+  }, [elements]);
 
   /**
    * Enhanced shape drawing function with support for all shapes
@@ -1510,7 +1872,7 @@ const Canvas: React.FC<CanvasProps> = ({
     contentContext.restore();
   }, [contentContext, drawElement, currentElement, zoomLevel, panOffset]);
 
-   const saveWhiteboard = useCallback(async () => {
+  const saveWhiteboard = useCallback(async () => {
     const id = params.id;
     try {
       const mappedStickyNotes = uniqueStickyNotes.map((note) => ({
@@ -1838,6 +2200,38 @@ const Canvas: React.FC<CanvasProps> = ({
   };
 
   /**
+   * Check if mouse is over a shape element
+   */
+  const isOverShapeElement = (
+    e: React.MouseEvent<HTMLCanvasElement>
+  ): string | null => {
+    const { x: screenX, y: screenY } = getScreenCoordinates(
+      e.clientX,
+      e.clientY
+    );
+
+    for (const element of elementsRef.current) {
+      if (element.type !== "text" && element.type !== "path" && "width" in element) {
+        const shapeElement = element as ShapeElement;
+        const adjustedX = shapeElement.x * zoomLevel + panOffset.x;
+        const adjustedY = shapeElement.y * zoomLevel + panOffset.y;
+        const adjustedWidth = Math.abs(shapeElement.width * zoomLevel);
+        const adjustedHeight = Math.abs(shapeElement.height * zoomLevel);
+
+        if (
+          screenX >= adjustedX &&
+          screenX <= adjustedX + adjustedWidth &&
+          screenY >= adjustedY &&
+          screenY <= adjustedY + adjustedHeight
+        ) {
+          return shapeElement.id;
+        }
+      }
+    }
+    return null;
+  };
+
+  /**
    * Handle mouse down events on canvas
    */
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -1895,6 +2289,26 @@ const Canvas: React.FC<CanvasProps> = ({
       return;
     } else {
       setActiveTextId(null);
+    }
+
+    // Check for shape element interaction
+    const clickedShapeId = isOverShapeElement(e);
+    if (clickedShapeId) {
+      setActiveShapeId(clickedShapeId);
+      const shapeElement = elementsRef.current.find(
+        (el) => el.id === clickedShapeId && el.type !== "text" && el.type !== "path" && "width" in el
+      ) as ShapeElement;
+      if (shapeElement) {
+        tempShapeState.current = { ...shapeElement };
+        setDragOffset({
+          x: canvasX - shapeElement.x,
+          y: canvasY - shapeElement.y,
+        });
+        setIsDraggingShape(true);
+      }
+      return;
+    } else {
+      setActiveShapeId(null);
     }
 
     // Handle tool-specific actions
@@ -2015,7 +2429,7 @@ const Canvas: React.FC<CanvasProps> = ({
   };
 
   /**
-   * Handle mouse move events
+   * Handle mouse move events with proper resize logic
    */
   const handleMouseMove = useCallback(
     throttle((e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -2071,6 +2485,57 @@ const Canvas: React.FC<CanvasProps> = ({
         return;
       }
 
+      // Handle sticky note resizing
+      if (isResizingNote && activeNoteId && tempNoteState.current && resizeDirection) {
+        const note = tempNoteState.current;
+        const minSize = 50;
+        let newWidth = note.width;
+        let newHeight = note.height;
+        let newX = note.x;
+        let newY = note.y;
+
+        const deltaX = canvasX - (note.x + (resizeDirection.includes('e') ? note.width : 0));
+        const deltaY = canvasY - (note.y + (resizeDirection.includes('s') ? note.height : 0));
+
+        switch (resizeDirection) {
+          case 'se':
+            newWidth = Math.max(minSize, note.width + deltaX);
+            newHeight = Math.max(minSize, note.height + deltaY);
+            break;
+          case 'sw':
+            newWidth = Math.max(minSize, note.width - deltaX);
+            newHeight = Math.max(minSize, note.height + deltaY);
+            newX = note.x + note.width - newWidth;
+            break;
+          case 'ne':
+            newWidth = Math.max(minSize, note.width + deltaX);
+            newHeight = Math.max(minSize, note.height - deltaY);
+            newY = note.y + note.height - newHeight;
+            break;
+          case 'nw':
+            newWidth = Math.max(minSize, note.width - deltaX);
+            newHeight = Math.max(minSize, note.height - deltaY);
+            newX = note.x + note.width - newWidth;
+            newY = note.y + note.height - newHeight;
+            break;
+        }
+
+        tempNoteState.current = {
+          ...tempNoteState.current,
+          x: newX,
+          y: newY,
+          width: newWidth,
+          height: newHeight,
+        };
+
+        setStickyNotes((prev) =>
+          prev.map((n) =>
+            n.id === activeNoteId ? { ...tempNoteState.current! } : n
+          )
+        );
+        return;
+      }
+
       // Handle text dragging
       if (isDraggingText && activeTextId && tempTextState.current) {
         const canvasWidth = canvasDimensions.width / zoomLevel;
@@ -2089,6 +2554,82 @@ const Canvas: React.FC<CanvasProps> = ({
         elementsRef.current = elementsRef.current.map((el) =>
           el.id === activeTextId && el.type === "text"
             ? tempTextState.current!
+            : el
+        );
+        setElements(elementsRef.current);
+        return;
+      }
+
+      // Handle shape dragging
+      if (isDraggingShape && activeShapeId && tempShapeState.current) {
+        const canvasWidth = canvasDimensions.width / zoomLevel;
+        const canvasHeight = canvasDimensions.height / zoomLevel;
+        const newX = canvasX - dragOffset.x;
+        const newY = canvasY - dragOffset.y;
+        const clampedX = Math.max(0, Math.min(newX, canvasWidth - tempShapeState.current.width));
+        const clampedY = Math.max(0, Math.min(newY, canvasHeight - tempShapeState.current.height));
+
+        tempShapeState.current = {
+          ...tempShapeState.current,
+          x: clampedX,
+          y: clampedY,
+        };
+
+        elementsRef.current = elementsRef.current.map((el) =>
+          el.id === activeShapeId && el.type !== "text" && el.type !== "path" && "width" in el
+            ? tempShapeState.current!
+            : el
+        );
+        setElements(elementsRef.current);
+        return;
+      }
+
+      // Handle shape resizing
+      if (isResizingShape && activeShapeId && tempShapeState.current && resizeDirection) {
+        const shape = tempShapeState.current;
+        const minSize = 10;
+        let newWidth = shape.width;
+        let newHeight = shape.height;
+        let newX = shape.x;
+        let newY = shape.y;
+
+        const deltaX = canvasX - (shape.x + (resizeDirection.includes('e') ? shape.width : 0));
+        const deltaY = canvasY - (shape.y + (resizeDirection.includes('s') ? shape.height : 0));
+
+        switch (resizeDirection) {
+          case 'se':
+            newWidth = Math.max(minSize, shape.width + deltaX);
+            newHeight = Math.max(minSize, shape.height + deltaY);
+            break;
+          case 'sw':
+            newWidth = Math.max(minSize, shape.width - deltaX);
+            newHeight = Math.max(minSize, shape.height + deltaY);
+            newX = shape.x + shape.width - newWidth;
+            break;
+          case 'ne':
+            newWidth = Math.max(minSize, shape.width + deltaX);
+            newHeight = Math.max(minSize, shape.height - deltaY);
+            newY = shape.y + shape.height - newHeight;
+            break;
+          case 'nw':
+            newWidth = Math.max(minSize, shape.width - deltaX);
+            newHeight = Math.max(minSize, shape.height - deltaY);
+            newX = shape.x + shape.width - newWidth;
+            newY = shape.y + shape.height - newHeight;
+            break;
+        }
+
+        tempShapeState.current = {
+          ...tempShapeState.current,
+          x: newX,
+          y: newY,
+          width: newWidth,
+          height: newHeight,
+        };
+
+        elementsRef.current = elementsRef.current.map((el) =>
+          el.id === activeShapeId && el.type !== "text" && el.type !== "path" && "width" in el
+            ? tempShapeState.current!
             : el
         );
         setElements(elementsRef.current);
@@ -2124,9 +2665,14 @@ const Canvas: React.FC<CanvasProps> = ({
       panStart,
       isDraggingNote,
       isDraggingText,
+      isDraggingShape,
+      isResizingNote,
+      isResizingShape,
       activeNoteId,
       activeTextId,
+      activeShapeId,
       dragOffset,
+      resizeDirection,
       isDrawing,
       currentElement,
       startPoint,
@@ -2185,6 +2731,28 @@ const Canvas: React.FC<CanvasProps> = ({
 
       setIsDraggingText(false);
       tempTextState.current = null;
+      return;
+    }
+
+    // Handle shape interactions
+    if (isDraggingShape || isResizingShape) {
+      if (tempShapeState.current && activeShapeId) {
+        const updatedShape = { ...tempShapeState.current };
+        elementsRef.current = elementsRef.current.map((el) =>
+          el.id === activeShapeId && el.type !== "text" && el.type !== "path" && "width" in el
+            ? updatedShape
+            : el
+        );
+        setElements(elementsRef.current);
+        debouncedSaveToHistory(elementsRef.current, stickyNotes);
+
+        // Emit socket event
+        emit('shapeUpdate', updatedShape);
+      }
+      setIsDraggingShape(false);
+      setIsResizingShape(false);
+      setResizeDirection(null);
+      tempShapeState.current = null;
       return;
     }
 
@@ -2384,6 +2952,62 @@ const Canvas: React.FC<CanvasProps> = ({
     });
   };
 
+  // Shape event handlers
+  const handleShapeMouseDown = (
+    e: React.MouseEvent<HTMLDivElement>,
+    shapeId: string
+  ) => {
+    e.stopPropagation();
+    if (!isValidId(shapeId)) return;
+
+    setActiveShapeId(shapeId);
+    const shapeElement = elementsRef.current.find(
+      (el) => el.id === shapeId && el.type !== "text" && el.type !== "path" && "width" in el
+    ) as ShapeElement;
+    if (!shapeElement) return;
+
+    const { x: canvasX, y: canvasY } = getCanvasCoordinates(
+      e.clientX,
+      e.clientY
+    );
+    setDragOffset({ x: canvasX - shapeElement.x, y: canvasY - shapeElement.y });
+    tempShapeState.current = { ...shapeElement };
+    setIsDraggingShape(true);
+  };
+
+  const handleDeleteShape = (shapeId: string) => {
+    if (!isValidId(shapeId)) return;
+
+    setElements((prev) => {
+      const newElements = prev.filter((el) => el.id !== shapeId);
+      elementsRef.current = newElements;
+      debouncedSaveToHistory(newElements, stickyNotes);
+      return newElements;
+    });
+
+    if (activeShapeId === shapeId) setActiveShapeId(null);
+  };
+
+  const handleShapeResizeStart = (
+    e: React.MouseEvent<HTMLDivElement>,
+    shapeId: string,
+    direction: string
+  ) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (!isValidId(shapeId)) return;
+
+    setActiveShapeId(shapeId);
+    setIsResizingShape(true);
+    setResizeDirection(direction);
+    const shape = elementsRef.current.find(
+      (el) => el.id === shapeId && el.type !== "text" && el.type !== "path" && "width" in el
+    ) as ShapeElement;
+    if (!shape) return;
+
+    tempShapeState.current = { ...shape };
+  };
+
   // Zoom handlers
   const handleZoomIn = () => setZoomLevel((prev) => Math.min(prev + 0.25, 4.0));
   const handleZoomOut = () =>
@@ -2451,7 +3075,6 @@ const Canvas: React.FC<CanvasProps> = ({
       {/* Collaboration Panel */}
       <div className="className=absolute top-0 right-0">
         <CollaborationPanel
-
           connectionState={connectionState}
           connectedUsers={connectedUsers}
           recentActivity={recentActivity}
@@ -2491,7 +3114,7 @@ const Canvas: React.FC<CanvasProps> = ({
       {/* Sticky notes */}
       {uniqueStickyNotes.map((note) => (
         <StickyNoteComponent
-          key={note.id}
+          key={`sticky-note-${note.id}`}
           note={note}
           zoomLevel={zoomLevel}
           panOffset={panOffset}
@@ -2511,10 +3134,10 @@ const Canvas: React.FC<CanvasProps> = ({
       ))}
 
       {/* Text elements */}
-      {elements.map((element) =>
+      {uniqueElements.map((element) =>
         element.type === "text" ? (
           <TextComponent
-            key={element.id}
+            key={`text-element-${element.id}`}
             textElement={element as TextElement}
             zoomLevel={zoomLevel}
             panOffset={panOffset}
@@ -2531,6 +3154,22 @@ const Canvas: React.FC<CanvasProps> = ({
         ) : null
       )}
 
+      {/* Shape elements */}
+      {uniqueElements.map((element) =>
+        element.type !== "text" && element.type !== "path" && "width" in element ? (
+          <ShapeComponent
+            key={`shape-element-${element.id}`}
+            shape={element as ShapeElement}
+            zoomLevel={zoomLevel}
+            panOffset={panOffset}
+            activeShapeId={activeShapeId}
+            handleShapeMouseDown={handleShapeMouseDown}
+            handleDeleteShape={handleDeleteShape}
+            handleShapeResizeStart={handleShapeResizeStart}
+          />
+        ) : null
+      )}
+
       {/* Color picker */}
       {colorPicker && (
         <div
@@ -2539,7 +3178,7 @@ const Canvas: React.FC<CanvasProps> = ({
         >
           {colorPalette.map((color, index) => (
             <button
-              key={index}
+              key={`color-${index}`}
               className="w-8 h-8 rounded-full border-2 border-gray-300 dark:border-gray-600 hover:border-purple-500 dark:hover:border-purple-400 focus:outline-none transition-all duration-200 hover:scale-110"
               style={{ backgroundColor: color.bg }}
               onClick={() =>
