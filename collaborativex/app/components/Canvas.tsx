@@ -669,7 +669,7 @@ const CollaborationPanel: React.FC<{
 
         {/* Collaboration Panel */}
         <div className={`fixed top-4 right-4 z-40 transition-all duration-300 ${isCollapsed ? 'w-12' : 'w-80'}`}>
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="backdrop-blur-lg rounded-lg shadow-lg  overflow-hidden">
 
             <div className="flex items-center justify-between p-1 border-b border-gray-00 dark:border-gray-700">
               <div className="flex items-center gap-2">
@@ -991,259 +991,268 @@ const ShapeComponent = memo(
     const adjustedHeight = shape.height * zoomLevel;
 
     // Create SVG path based on shape type
- const renderShape = () => {
-  const strokeWidth = (shape.lineWidth || 2) / zoomLevel;
+    const renderShape = () => {
+      const strokeWidth = (shape.lineWidth || 2) / zoomLevel;
 
-  switch (shape.type) {
-    case "rectangle":
-      return (
-        <rect
-          x={strokeWidth / 2}
-          y={strokeWidth / 2}
-          width={Math.max(0, adjustedWidth - strokeWidth)}
-          height={Math.max(0, adjustedHeight - strokeWidth)}
-          fill="transparent"
-          stroke={shape.color}
-          strokeWidth={strokeWidth}
-        />
-      );
+      switch (shape.type) {
+        case "rectangle":
+          return (
+            <rect
+              x={strokeWidth / 2}
+              y={strokeWidth / 2}
+              width={Math.max(0, adjustedWidth - strokeWidth)}
+              height={Math.max(0, adjustedHeight - strokeWidth)}
+              fill="transparent"
+              stroke={shape.color}
+              strokeWidth={strokeWidth}
+            />
+          );
 
-    case "circle":
-      return (
-        <ellipse
-          cx={adjustedWidth / 2}
-          cy={adjustedHeight / 2}
-          rx={Math.max(0, (adjustedWidth - strokeWidth) / 2)}
-          ry={Math.max(0, (adjustedHeight - strokeWidth) / 2)}
-          fill="transparent"
-          stroke={shape.color}
-          strokeWidth={strokeWidth}
-        />
-      );
+        case "circle":
+          return (
+            <ellipse
+              cx={adjustedWidth / 2}
+              cy={adjustedHeight / 2}
+              rx={Math.max(0, (adjustedWidth - strokeWidth) / 2)}
+              ry={Math.max(0, (adjustedHeight - strokeWidth) / 2)}
+              fill="transparent"
+              stroke={shape.color}
+              strokeWidth={strokeWidth}
+            />
+          );
 
-    case "triangle":
-      const trianglePoints = `${adjustedWidth / 2},${strokeWidth / 2} ${strokeWidth / 2},${adjustedHeight - strokeWidth / 2} ${adjustedWidth - strokeWidth / 2},${adjustedHeight - strokeWidth / 2}`;
-      return (
-        <polygon
-          points={trianglePoints}
-          fill="transparent"
-          stroke={shape.color}
-          strokeWidth={strokeWidth}
-        />
-      );
+        case "triangle":
+          const trianglePoints = `${adjustedWidth / 2},${strokeWidth / 2} ${strokeWidth / 2},${adjustedHeight - strokeWidth / 2} ${adjustedWidth - strokeWidth / 2},${adjustedHeight - strokeWidth / 2}`;
+          return (
+            <polygon
+              points={trianglePoints}
+              fill="transparent"
+              stroke={shape.color}
+              strokeWidth={strokeWidth}
+            />
+          );
 
-    case "diamond":
-      const dX = adjustedWidth / 2;
-      const dY = adjustedHeight / 2;
-      return (
-        <polygon
-          points={`${dX},${strokeWidth / 2} ${adjustedWidth - strokeWidth / 2},${dY} ${dX},${adjustedHeight - strokeWidth / 2} ${strokeWidth / 2},${dY}`}
-          fill="transparent"
-          stroke={shape.color}
-          strokeWidth={strokeWidth}
-        />
-      );
+        case "diamond":
+          const dX = adjustedWidth / 2;
+          const dY = adjustedHeight / 2;
+          return (
+            <polygon
+              points={`${dX},${strokeWidth / 2} ${adjustedWidth - strokeWidth / 2},${dY} ${dX},${adjustedHeight - strokeWidth / 2} ${strokeWidth / 2},${dY}`}
+              fill="transparent"
+              stroke={shape.color}
+              strokeWidth={strokeWidth}
+            />
+          );
 
-    case "star":
-      const starPoints = 5;
-      const outerRadius = Math.min(adjustedWidth, adjustedHeight) / 2 - strokeWidth;
-      const innerRadius = outerRadius / 2.5;
-      const cx = adjustedWidth / 2;
-      const cy = adjustedHeight / 2;
-      const starPath = Array.from({ length: starPoints * 2 }, (_, i) => {
-        const angle = (Math.PI / starPoints) * i;
-        const r = i % 2 === 0 ? outerRadius : innerRadius;
-        return `${cx + r * Math.sin(angle)},${cy - r * Math.cos(angle)}`;
-      }).join(" ");
-      return (
-        <polygon
-          points={starPath}
-          fill="transparent"
-          stroke={shape.color}
-          strokeWidth={strokeWidth}
-        />
-      );
+        case "star":
+          const starPoints = 5;
+          const outerRadius = Math.min(adjustedWidth, adjustedHeight) / 2 - strokeWidth;
+          const innerRadius = outerRadius / 2.5;
+          const cx = adjustedWidth / 2;
+          const cy = adjustedHeight / 2;
+          const starPath = Array.from({ length: starPoints * 2 }, (_, i) => {
+            const angle = (Math.PI / starPoints) * i;
+            const r = i % 2 === 0 ? outerRadius : innerRadius;
+            return `${cx + r * Math.sin(angle)},${cy - r * Math.cos(angle)}`;
+          }).join(" ");
+          return (
+            <polygon
+              points={starPath}
+              fill="transparent"
+              stroke={shape.color}
+              strokeWidth={strokeWidth}
+            />
+          );
 
-    case "arrowUp":
-      return (
-        <polygon
-          points={`${adjustedWidth / 2},${strokeWidth} ${strokeWidth},${adjustedHeight - strokeWidth} ${adjustedWidth - strokeWidth},${adjustedHeight - strokeWidth}`}
-          fill="transparent"
-          stroke={shape.color}
-          strokeWidth={strokeWidth}
-        />
-      );
+        case "arrowUp":
+          return (
+            <path
+              d="M50 10 L40 35 H47 V90 H53 V35 H60 Z"
+              fill="transparent"
+              stroke={shape.color}
+              strokeWidth={2}
+              strokeLinejoin="round"
+            />
+          );
 
-    case "arrowDown":
-      return (
-        <polygon
-          points={`${adjustedWidth / 2},${adjustedHeight - strokeWidth} ${strokeWidth},${strokeWidth} ${adjustedWidth - strokeWidth},${strokeWidth}`}
-          fill="transparent"
-          stroke={shape.color}
-          strokeWidth={strokeWidth}
-        />
-      );
 
-    case "arrowLeft":
-      return (
-        <polygon
-          points={`${strokeWidth},${adjustedHeight / 2} ${adjustedWidth - strokeWidth},${strokeWidth} ${adjustedWidth - strokeWidth},${adjustedHeight - strokeWidth}`}
-          fill="transparent"
-          stroke={shape.color}
-          strokeWidth={strokeWidth}
-        />
-      );
+        case "arrowDown":
+          return (
+            <path
+              d="M50 90 L40 65 H47 V10 H53 V65 H60 Z"
+              fill="transparent"
+              stroke={shape.color}
+              strokeWidth={2}
+              strokeLinejoin="round"
+            />
+          );
 
-    case "arrowRight":
-      return (
-        <polygon
-          points={`${adjustedWidth - strokeWidth},${adjustedHeight / 2} ${strokeWidth},${strokeWidth} ${strokeWidth},${adjustedHeight - strokeWidth}`}
-          fill="transparent"
-          stroke={shape.color}
-          strokeWidth={strokeWidth}
-        />
-      );
 
-    case "heart":
-      const path = `
+        case "arrowLeft":
+          return (
+            <path
+              d="M10 50 L35 40 V47 H90 V53 H35 V60 Z"
+              fill="transparent"
+              stroke={shape.color}
+              strokeWidth={2}
+              strokeLinejoin="round"
+            />
+          );
+
+
+        case "arrowRight":
+          return (
+            <path
+              d="M90 50 L65 40 V47 H10 V53 H65 V60 Z"
+              fill="transparent"
+              stroke={shape.color}
+              strokeWidth={2}
+              strokeLinejoin="round"
+            />
+          );
+
+
+
+
+        case "heart":
+          const path = `
         M ${adjustedWidth / 2} ${adjustedHeight - strokeWidth}
         C ${adjustedWidth * 0.8} ${adjustedHeight * 0.75}, ${adjustedWidth} ${adjustedHeight * 0.4}, ${adjustedWidth / 2} ${adjustedHeight * 0.2}
         C ${0} ${adjustedHeight * 0.4}, ${adjustedWidth * 0.2} ${adjustedHeight * 0.75}, ${adjustedWidth / 2} ${adjustedHeight - strokeWidth}
       `;
-      return (
-        <path
-          d={path}
-          fill="transparent"
-          stroke={shape.color}
-          strokeWidth={strokeWidth}
-        />
-      );
+          return (
+            <path
+              d={path}
+              fill="transparent"
+              stroke={shape.color}
+              strokeWidth={strokeWidth}
+            />
+          );
 
-    case "pentagon":
-    case "heptagon":
-    case "octagon":
-      const sides = shape.type === "pentagon" ? 5 : shape.type === "heptagon" ? 7 : 8;
-      const radius = Math.min(adjustedWidth, adjustedHeight) / 2 - strokeWidth;
-      const polyPath = Array.from({ length: sides }, (_, i) => {
-        const angle = (2 * Math.PI * i) / sides - Math.PI / 2;
-        const x = adjustedWidth / 2 + radius * Math.cos(angle);
-        const y = adjustedHeight / 2 + radius * Math.sin(angle);
-        return `${x},${y}`;
-      }).join(" ");
-      return (
-        <polygon
-          points={polyPath}
-          fill="transparent"
-          stroke={shape.color}
-          strokeWidth={strokeWidth}
-        />
-      );
+        case "pentagon":
+        case "heptagon":
+        case "octagon":
+          const sides = shape.type === "pentagon" ? 5 : shape.type === "heptagon" ? 7 : 8;
+          const radius = Math.min(adjustedWidth, adjustedHeight) / 2 - strokeWidth;
+          const polyPath = Array.from({ length: sides }, (_, i) => {
+            const angle = (2 * Math.PI * i) / sides - Math.PI / 2;
+            const x = adjustedWidth / 2 + radius * Math.cos(angle);
+            const y = adjustedHeight / 2 + radius * Math.sin(angle);
+            return `${x},${y}`;
+          }).join(" ");
+          return (
+            <polygon
+              points={polyPath}
+              fill="transparent"
+              stroke={shape.color}
+              strokeWidth={strokeWidth}
+            />
+          );
 
-    case "hexagon":
-      const hexRadius = Math.min(adjustedWidth, adjustedHeight) / 2 - strokeWidth;
-      const hexPath = Array.from({ length: 6 }, (_, i) => {
-        const angle = (Math.PI / 3) * i - Math.PI / 2;
-        const x = adjustedWidth / 2 + hexRadius * Math.cos(angle);
-        const y = adjustedHeight / 2 + hexRadius * Math.sin(angle);
-        return `${x},${y}`;
-      }).join(" ");
-      return (
-        <polygon
-          points={hexPath}
-          fill="transparent"
-          stroke={shape.color}
-          strokeWidth={strokeWidth}
-        />
-      );
+        case "hexagon":
+          const hexRadius = Math.min(adjustedWidth, adjustedHeight) / 2 - strokeWidth;
+          const hexPath = Array.from({ length: 6 }, (_, i) => {
+            const angle = (Math.PI / 3) * i - Math.PI / 2;
+            const x = adjustedWidth / 2 + hexRadius * Math.cos(angle);
+            const y = adjustedHeight / 2 + hexRadius * Math.sin(angle);
+            return `${x},${y}`;
+          }).join(" ");
+          return (
+            <polygon
+              points={hexPath}
+              fill="transparent"
+              stroke={shape.color}
+              strokeWidth={strokeWidth}
+            />
+          );
 
-    case "cross":
-      const crossSize = Math.min(adjustedWidth, adjustedHeight) / 3;
-      const offset = crossSize / 3;
-      return (
-        <>
-          <rect
-            x={(adjustedWidth - offset) / 2}
-            y={(adjustedHeight - crossSize) / 2}
-            width={offset}
-            height={crossSize}
-            fill="transparent"
-            stroke={shape.color}
-            strokeWidth={strokeWidth}
-          />
-          <rect
-            x={(adjustedWidth - crossSize) / 2}
-            y={(adjustedHeight - offset) / 2}
-            width={crossSize}
-            height={offset}
-            fill="transparent"
-            stroke={shape.color}
-            strokeWidth={strokeWidth}
-          />
-        </>
-      );
+        case "cross":
+          const crossSize = Math.min(adjustedWidth, adjustedHeight) / 3;
+          const offset = crossSize / 3;
+          return (
+            <>
+              <rect
+                x={(adjustedWidth - offset) / 2}
+                y={(adjustedHeight - crossSize) / 2}
+                width={offset}
+                height={crossSize}
+                fill="transparent"
+                stroke={shape.color}
+                strokeWidth={strokeWidth}
+              />
+              <rect
+                x={(adjustedWidth - crossSize) / 2}
+                y={(adjustedHeight - offset) / 2}
+                width={crossSize}
+                height={offset}
+                fill="transparent"
+                stroke={shape.color}
+                strokeWidth={strokeWidth}
+              />
+            </>
+          );
 
-    case "smiley":
-      return (
-        <>
-          <circle
-            cx={adjustedWidth / 2}
-            cy={adjustedHeight / 2}
-            r={(Math.min(adjustedWidth, adjustedHeight) - strokeWidth) / 2}
-            fill="transparent"
-            stroke={shape.color}
-            strokeWidth={strokeWidth}
-          />
-          <circle
-            cx={adjustedWidth * 0.35}
-            cy={adjustedHeight * 0.4}
-            r={strokeWidth}
-            fill={shape.color}
-          />
-          <circle
-            cx={adjustedWidth * 0.65}
-            cy={adjustedHeight * 0.4}
-            r={strokeWidth}
-            fill={shape.color}
-          />
-          <path
-            d={`M${adjustedWidth * 0.35},${adjustedHeight * 0.65} Q${adjustedWidth / 2},${adjustedHeight * 0.8} ${adjustedWidth * 0.65},${adjustedHeight * 0.65}`}
-            fill="transparent"
-            stroke={shape.color}
-            strokeWidth={strokeWidth}
-          />
-        </>
-      );
+        case "smiley":
+          return (
+            <>
+              <circle
+                cx={adjustedWidth / 2}
+                cy={adjustedHeight / 2}
+                r={(Math.min(adjustedWidth, adjustedHeight) - strokeWidth) / 2}
+                fill="transparent"
+                stroke={shape.color}
+                strokeWidth={strokeWidth}
+              />
+              <circle
+                cx={adjustedWidth * 0.35}
+                cy={adjustedHeight * 0.4}
+                r={strokeWidth}
+                fill={shape.color}
+              />
+              <circle
+                cx={adjustedWidth * 0.65}
+                cy={adjustedHeight * 0.4}
+                r={strokeWidth}
+                fill={shape.color}
+              />
+              <path
+                d={`M${adjustedWidth * 0.35},${adjustedHeight * 0.65} Q${adjustedWidth / 2},${adjustedHeight * 0.8} ${adjustedWidth * 0.65},${adjustedHeight * 0.65}`}
+                fill="transparent"
+                stroke={shape.color}
+                strokeWidth={strokeWidth}
+              />
+            </>
+          );
 
-    case "cloud":
-      const cloudPath = `
+        case "cloud":
+          const cloudPath = `
         M ${adjustedWidth * 0.25},${adjustedHeight * 0.6}
         C ${adjustedWidth * 0.2},${adjustedHeight * 0.5}, ${adjustedWidth * 0.3},${adjustedHeight * 0.4}, ${adjustedWidth * 0.4},${adjustedHeight * 0.5}
         C ${adjustedWidth * 0.5},${adjustedHeight * 0.3}, ${adjustedWidth * 0.7},${adjustedHeight * 0.4}, ${adjustedWidth * 0.65},${adjustedHeight * 0.6}
         Z
       `;
-      return (
-        <path
-          d={cloudPath}
-          fill="transparent"
-          stroke={shape.color}
-          strokeWidth={strokeWidth}
-        />
-      );
+          return (
+            <path
+              d={cloudPath}
+              fill="transparent"
+              stroke={shape.color}
+              strokeWidth={strokeWidth}
+            />
+          );
 
-    default:
-   return null;
-  }
-};
+        default:
+          return null;
+      }
+    };
 
 
     return (
       <div
         data-shape-id={shape.id}
-        className={`absolute transition-all duration-200 ${
-          activeShapeId === shape.id
-            ? "z-30 ring-2 ringpurple-500"
+        className={`absolute transition-all duration-200 ${activeShapeId === shape.id
+            ? "z-30 ring-2 purple-500"
             : "z-20"
-        }`}
+          }`}
         style={{
           left: `${adjustedX}px`,
           top: `${adjustedY}px`,
@@ -1714,96 +1723,228 @@ const Canvas: React.FC<CanvasProps> = ({
   /**
    * Enhanced shape drawing function with support for all shapes
    */
-  const drawElement = useCallback(
-    (element: WhiteboardElement) => {
-      if (
-        !contentContext ||
-        !element ||
-        element.type === "stickyNote" ||
-        element.type === "text"
-      )
-        return;
+const drawElement = useCallback(
+  (element: WhiteboardElement) => {
+    if (
+      !contentContext ||
+      !element ||
+      element.type === "stickyNote" ||
+      element.type === "text"
+    )
+      return;
 
-      // Handle path elements (pen, eraser, highlighter)
-      if (
-        element.type === "path" &&
-        (element as PathElement).points?.length > 1
-      ) {
-        const path = element as PathElement;
-        contentContext.beginPath();
-        contentContext.moveTo(path.points[0].x, path.points[0].y);
-        contentContext.strokeStyle = path.color;
-        contentContext.lineWidth = path.width / zoomLevel;
+    // Handle path elements
+    if (
+      element.type === "path" &&
+      (element as PathElement).points?.length > 1
+    ) {
+      const path = element as PathElement;
+      contentContext.beginPath();
+      contentContext.moveTo(path.points[0].x, path.points[0].y);
+      contentContext.strokeStyle = path.color;
+      contentContext.lineWidth = path.width / zoomLevel;
 
-        if (path.tool === "eraser") {
-          contentContext.globalCompositeOperation = "destination-out";
-        } else if (path.tool === "highlighter") {
-          contentContext.globalCompositeOperation = "multiply";
-          contentContext.globalAlpha = 0.5;
-        } else {
-          contentContext.globalCompositeOperation = "source-over";
-          contentContext.globalAlpha = 1.0;
-        }
-
-        for (let i = 1; i < path.points.length; i++) {
-          contentContext.lineTo(path.points[i].x, path.points[i].y);
-        }
-        contentContext.stroke();
+      if (path.tool === "eraser") {
+        contentContext.globalCompositeOperation = "destination-out";
+      } else if (path.tool === "highlighter") {
+        contentContext.globalCompositeOperation = "multiply";
+        contentContext.globalAlpha = 0.5;
+      } else {
         contentContext.globalCompositeOperation = "source-over";
         contentContext.globalAlpha = 1.0;
       }
-      // Handle shape elements
-      else if (element.type !== "path") {
-        const shape = element as ShapeElement;
-        contentContext.beginPath();
-        contentContext.strokeStyle = shape.color;
-        contentContext.lineWidth = shape.lineWidth / zoomLevel;
-        contentContext.fillStyle = "transparent";
 
-        const x = shape.x;
-        const y = shape.y;
-        const width = shape.width;
-        const height = shape.height;
-
-        switch (shape.type) {
-          case "rectangle":
-            contentContext.rect(x, y, width, height);
-            break;
-
-          case "circle":
-            contentContext.ellipse(
-              x + width / 2,
-              y + height / 2,
-              Math.abs(width / 2),
-              Math.abs(height / 2),
-              0,
-              0,
-              Math.PI * 2
-            );
-            break;
-
-          case "line":
-            contentContext.moveTo(x, y);
-            contentContext.lineTo(x + width, y + height);
-            break;
-
-          case "triangle":
-            contentContext.moveTo(x + width / 2, y);
-            contentContext.lineTo(x, y + height);
-            contentContext.lineTo(x + width, y + height);
-            contentContext.closePath();
-            break;
-
-          default:
-            contentContext.rect(x, y, width, height);
-            break;
-        }
-
-        contentContext.stroke();
+      for (let i = 1; i < path.points.length; i++) {
+        contentContext.lineTo(path.points[i].x, path.points[i].y);
       }
-    },
-    [contentContext, zoomLevel]
-  );
+      contentContext.stroke();
+      contentContext.globalCompositeOperation = "source-over";
+      contentContext.globalAlpha = 1.0;
+    }
+
+    // Handle shape elements
+    else if (element.type !== "path") {
+      const shape = element as ShapeElement;
+      contentContext.beginPath();
+      contentContext.strokeStyle = shape.color;
+      contentContext.lineWidth = shape.lineWidth / zoomLevel;
+      contentContext.fillStyle = "transparent";
+
+      const x = shape.x;
+      const y = shape.y;
+      const width = shape.width;
+      const height = shape.height;
+
+      const cx = x + width / 2;
+      const cy = y + height / 2;
+      const minDim = Math.min(width, height);
+
+      switch (shape.type) {
+        case "rectangle":
+          contentContext.rect(x, y, width, height);
+          break;
+
+        case "circle":
+          contentContext.ellipse(cx, cy, width / 2, height / 2, 0, 0, Math.PI * 2);
+          break;
+
+        case "line":
+          contentContext.moveTo(x, y);
+          contentContext.lineTo(x + width, y + height);
+          break;
+
+        case "triangle":
+          contentContext.moveTo(cx, y);
+          contentContext.lineTo(x, y + height);
+          contentContext.lineTo(x + width, y + height);
+          contentContext.closePath();
+          break;
+
+        case "diamond":
+          contentContext.moveTo(cx, y);
+          contentContext.lineTo(x + width, cy);
+          contentContext.lineTo(cx, y + height);
+          contentContext.lineTo(x, cy);
+          contentContext.closePath();
+          break;
+
+        case "star":
+          const outerRadius = minDim / 2;
+          const innerRadius = outerRadius / 2.5;
+          for (let i = 0; i < 10; i++) {
+            const angle = (Math.PI / 5) * i - Math.PI / 2;
+            const r = i % 2 === 0 ? outerRadius : innerRadius;
+            const px = cx + r * Math.cos(angle);
+            const py = cy + r * Math.sin(angle);
+            if (i === 0) contentContext.moveTo(px, py);
+            else contentContext.lineTo(px, py);
+          }
+          contentContext.closePath();
+          break;
+
+        case "arrowUp":
+          contentContext.moveTo(cx, y);
+          contentContext.lineTo(x + width * 0.4, y + height * 0.35);
+          contentContext.lineTo(x + width * 0.47, y + height * 0.35);
+          contentContext.lineTo(x + width * 0.47, y + height);
+          contentContext.lineTo(x + width * 0.53, y + height);
+          contentContext.lineTo(x + width * 0.53, y + height * 0.35);
+          contentContext.lineTo(x + width * 0.6, y + height * 0.35);
+          contentContext.closePath();
+          break;
+
+        case "arrowDown":
+          contentContext.moveTo(cx, y + height);
+          contentContext.lineTo(x + width * 0.4, y + height * 0.65);
+          contentContext.lineTo(x + width * 0.47, y + height * 0.65);
+          contentContext.lineTo(x + width * 0.47, y);
+          contentContext.lineTo(x + width * 0.53, y);
+          contentContext.lineTo(x + width * 0.53, y + height * 0.65);
+          contentContext.lineTo(x + width * 0.6, y + height * 0.65);
+          contentContext.closePath();
+          break;
+
+        case "arrowLeft":
+          contentContext.moveTo(x, cy);
+          contentContext.lineTo(x + width * 0.35, y + height * 0.4);
+          contentContext.lineTo(x + width * 0.35, y + height * 0.47);
+          contentContext.lineTo(x + width, y + height * 0.47);
+          contentContext.lineTo(x + width, y + height * 0.53);
+          contentContext.lineTo(x + width * 0.35, y + height * 0.53);
+          contentContext.lineTo(x + width * 0.35, y + height * 0.6);
+          contentContext.closePath();
+          break;
+
+        case "arrowRight":
+          contentContext.moveTo(x + width, cy);
+          contentContext.lineTo(x + width * 0.65, y + height * 0.4);
+          contentContext.lineTo(x + width * 0.65, y + height * 0.47);
+          contentContext.lineTo(x, y + height * 0.47);
+          contentContext.lineTo(x, y + height * 0.53);
+          contentContext.lineTo(x + width * 0.65, y + height * 0.53);
+          contentContext.lineTo(x + width * 0.65, y + height * 0.6);
+          contentContext.closePath();
+          break;
+
+        case "heart":
+          contentContext.moveTo(cx, y + height);
+          contentContext.bezierCurveTo(
+            x + width * 0.8, y + height * 0.75,
+            x + width, y + height * 0.4,
+            cx, y + height * 0.2
+          );
+          contentContext.bezierCurveTo(
+            x, y + height * 0.4,
+            x + width * 0.2, y + height * 0.75,
+            cx, y + height
+          );
+          contentContext.closePath();
+          break;
+
+        case "hexagon":
+          for (let i = 0; i < 6; i++) {
+            const angle = (Math.PI / 3) * i - Math.PI / 2;
+            const px = cx + (minDim / 2) * Math.cos(angle);
+            const py = cy + (minDim / 2) * Math.sin(angle);
+            if (i === 0) contentContext.moveTo(px, py);
+            else contentContext.lineTo(px, py);
+          }
+          contentContext.closePath();
+          break;
+
+        case "pentagon":
+        case "heptagon":
+        case "octagon":
+          const sides = shape.type === "pentagon" ? 5 : shape.type === "heptagon" ? 7 : 8;
+          for (let i = 0; i < sides; i++) {
+            const angle = (2 * Math.PI * i) / sides - Math.PI / 2;
+            const px = cx + (minDim / 2) * Math.cos(angle);
+            const py = cy + (minDim / 2) * Math.sin(angle);
+            if (i === 0) contentContext.moveTo(px, py);
+            else contentContext.lineTo(px, py);
+          }
+          contentContext.closePath();
+          break;
+
+        case "cross":
+          const arm = minDim / 3;
+          const offset = arm / 3;
+          contentContext.rect(cx - offset / 2, cy - arm / 2, offset, arm);
+          contentContext.rect(cx - arm / 2, cy - offset / 2, arm, offset);
+          break;
+
+        // case "smiley":
+        //   contentContext.arc(cx, cy, minDim / 2 - 2, 0, Math.PI * 2); // Face
+        //   contentContext.moveTo(cx - minDim * 0.15, cy - minDim * 0.1);
+        //   contentContext.arc(cx - minDim * 0.15, cy - minDim * 0.1, 2, 0, Math.PI * 2); // Eye 1
+        //   contentContext.moveTo(cx + minDim * 0.15, cy - minDim * 0.1);
+        //   contentContext.arc(cx + minDim * 0.15, cy - minDim * 0.1, 2, 0, Math.PI * 2); // Eye 2
+        //   contentContext.moveTo(cx - minDim * 0.15, cy + minDim * 0.15);
+        //   contentContext.quadraticCurveTo(cx, cy + minDim * 0.3, cx + minDim * 0.15, cy + minDim * 0.15); // Smile
+        //   break;
+
+        case "cloud":
+          contentContext.moveTo(x + width * 0.25, y + height * 0.6);
+          contentContext.bezierCurveTo(
+            x + width * 0.2, y + height * 0.5,
+            x + width * 0.3, y + height * 0.4,
+            x + width * 0.4, y + height * 0.5
+          );
+          contentContext.bezierCurveTo(
+            x + width * 0.5, y + height * 0.3,
+            x + width * 0.7, y + height * 0.4,
+            x + width * 0.65, y + height * 0.6
+          );
+          contentContext.closePath();
+          break;
+      }
+
+      contentContext.stroke();
+    }
+  },
+  [contentContext, zoomLevel]
+);
+
 
   /**
    * Draw grid background with proper scaling and panning

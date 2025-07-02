@@ -48,7 +48,7 @@ useEffect(() => {
             const userData = await response.json();
             setTheme(userData.preferences?.theme || "system");
           } else {
-            console.error("Failed to fetch user profile");
+            // console.error("Failed to fetch user profile");
             setTheme("system");
           }
         } catch (err) {

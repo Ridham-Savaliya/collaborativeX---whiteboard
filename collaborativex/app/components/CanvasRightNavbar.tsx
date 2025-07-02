@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { User, Home, Save, Download } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { jwtDecode } from "jwt-decode";
 
 interface RightNavBarProps {
   saveWhiteboard: () => void;
@@ -36,6 +37,20 @@ const RightNavBar: React.FC<RightNavBarProps> = ({ saveWhiteboard, exportAsPDF, 
     saveWhiteboard();
     setIsDirty(false); // Changes are saved now
   };
+
+
+  const token:any = localStorage.getItem('token');
+  let decode:any = '';
+  if(token)
+  {
+
+       decode = jwtDecode<{name:string}>(token)
+  }
+
+  
+
+
+  
 
   const handleExport = () => {
     exportAsPNG();
@@ -99,7 +114,7 @@ const RightNavBar: React.FC<RightNavBarProps> = ({ saveWhiteboard, exportAsPDF, 
           <div className="absolute right-0 mt-2 w-48 bg-gray-800/90 backdrop-blur-xl text-white rounded-md shadow-lg border border-purple-500/20">
             <div className="p-4">
               <p className="text-sm font-medium">User Name</p>
-              <p className="text-xs text-gray-300">user@example.com</p>
+              <p className="text-xs text-gray-300">{decode.name}</p>
             </div>
             <div className="border-t border-purple-500/20">
               <button

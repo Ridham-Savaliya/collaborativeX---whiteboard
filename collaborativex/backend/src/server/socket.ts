@@ -67,7 +67,7 @@ export const setupSocket = (io: Server) => {
 
         if (!isOwner && !isCollaborator) {
           console.log('User not authorized:', email, 'Owner:', whiteboard.owner.toString(), 'Collaborators:', whiteboard.collaborators);
-          socket.emit('error', { message: 'Unauthorized access to whiteboard!' });
+          socket.emit('error_unauthorized', { message: 'Unauthorized access to whiteboard!' });
           return;
         }
 
