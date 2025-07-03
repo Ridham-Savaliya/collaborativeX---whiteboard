@@ -29,6 +29,8 @@ export async function POST(req: NextRequest) {
         process.env.NEXTAUTH_SECRET!,
         { expiresIn: '1h' })
 
+        // console.log(process.env.NEXTAUTH_SECRET)
+
     return NextResponse.json({ token, message: "Login successfully!" }, { status: 200 });
 
 }

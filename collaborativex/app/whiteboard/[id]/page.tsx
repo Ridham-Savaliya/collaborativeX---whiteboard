@@ -8,6 +8,10 @@ import { log } from "console";
 import withAuth from "@/app/api/_lib/withAuth";
 import { useGlobalLoader } from "@/app/hooks/useGlobalLoader";
 import { useRouter } from "next/navigation";
+import axios from "axios";
+import { useParams } from "next/navigation";
+
+
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -16,7 +20,7 @@ interface PageProps {
 const WhiteboardPage: React.FC<PageProps> = ({ params }) => {
   // Unwrap the params promise using React.use()
   const { id } = React.use(params);
-
+  const router = useRouter()
   console.log("Whiteboard ID:", id);
 
 
@@ -56,7 +60,7 @@ const WhiteboardPage: React.FC<PageProps> = ({ params }) => {
   });
 
 
-  
+
 
   const [history, setHistory] = useState<
     { elements: WhiteboardElement[]; stickyNotes: StickyNote[] }[]
@@ -65,10 +69,18 @@ const WhiteboardPage: React.FC<PageProps> = ({ params }) => {
 
   const canUndo = historyIndex > 0;
   const canRedo = historyIndex < history.length - 1;
+  const token = localStorage.getItem("token"); // Get the JWT token
+  let inviteeEmail = new URLSearchParams(window.location.search).get('collaborator');
+  const [ShowIsNotRegisteredModel, setShowIsNotRegisteredModel] = useState(false)
+  const [ShowIsNotInvitedModel, setShowIsNotInvitedModel] = useState(false)
+  const Wid = useParams();
+  const WhiteboardId = Wid.id;
+  console.log(Wid.id)
+  console.log(inviteeEmail)
 
   useEffect(() => {
     const startTime = Date.now(); // Track when user opened the page
-    const token = localStorage.getItem("token"); // Get the JWT token
+
 
     const handleBeforeUnload = () => {
       const endTime = Date.now();
@@ -95,6 +107,75 @@ const WhiteboardPage: React.FC<PageProps> = ({ params }) => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
   }, []);
+
+  // check whether the collaborator is registered or invited!
+
+
+  useEffect(() => {
+
+    const CheckCollaborators = async () => {
+      try {
+        const res = await axios.post(
+          "/api/whiteboard/collaborate",
+          {
+            WhiteboardId,
+            email: inviteeEmail
+          },
+          {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`
+            }
+          }
+        );
+
+        const data = res.data;
+
+        if (data.success === "pass") {
+          console.log(data.message);
+
+        }
+      } catch (error: any) {
+        const status = error?.response?.status;
+        const reason = error?.response?.data?.reason;
+        const message = error?.response?.data?.message;
+
+        if (status === 401 && reason === "Not_Registered") {
+          console.log("❌ Not registered:", message);
+          // 👉 Redirect to register page or show "Please sign up" message
+          setShowIsNotRegisteredModel(true)
+
+          setTimeout(() => {
+            router.push(
+              `/register?postRegister=/whiteboard/${WhiteboardId}?collaborator=${inviteeEmail}`
+            );
+          }, 4500);
+
+        }
+        else if (status === 403 && reason === "Not_Invited") {
+          console.log("❌ Not invited:", message);
+
+          // 👉 Show "You are not invited to this whiteboard" or disable access
+          setShowIsNotInvitedModel(true)
+          setTimeout(() => {
+            router.push(
+              `/`
+            );
+          },50000);
+        }
+        else {
+          console.warn("⚠️ Unexpected error:", message || error.message);
+          setShowIsNotInvitedModel(false)
+          setShowIsNotRegisteredModel(false)
+        }
+      }
+    };
+
+    if (inviteeEmail && WhiteboardId) {
+      CheckCollaborators();
+    }
+  }, []);
+
 
   useEffect(() => {
     if (window.innerWidth < 768) {
@@ -160,6 +241,43 @@ const WhiteboardPage: React.FC<PageProps> = ({ params }) => {
 
   return (
     <div className="flex h-screen overflow-hidden  font-sans">
+
+{ShowIsNotRegisteredModel && (
+  <div className="absolute inset-0 bg-gradient-to-br  from-purple-600 to-fuchsia-600 text-white flex flex-col justify-center items-center z-50 p-4">
+    <h1 className="text-3xl md:text-4xl font-extrabold mb-4 text-center">
+      You’re not registered with us😊
+    </h1>
+    <p className="text-lg md:text-xl text-center max-w-md">
+      Please complete your registration to collaborate on this whiteboard. You’ll be redirected shortly. ❤️
+    </p>
+    <span className="mt-6 text-sm text-white/80">— CollaborativeX</span>
+  </div>
+)}
+
+{ShowIsNotInvitedModel && (
+  <div className="fixed inset-0 bg-gradient-to-br from-purple-700 to-indigo-600 text-white flex flex-col justify-center items-center z-50 p-4">
+    <div className="flex items-center gap-2 mb-4 animate-pulse">
+      <h1 className="text-4xl font-bold">Collaborative</h1>
+      <img
+        src="https://res.cloudinary.com/dzrzfsu9u/image/upload/v1748849092/promotions/v2vqh2xjmdemfqsqnhpb.png"
+        alt="CollaborativeX Logo"
+        className="w-12 h-12 rounded-md shadow-lg"
+      />
+    </div>
+    <p className="text-2xl text-center font-semibold mb-2">
+      You are not invited to this whiteboard😊.
+    </p>
+    <p className="text-lg text-center mb-4 max-w-md">
+      Please contact the whiteboard owner if you believe this is a mistake.
+    </p>
+    <p className="text-sm text-white/80 italic">
+      You will be redirected to the homepage shortly...
+    </p>
+    <button className="mt-2" onClick={() => router.push("/")}><span className="font-bold hover:text-purple-200">Click here</span>  if you don't want to wait...</button>
+  </div>
+)}
+
+
       <Sidebar
         setColor={setStrokeColor}
         setLineWidth={setLineWidth}

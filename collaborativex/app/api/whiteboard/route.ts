@@ -75,11 +75,16 @@ export async function POST(req: NextRequest, res: NextResponse) {
     await userRecord.save();
   }
 
+  collaborators.forEach((email:string) => {
 
+    const invitationLink =  `http://localhost:3000/whiteboard/${newWhiteboard._id}?collaborator=${email}`
 
+    console.log(invitationLink)
+
+    
   if(newWhiteboard.collaborators)
   {
-    sendMail(collaborators,'CollaborativeX has invited you to collaborate on Whiteboard',`
+    sendMail(email,'CollaborativeX has invited you to collaborate on Whiteboard',`
      <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -119,7 +124,7 @@ export async function POST(req: NextRequest, res: NextResponse) {
               <table align="center" cellpadding="0" cellspacing="0" style="margin:24px 0;">
                 <tr>
                   <td align="center" style="border-radius:20px;" bgcolor="#9e34f7">
-                    <a href=${`http://localhost:3000/whiteboard/${newWhiteboard._id}`} target="_blank" style="display:inline-block;padding:16px 32px;font-family:sans-serif;font-size:16px;color:#ffffff;font-weight:600;text-decoration:none;border-radius:20px;">
+                    <a href="${invitationLink}" target="_blank" style="display:inline-block;padding:16px 32px;font-family:sans-serif;font-size:16px;color:#ffffff;font-weight:600;text-decoration:none;border-radius:20px;">
                       Join the Creative Session
                     </a>
                   </td>
@@ -150,7 +155,7 @@ export async function POST(req: NextRequest, res: NextResponse) {
               <a href="#" style="color:#8b5cf6;text-decoration:none;margin:0 8px;">Community</a>|
               <a href="#" style="color:#8b5cf6;text-decoration:none;margin:0 8px;">Privacy Policy</a>|
               <a href="#" style="color:#8b5cf6;text-decoration:none;">Unsubscribe</a>
-              <p style="margin-top:20px;color:#9ca3af;">© 2025 collaborativeX. Made with ❤️ for creators worldwide.</p>
+              <p style="margin-top:20px;color:#9ca3af;">© 2025 collaborativeX. Made with ❤️ for creators worldwide by Ridham Savaliya.</p>
             </td>
           </tr>
 
@@ -164,10 +169,9 @@ export async function POST(req: NextRequest, res: NextResponse) {
       `)
   }
 
+  });
 
-
-
-  return NextResponse.json({ whiteboard: newWhiteboard }, { status: 201 });
+    return NextResponse.json({ whiteboard: newWhiteboard }, { status: 201 });
 }
 
 

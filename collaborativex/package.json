@@ -26,7 +26,7 @@
     "konva": "^9.3.20",
     "lodash": "^4.17.21",
     "lucide-react": "^0.507.0",
-    "@collaborativex/models": "file:../models",
+
     "mongoose": "^8.15.1",
     "multer": "^2.0.1",
     "next": "15.3.1",

@@ -110,7 +110,7 @@ const CanvasToolbar: React.FC<ToolbarProps> = ({
 
   return (
     <>
-      <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 flex items-center justify-center">
+      <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-40 flex items-center justify-center">
         <div className="relative">
           {activeToolGroup && renderToolGroup(activeToolGroup)}
           <div
