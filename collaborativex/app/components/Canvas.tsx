@@ -1681,9 +1681,9 @@ const Canvas: React.FC<CanvasProps> = ({
       }, 3000);
     });
 
-    socket.on('error', (error: { message: string; code?: string }) => {
-      console.error('Socket error:', error);
-      addError(error.message, error.code);
+    socket.on('error_user_not_found', (error: { message: string; code?: string }) => {
+      // console.error('Socket error:', error);
+      // addError(error.message, error.code);
     });
 
     return () => {

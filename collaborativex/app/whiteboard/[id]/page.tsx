@@ -22,7 +22,7 @@ const WhiteboardPage: React.FC<PageProps> = ({ params }) => {
   const { id } = React.use(params);
   const router = useRouter()
   console.log("Whiteboard ID:", id);
-
+  const { navigateWithLoader } = useGlobalLoader();
 
   const [strokeColor, setStrokeColor] = useState<string>("#000000");
   const [lineWidth, setLineWidth] = useState<number>(5);
@@ -78,40 +78,7 @@ const WhiteboardPage: React.FC<PageProps> = ({ params }) => {
   console.log(Wid.id)
   console.log(inviteeEmail)
 
-  useEffect(() => {
-    const startTime = Date.now(); // Track when user opened the page
-
-
-    const handleBeforeUnload = () => {
-      const endTime = Date.now();
-      const durationSeconds = Math.floor((endTime - startTime) / 1000);
-
-      if (token) {
-        fetch("/api/user/profile/timespent", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`, // ✅ Auth header
-          },
-          body: JSON.stringify({ sessionDurationSeconds: durationSeconds }),
-          keepalive: true, // ✅ Ensures it still sends even if tab is closed
-        });
-      }
-    };
-
-    // ✅ Attach event before window unloads
-    window.addEventListener("beforeunload", handleBeforeUnload);
-
-    // ✅ Cleanup on component unmount
-    return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-    };
-  }, []);
-
-  // check whether the collaborator is registered or invited!
-
-
-  useEffect(() => {
+useEffect(() => {
 
     const CheckCollaborators = async () => {
       try {
@@ -161,7 +128,7 @@ const WhiteboardPage: React.FC<PageProps> = ({ params }) => {
             router.push(
               `/`
             );
-          },50000);
+          },5000);
         }
         else {
           console.warn("⚠️ Unexpected error:", message || error.message);
@@ -175,6 +142,43 @@ const WhiteboardPage: React.FC<PageProps> = ({ params }) => {
       CheckCollaborators();
     }
   }, []);
+
+
+
+  useEffect(() => {
+    const startTime = Date.now(); // Track when user opened the page
+
+
+    const handleBeforeUnload = () => {
+      const endTime = Date.now();
+      const durationSeconds = Math.floor((endTime - startTime) / 1000);
+
+      if (token) {
+        fetch("/api/user/profile/timespent", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`, // ✅ Auth header
+          },
+          body: JSON.stringify({ sessionDurationSeconds: durationSeconds }),
+          keepalive: true, // ✅ Ensures it still sends even if tab is closed
+        });
+      }
+    };
+
+    // ✅ Attach event before window unloads
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    // ✅ Cleanup on component unmount
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, []);
+
+  // check whether the collaborator is registered or invited!
+
+
+  
 
 
   useEffect(() => {
@@ -273,7 +277,7 @@ const WhiteboardPage: React.FC<PageProps> = ({ params }) => {
     <p className="text-sm text-white/80 italic">
       You will be redirected to the homepage shortly...
     </p>
-    <button className="mt-2" onClick={() => router.push("/")}><span className="font-bold hover:text-purple-200">Click here</span>  if you don't want to wait...</button>
+    <button className="mt-2" onClick={()=> navigateWithLoader(router,"/")}><span className="font-bold hover:text-purple-200">Click here</span>  if you don't want to wait...</button>
   </div>
 )}
 

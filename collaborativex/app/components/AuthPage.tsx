@@ -41,10 +41,18 @@ const AuthPage = () => {
     setOtpDetails((prev) => ({ ...prev, [name]: value }));
   };
 
+  useEffect(() => {
+
+    
+  }, [])
+
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     const { email, password, confirmPassword, name } = formData;
+    const postRegister = new URLSearchParams(window.location.search).get('postRegister');
+    console.log(postRegister)
 
     if (password !== confirmPassword) {
       toast.error("Passwords do not match");
@@ -60,8 +68,18 @@ const AuthPage = () => {
       });
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("userId", res.data.user.id);
+
+
+
+      if (postRegister) {
+        navigateWithLoader(router, postRegister);
+      }
+      else {
+        navigateWithLoader(router, '/onboarding');
+      }
+
       toast.success("Registered successfully!");
-      navigateWithLoader(router, "/onboarding"); //
+
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Registration failed");
     } finally {
@@ -78,7 +96,7 @@ const AuthPage = () => {
       const res = await axios.post("/api/auth/login", { email, password });
       localStorage.setItem("token", res.data.token);
       toast.success(res.data.message);
-    navigateWithLoader(router, "/onboarding"); // 
+      navigateWithLoader(router, "/onboarding"); // 
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Login failed");
     } finally {
@@ -248,8 +266,8 @@ const AuthPage = () => {
                   ? "Logging in..."
                   : "Registering..."
                 : isLogin
-                ? "Sign In"
-                : "Sign Up"}
+                  ? "Sign In"
+                  : "Sign Up"}
             </button>
           </form>
 
@@ -359,8 +377,8 @@ const AuthPage = () => {
                 {isLoading
                   ? "Processing..."
                   : step === 1
-                  ? "Send OTP"
-                  : "Reset Password"}
+                    ? "Send OTP"
+                    : "Reset Password"}
               </button>
             </form>
           </div>

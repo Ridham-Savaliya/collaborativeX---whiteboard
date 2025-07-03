@@ -73,7 +73,7 @@ export const setupSocket = (io: Server) => {
 
         const user = await User.findById(userId).select('name');
         if (!user) {
-          socket.emit('error', { message: 'User not found' });
+          socket.emit('error_user_not_found', { message: 'User not found' });
           return;
         }
 
