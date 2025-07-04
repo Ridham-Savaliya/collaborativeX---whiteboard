@@ -2,6 +2,8 @@
 import React from 'react'
 import { useParams } from 'next/navigation'
 
+    export const dynamic = 'force-dynamic'
+
 const page = () => {
 const params = useParams()
   return (
