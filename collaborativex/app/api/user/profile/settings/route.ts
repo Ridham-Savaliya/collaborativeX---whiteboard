@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/app/api/_lib/db";
-import User from "@/models/User";
+import User from "@/app/api/models/User";
 import { authenticate } from "@/app/api/_lib/authMiddleware";
 
 
