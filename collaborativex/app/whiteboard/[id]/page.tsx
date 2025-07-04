@@ -13,13 +13,15 @@ import { useParams } from "next/navigation";
 
 
 
-interface PageProps {
-  params: Promise<{ id: string }>;
-}
+type PageProps = {
+  params: {
+    id: string;
+  };
+};
 
 const WhiteboardPage: React.FC<PageProps> = ({ params }) => {
-  // Unwrap the params promise using React.use()
-  const { id } = React.use(params);
+
+  const { id } = params;
   const router = useRouter()
   console.log("Whiteboard ID:", id);
   const { navigateWithLoader } = useGlobalLoader();
