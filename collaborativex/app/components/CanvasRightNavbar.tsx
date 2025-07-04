@@ -135,12 +135,13 @@ const handleInvite = async (e: any) => {
 
           <form
             action="post"
-
+            onSubmit={handleInvite}
             className="w-full flex flex-col gap-3"
           >
             <div className="w-full">
               <textarea
               value={inviteeData}
+              required
                 placeholder="Enter emails separated by commas"
                 onChange={(e) => setinviteeData(e.target.value)}
                 className="w-full h-24 p-3 rounded-md bg-white/20 text-white placeholder-white/70 font-mono resize-none outline-none focus:ring-2 focus:ring-white/50 backdrop-blur-lg transition-all duration-300"
@@ -149,7 +150,7 @@ const handleInvite = async (e: any) => {
 
             <input
               type="submit"
-              onClick={handleInvite}
+
               value={isInviting ? "sending invite..." : "🚀 Send Invite" }
               className="cursor-pointer w-full bg-white/20 border border-white text-white font-bold py-2 px-4 rounded-md transition-all duration-300 ease-in-out hover:scale-105 hover:shadow-xl hover:bg-white/30 backdrop-blur-md"
             />
