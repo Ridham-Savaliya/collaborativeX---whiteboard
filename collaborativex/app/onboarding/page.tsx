@@ -53,6 +53,8 @@ const Onboarding = () => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+
+    console.log("this is checking log for vercel")
   useEffect(() => {
     const storedToken = localStorage.getItem("token");
     if (storedToken) {
