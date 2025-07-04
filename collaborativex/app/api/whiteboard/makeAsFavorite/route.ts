@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/app/api/_lib/db";
-import Whiteboard from "@/models/Whiteboard";
+import Whiteboard from "../../models/Whiteboard";
 import { authenticate } from "../../_lib/authMiddleware";
 
 export async function PATCH(req: NextRequest) {

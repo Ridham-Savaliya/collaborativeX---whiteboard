@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { Whiteboard,User } from "@/models";
+import Whiteboard from "../../models/Whiteboard";
+import User from "../../models/User";
 import jwt from 'jsonwebtoken'
 import connectDB from "@/app/api/_lib/db";
 

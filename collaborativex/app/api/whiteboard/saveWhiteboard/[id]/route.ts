@@ -1,4 +1,4 @@
-import Whiteboard from '@/models/Whiteboard';
+import Whiteboard from '@/app/api/models/Whiteboard';
 import connectDB from '../../../_lib/db';
 import { authenticate } from '../../../_lib/authMiddleware';
 import { NextResponse, NextRequest } from 'next/server';
