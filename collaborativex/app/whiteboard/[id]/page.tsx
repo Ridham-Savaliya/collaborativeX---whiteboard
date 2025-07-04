@@ -76,6 +76,7 @@ const WhiteboardPage: React.FC = () => {
   const WhiteboardId = Wid.id;
   console.log(Wid.id)
   console.log(inviteeEmail)
+  console.log("🔄 Build version: 470a846")
 
 useEffect(() => {
 
