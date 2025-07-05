@@ -6,6 +6,7 @@ import { useRouter, usePathname } from "next/navigation";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { useGlobalLoader } from "../hooks/useGlobalLoader";
+import { useToast } from "../utills/ToastProvider";
 
 const AuthPage = () => {
   const router = useRouter();
@@ -17,6 +18,7 @@ const AuthPage = () => {
   const [isForgetPwd, setIsForgetPwd] = useState(false);
   const [otpId, setOtpId] = useState(null);
   const [step, setStep] = useState(1);
+  const {showToast} = useToast()
 
   const [formData, setFormData] = useState({
     email: "",
@@ -78,7 +80,8 @@ const AuthPage = () => {
         navigateWithLoader(router, '/onboarding');
       }
 
-      toast.success("Registered successfully!");
+      // toast.success("Registered successfully!");
+      showToast("Registered successfully!","error");
 
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Registration failed");
@@ -95,7 +98,9 @@ const AuthPage = () => {
     try {
       const res = await axios.post("/api/auth/login", { email, password });
       localStorage.setItem("token", res.data.token);
-      toast.success(res.data.message);
+      // toast.success(res.data.message);
+      showToast(res.data.message)
+      
       navigateWithLoader(router, "/onboarding"); // 
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Login failed");

@@ -6,6 +6,8 @@ import { LoaderProvider } from "./hooks/useGlobalLoader";
 import GlobalLoader from "./components/GlobalLoader";
 import { ThemeProvider } from "./context/ThemeContext";
 import I18nProvider from "./components/I18nProvider";
+import { ToastProvider } from "./utills/ToastProvider";
+
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -112,32 +114,36 @@ export default function RootLayout({
               },
             }),
           }}
-          
+
         />
         <link rel="icon" href="/logo.png" type="image/png" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <I18nProvider>
-        <ThemeProvider>
-          <LoaderProvider>
-            <GlobalLoader />
-            <ToastContainer
-              position="top-right"
-              autoClose={4000}
-              theme="dark" // Perfect for your UI
-              toastStyle={{
-                background: "#1e293b", // slate-800
-                color: "#e2e8f0", // gray-200
-                fontWeight: "bold",
-                borderLeft: "5px solid #8b8efb", // your brand accent
-              }}
-            />
 
-            {children}
-          </LoaderProvider>
-        </ThemeProvider>
+        <I18nProvider>
+          <ThemeProvider>
+            <LoaderProvider>
+              <GlobalLoader />
+              <ToastProvider>
+
+                <ToastContainer
+                  position="top-right"
+                  autoClose={4000}
+                  theme="dark" // Perfect for your UI
+                  toastStyle={{
+                    background: "#1e293b", // slate-800
+                    color: "#e2e8f0", // gray-200
+                    fontWeight: "bold",
+                    borderLeft: "5px solid #8b8efb", // your brand accent
+                  }}
+                />
+
+                {children}
+              </ToastProvider>
+            </LoaderProvider>
+          </ThemeProvider>
         </I18nProvider>
       </body>
     </html>

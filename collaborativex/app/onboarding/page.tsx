@@ -19,6 +19,7 @@ import {
 import { jwtDecode } from "jwt-decode";
 import withAuth from "../api/_lib/withAuth";
 import { useGlobalLoader } from "../hooks/useGlobalLoader";
+import { useToast } from "../utills/ToastProvider";
 
 interface Whiteboard {
   _id: string;
@@ -52,9 +53,9 @@ const Onboarding = () => {
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const {showToast} = useToast()
 
 
-    console.log("this is checking log for vercel")
   useEffect(() => {
     const storedToken = localStorage.getItem("token");
     if (storedToken) {
@@ -112,6 +113,7 @@ const Onboarding = () => {
       if (response.ok) {
         const data = await response.json();
         setWhiteboards(Array.isArray(data.whiteboards) ? data.whiteboards : []);
+        showToast("whiteboards loaded!","success")
       } else {
         console.error(t("errors.fetchWhiteboards"));
         setWhiteboards([]);
@@ -146,6 +148,7 @@ const Onboarding = () => {
         body: JSON.stringify({ whiteboardId: id }),
       });
       if (response.ok) {
+
         setWhiteboards(
           whiteboards.map((board) =>
             board._id === id
@@ -153,6 +156,7 @@ const Onboarding = () => {
               : board
           )
         );
+        showToast("you made it favorite!","success")
       }
     } catch (e) {
       console.error(t("errors.toggleFavorite"), e);
@@ -172,6 +176,7 @@ const Onboarding = () => {
         });
         if (response.ok) {
           setWhiteboards(whiteboards.filter((board) => board._id !== id));
+          showToast('you just deleted a whiteboard!',"success")
         }
       } catch (e) {
         console.error(t("errors.deleteWhiteboard"), e);
@@ -550,7 +555,9 @@ const Onboarding = () => {
               <div className="w-12 h-12 bg-gradient-to-br from-indigo-600 dark:from-indigo-400 to-purple-600 dark:to-purple-400 rounded-2xl flex items-center justify-center shadow-lg">
                 <span className="text-white font-bold text-xl">C</span>
               </div>
+           
               <div>
+
                 <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 dark:from-indigo-400 to-purple-600 dark:to-purple-400 bg-clip-text text-transparent">
                   {t("collaborativeX")}
                 </h1>

@@ -32,9 +32,7 @@ import {
   X
 } from "lucide-react";
 import { useParams } from "next/navigation";
-import dotenv from 'dotenv'
-dotenv.config();
-
+import { useToast } from "../utills/ToastProvider";
 // Socket Types
 interface UserPresence {
   email: string;
@@ -1252,8 +1250,8 @@ const ShapeComponent = memo(
       <div
         data-shape-id={shape.id}
         className={`absolute transition-all duration-200 ${activeShapeId === shape.id
-            ? "z-30 ring-2 purple-500"
-            : "z-20"
+          ? "z-30 ring-2 purple-500"
+          : "z-20"
           }`}
         style={{
           left: `${adjustedX}px`,
@@ -1374,10 +1372,7 @@ const Canvas: React.FC<CanvasProps> = ({
     x: number;
     y: number;
   } | null>(null);
-  const [toast, setToast] = useState<{
-    message: string;
-    type: "success" | "error" | "info";
-  } | null>(null);
+
 
   // Socket states
   const socketRef = useRef<Socket | null>(null);
@@ -1388,6 +1383,7 @@ const Canvas: React.FC<CanvasProps> = ({
   const [errors, setErrors] = useState<SocketError[]>([]);
   const latencyCheckRef = useRef<number | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const { showToast } = useToast()
 
   // Sticky note colors
   const stickyNoteColors = [
@@ -1482,6 +1478,7 @@ const Canvas: React.FC<CanvasProps> = ({
     // Connection event handlers
     socket.on('connect', () => {
       console.log('Socket connected:', socket.id);
+      showToast("Connected to collaborative session", "success")
       setConnectionState({
         status: 'connected',
         lastConnected: new Date(),
@@ -1494,7 +1491,7 @@ const Canvas: React.FC<CanvasProps> = ({
       measureLatency();
       const latencyInterval = setInterval(measureLatency, 30000);
 
-      setToast({ message: "Connected to collaborative session", type: "success" });
+
 
       return () => clearInterval(latencyInterval);
     });
@@ -1512,7 +1509,9 @@ const Canvas: React.FC<CanvasProps> = ({
         addError('Connection lost due to network issues', 'NETWORK_ERROR');
       }
 
-      setToast({ message: "Disconnected from collaborative session", type: "error" });
+
+
+      showToast("Disconnected from collaborative session", "error")
     });
 
     socket.on('connect_error', (error) => {
@@ -1534,7 +1533,8 @@ const Canvas: React.FC<CanvasProps> = ({
         reconnectAttempts: attemptNumber
       }));
       socket.emit('join_whiteboard', whiteboardId);
-      setToast({ message: "Reconnected to collaborative session", type: "success" });
+
+      showToast("Reconnected to collaborative session", "success")
     });
 
     socket.on('reconnect_attempt', (attemptNumber) => {
@@ -1574,10 +1574,12 @@ const Canvas: React.FC<CanvasProps> = ({
     socket.on('user_presence', (presence: UserPresence) => {
       console.log('User presence update:', presence);
       if (presence.joined) {
-        setToast({ message: `${presence.username} has joined whiteboard.`, type: "info" })
+
+        showToast(`${presence.username} has joined whiteboard.`, "success")
       }
       else {
-        setToast({ message: `${presence.username} has left whiteboard.`, type: "info" })
+
+        showToast(`${presence.username} has left whiteboard.`, "success")
       }
 
       setConnectedUsers(prev => {
@@ -1726,227 +1728,227 @@ const Canvas: React.FC<CanvasProps> = ({
   /**
    * Enhanced shape drawing function with support for all shapes
    */
-const drawElement = useCallback(
-  (element: WhiteboardElement) => {
-    if (
-      !contentContext ||
-      !element ||
-      element.type === "stickyNote" ||
-      element.type === "text"
-    )
-      return;
+  const drawElement = useCallback(
+    (element: WhiteboardElement) => {
+      if (
+        !contentContext ||
+        !element ||
+        element.type === "stickyNote" ||
+        element.type === "text"
+      )
+        return;
 
-    // Handle path elements
-    if (
-      element.type === "path" &&
-      (element as PathElement).points?.length > 1
-    ) {
-      const path = element as PathElement;
-      contentContext.beginPath();
-      contentContext.moveTo(path.points[0].x, path.points[0].y);
-      contentContext.strokeStyle = path.color;
-      contentContext.lineWidth = path.width / zoomLevel;
+      // Handle path elements
+      if (
+        element.type === "path" &&
+        (element as PathElement).points?.length > 1
+      ) {
+        const path = element as PathElement;
+        contentContext.beginPath();
+        contentContext.moveTo(path.points[0].x, path.points[0].y);
+        contentContext.strokeStyle = path.color;
+        contentContext.lineWidth = path.width / zoomLevel;
 
-      if (path.tool === "eraser") {
-        contentContext.globalCompositeOperation = "destination-out";
-      } else if (path.tool === "highlighter") {
-        contentContext.globalCompositeOperation = "multiply";
-        contentContext.globalAlpha = 0.5;
-      } else {
+        if (path.tool === "eraser") {
+          contentContext.globalCompositeOperation = "destination-out";
+        } else if (path.tool === "highlighter") {
+          contentContext.globalCompositeOperation = "multiply";
+          contentContext.globalAlpha = 0.5;
+        } else {
+          contentContext.globalCompositeOperation = "source-over";
+          contentContext.globalAlpha = 1.0;
+        }
+
+        for (let i = 1; i < path.points.length; i++) {
+          contentContext.lineTo(path.points[i].x, path.points[i].y);
+        }
+        contentContext.stroke();
         contentContext.globalCompositeOperation = "source-over";
         contentContext.globalAlpha = 1.0;
       }
 
-      for (let i = 1; i < path.points.length; i++) {
-        contentContext.lineTo(path.points[i].x, path.points[i].y);
+      // Handle shape elements
+      else if (element.type !== "path") {
+        const shape = element as ShapeElement;
+        contentContext.beginPath();
+        contentContext.strokeStyle = shape.color;
+        contentContext.lineWidth = shape.lineWidth / zoomLevel;
+        contentContext.fillStyle = "transparent";
+
+        const x = shape.x;
+        const y = shape.y;
+        const width = shape.width;
+        const height = shape.height;
+
+        const cx = x + width / 2;
+        const cy = y + height / 2;
+        const minDim = Math.min(width, height);
+
+        switch (shape.type) {
+          case "rectangle":
+            contentContext.rect(x, y, width, height);
+            break;
+
+          case "circle":
+            contentContext.ellipse(cx, cy, width / 2, height / 2, 0, 0, Math.PI * 2);
+            break;
+
+          case "line":
+            contentContext.moveTo(x, y);
+            contentContext.lineTo(x + width, y + height);
+            break;
+
+          case "triangle":
+            contentContext.moveTo(cx, y);
+            contentContext.lineTo(x, y + height);
+            contentContext.lineTo(x + width, y + height);
+            contentContext.closePath();
+            break;
+
+          case "diamond":
+            contentContext.moveTo(cx, y);
+            contentContext.lineTo(x + width, cy);
+            contentContext.lineTo(cx, y + height);
+            contentContext.lineTo(x, cy);
+            contentContext.closePath();
+            break;
+
+          case "star":
+            const outerRadius = minDim / 2;
+            const innerRadius = outerRadius / 2.5;
+            for (let i = 0; i < 10; i++) {
+              const angle = (Math.PI / 5) * i - Math.PI / 2;
+              const r = i % 2 === 0 ? outerRadius : innerRadius;
+              const px = cx + r * Math.cos(angle);
+              const py = cy + r * Math.sin(angle);
+              if (i === 0) contentContext.moveTo(px, py);
+              else contentContext.lineTo(px, py);
+            }
+            contentContext.closePath();
+            break;
+
+          case "arrowUp":
+            contentContext.moveTo(cx, y);
+            contentContext.lineTo(x + width * 0.4, y + height * 0.35);
+            contentContext.lineTo(x + width * 0.47, y + height * 0.35);
+            contentContext.lineTo(x + width * 0.47, y + height);
+            contentContext.lineTo(x + width * 0.53, y + height);
+            contentContext.lineTo(x + width * 0.53, y + height * 0.35);
+            contentContext.lineTo(x + width * 0.6, y + height * 0.35);
+            contentContext.closePath();
+            break;
+
+          case "arrowDown":
+            contentContext.moveTo(cx, y + height);
+            contentContext.lineTo(x + width * 0.4, y + height * 0.65);
+            contentContext.lineTo(x + width * 0.47, y + height * 0.65);
+            contentContext.lineTo(x + width * 0.47, y);
+            contentContext.lineTo(x + width * 0.53, y);
+            contentContext.lineTo(x + width * 0.53, y + height * 0.65);
+            contentContext.lineTo(x + width * 0.6, y + height * 0.65);
+            contentContext.closePath();
+            break;
+
+          case "arrowLeft":
+            contentContext.moveTo(x, cy);
+            contentContext.lineTo(x + width * 0.35, y + height * 0.4);
+            contentContext.lineTo(x + width * 0.35, y + height * 0.47);
+            contentContext.lineTo(x + width, y + height * 0.47);
+            contentContext.lineTo(x + width, y + height * 0.53);
+            contentContext.lineTo(x + width * 0.35, y + height * 0.53);
+            contentContext.lineTo(x + width * 0.35, y + height * 0.6);
+            contentContext.closePath();
+            break;
+
+          case "arrowRight":
+            contentContext.moveTo(x + width, cy);
+            contentContext.lineTo(x + width * 0.65, y + height * 0.4);
+            contentContext.lineTo(x + width * 0.65, y + height * 0.47);
+            contentContext.lineTo(x, y + height * 0.47);
+            contentContext.lineTo(x, y + height * 0.53);
+            contentContext.lineTo(x + width * 0.65, y + height * 0.53);
+            contentContext.lineTo(x + width * 0.65, y + height * 0.6);
+            contentContext.closePath();
+            break;
+
+          case "heart":
+            contentContext.moveTo(cx, y + height);
+            contentContext.bezierCurveTo(
+              x + width * 0.8, y + height * 0.75,
+              x + width, y + height * 0.4,
+              cx, y + height * 0.2
+            );
+            contentContext.bezierCurveTo(
+              x, y + height * 0.4,
+              x + width * 0.2, y + height * 0.75,
+              cx, y + height
+            );
+            contentContext.closePath();
+            break;
+
+          case "hexagon":
+            for (let i = 0; i < 6; i++) {
+              const angle = (Math.PI / 3) * i - Math.PI / 2;
+              const px = cx + (minDim / 2) * Math.cos(angle);
+              const py = cy + (minDim / 2) * Math.sin(angle);
+              if (i === 0) contentContext.moveTo(px, py);
+              else contentContext.lineTo(px, py);
+            }
+            contentContext.closePath();
+            break;
+
+          case "pentagon":
+          case "heptagon":
+          case "octagon":
+            const sides = shape.type === "pentagon" ? 5 : shape.type === "heptagon" ? 7 : 8;
+            for (let i = 0; i < sides; i++) {
+              const angle = (2 * Math.PI * i) / sides - Math.PI / 2;
+              const px = cx + (minDim / 2) * Math.cos(angle);
+              const py = cy + (minDim / 2) * Math.sin(angle);
+              if (i === 0) contentContext.moveTo(px, py);
+              else contentContext.lineTo(px, py);
+            }
+            contentContext.closePath();
+            break;
+
+          case "cross":
+            const arm = minDim / 3;
+            const offset = arm / 3;
+            contentContext.rect(cx - offset / 2, cy - arm / 2, offset, arm);
+            contentContext.rect(cx - arm / 2, cy - offset / 2, arm, offset);
+            break;
+
+          // case "smiley":
+          //   contentContext.arc(cx, cy, minDim / 2 - 2, 0, Math.PI * 2); // Face
+          //   contentContext.moveTo(cx - minDim * 0.15, cy - minDim * 0.1);
+          //   contentContext.arc(cx - minDim * 0.15, cy - minDim * 0.1, 2, 0, Math.PI * 2); // Eye 1
+          //   contentContext.moveTo(cx + minDim * 0.15, cy - minDim * 0.1);
+          //   contentContext.arc(cx + minDim * 0.15, cy - minDim * 0.1, 2, 0, Math.PI * 2); // Eye 2
+          //   contentContext.moveTo(cx - minDim * 0.15, cy + minDim * 0.15);
+          //   contentContext.quadraticCurveTo(cx, cy + minDim * 0.3, cx + minDim * 0.15, cy + minDim * 0.15); // Smile
+          //   break;
+
+          case "cloud":
+            contentContext.moveTo(x + width * 0.25, y + height * 0.6);
+            contentContext.bezierCurveTo(
+              x + width * 0.2, y + height * 0.5,
+              x + width * 0.3, y + height * 0.4,
+              x + width * 0.4, y + height * 0.5
+            );
+            contentContext.bezierCurveTo(
+              x + width * 0.5, y + height * 0.3,
+              x + width * 0.7, y + height * 0.4,
+              x + width * 0.65, y + height * 0.6
+            );
+            contentContext.closePath();
+            break;
+        }
+
+        contentContext.stroke();
       }
-      contentContext.stroke();
-      contentContext.globalCompositeOperation = "source-over";
-      contentContext.globalAlpha = 1.0;
-    }
-
-    // Handle shape elements
-    else if (element.type !== "path") {
-      const shape = element as ShapeElement;
-      contentContext.beginPath();
-      contentContext.strokeStyle = shape.color;
-      contentContext.lineWidth = shape.lineWidth / zoomLevel;
-      contentContext.fillStyle = "transparent";
-
-      const x = shape.x;
-      const y = shape.y;
-      const width = shape.width;
-      const height = shape.height;
-
-      const cx = x + width / 2;
-      const cy = y + height / 2;
-      const minDim = Math.min(width, height);
-
-      switch (shape.type) {
-        case "rectangle":
-          contentContext.rect(x, y, width, height);
-          break;
-
-        case "circle":
-          contentContext.ellipse(cx, cy, width / 2, height / 2, 0, 0, Math.PI * 2);
-          break;
-
-        case "line":
-          contentContext.moveTo(x, y);
-          contentContext.lineTo(x + width, y + height);
-          break;
-
-        case "triangle":
-          contentContext.moveTo(cx, y);
-          contentContext.lineTo(x, y + height);
-          contentContext.lineTo(x + width, y + height);
-          contentContext.closePath();
-          break;
-
-        case "diamond":
-          contentContext.moveTo(cx, y);
-          contentContext.lineTo(x + width, cy);
-          contentContext.lineTo(cx, y + height);
-          contentContext.lineTo(x, cy);
-          contentContext.closePath();
-          break;
-
-        case "star":
-          const outerRadius = minDim / 2;
-          const innerRadius = outerRadius / 2.5;
-          for (let i = 0; i < 10; i++) {
-            const angle = (Math.PI / 5) * i - Math.PI / 2;
-            const r = i % 2 === 0 ? outerRadius : innerRadius;
-            const px = cx + r * Math.cos(angle);
-            const py = cy + r * Math.sin(angle);
-            if (i === 0) contentContext.moveTo(px, py);
-            else contentContext.lineTo(px, py);
-          }
-          contentContext.closePath();
-          break;
-
-        case "arrowUp":
-          contentContext.moveTo(cx, y);
-          contentContext.lineTo(x + width * 0.4, y + height * 0.35);
-          contentContext.lineTo(x + width * 0.47, y + height * 0.35);
-          contentContext.lineTo(x + width * 0.47, y + height);
-          contentContext.lineTo(x + width * 0.53, y + height);
-          contentContext.lineTo(x + width * 0.53, y + height * 0.35);
-          contentContext.lineTo(x + width * 0.6, y + height * 0.35);
-          contentContext.closePath();
-          break;
-
-        case "arrowDown":
-          contentContext.moveTo(cx, y + height);
-          contentContext.lineTo(x + width * 0.4, y + height * 0.65);
-          contentContext.lineTo(x + width * 0.47, y + height * 0.65);
-          contentContext.lineTo(x + width * 0.47, y);
-          contentContext.lineTo(x + width * 0.53, y);
-          contentContext.lineTo(x + width * 0.53, y + height * 0.65);
-          contentContext.lineTo(x + width * 0.6, y + height * 0.65);
-          contentContext.closePath();
-          break;
-
-        case "arrowLeft":
-          contentContext.moveTo(x, cy);
-          contentContext.lineTo(x + width * 0.35, y + height * 0.4);
-          contentContext.lineTo(x + width * 0.35, y + height * 0.47);
-          contentContext.lineTo(x + width, y + height * 0.47);
-          contentContext.lineTo(x + width, y + height * 0.53);
-          contentContext.lineTo(x + width * 0.35, y + height * 0.53);
-          contentContext.lineTo(x + width * 0.35, y + height * 0.6);
-          contentContext.closePath();
-          break;
-
-        case "arrowRight":
-          contentContext.moveTo(x + width, cy);
-          contentContext.lineTo(x + width * 0.65, y + height * 0.4);
-          contentContext.lineTo(x + width * 0.65, y + height * 0.47);
-          contentContext.lineTo(x, y + height * 0.47);
-          contentContext.lineTo(x, y + height * 0.53);
-          contentContext.lineTo(x + width * 0.65, y + height * 0.53);
-          contentContext.lineTo(x + width * 0.65, y + height * 0.6);
-          contentContext.closePath();
-          break;
-
-        case "heart":
-          contentContext.moveTo(cx, y + height);
-          contentContext.bezierCurveTo(
-            x + width * 0.8, y + height * 0.75,
-            x + width, y + height * 0.4,
-            cx, y + height * 0.2
-          );
-          contentContext.bezierCurveTo(
-            x, y + height * 0.4,
-            x + width * 0.2, y + height * 0.75,
-            cx, y + height
-          );
-          contentContext.closePath();
-          break;
-
-        case "hexagon":
-          for (let i = 0; i < 6; i++) {
-            const angle = (Math.PI / 3) * i - Math.PI / 2;
-            const px = cx + (minDim / 2) * Math.cos(angle);
-            const py = cy + (minDim / 2) * Math.sin(angle);
-            if (i === 0) contentContext.moveTo(px, py);
-            else contentContext.lineTo(px, py);
-          }
-          contentContext.closePath();
-          break;
-
-        case "pentagon":
-        case "heptagon":
-        case "octagon":
-          const sides = shape.type === "pentagon" ? 5 : shape.type === "heptagon" ? 7 : 8;
-          for (let i = 0; i < sides; i++) {
-            const angle = (2 * Math.PI * i) / sides - Math.PI / 2;
-            const px = cx + (minDim / 2) * Math.cos(angle);
-            const py = cy + (minDim / 2) * Math.sin(angle);
-            if (i === 0) contentContext.moveTo(px, py);
-            else contentContext.lineTo(px, py);
-          }
-          contentContext.closePath();
-          break;
-
-        case "cross":
-          const arm = minDim / 3;
-          const offset = arm / 3;
-          contentContext.rect(cx - offset / 2, cy - arm / 2, offset, arm);
-          contentContext.rect(cx - arm / 2, cy - offset / 2, arm, offset);
-          break;
-
-        // case "smiley":
-        //   contentContext.arc(cx, cy, minDim / 2 - 2, 0, Math.PI * 2); // Face
-        //   contentContext.moveTo(cx - minDim * 0.15, cy - minDim * 0.1);
-        //   contentContext.arc(cx - minDim * 0.15, cy - minDim * 0.1, 2, 0, Math.PI * 2); // Eye 1
-        //   contentContext.moveTo(cx + minDim * 0.15, cy - minDim * 0.1);
-        //   contentContext.arc(cx + minDim * 0.15, cy - minDim * 0.1, 2, 0, Math.PI * 2); // Eye 2
-        //   contentContext.moveTo(cx - minDim * 0.15, cy + minDim * 0.15);
-        //   contentContext.quadraticCurveTo(cx, cy + minDim * 0.3, cx + minDim * 0.15, cy + minDim * 0.15); // Smile
-        //   break;
-
-        case "cloud":
-          contentContext.moveTo(x + width * 0.25, y + height * 0.6);
-          contentContext.bezierCurveTo(
-            x + width * 0.2, y + height * 0.5,
-            x + width * 0.3, y + height * 0.4,
-            x + width * 0.4, y + height * 0.5
-          );
-          contentContext.bezierCurveTo(
-            x + width * 0.5, y + height * 0.3,
-            x + width * 0.7, y + height * 0.4,
-            x + width * 0.65, y + height * 0.6
-          );
-          contentContext.closePath();
-          break;
-      }
-
-      contentContext.stroke();
-    }
-  },
-  [contentContext, zoomLevel]
-);
+    },
+    [contentContext, zoomLevel]
+  );
 
 
   /**
@@ -2089,10 +2091,12 @@ const drawElement = useCallback(
 
       if (!response.ok) throw new Error("Failed to save whiteboard");
       const data = await response.json();
-      setToast({ message: data.message, type: "success" });
+
+      showToast(data.message, "success")
     } catch (error) {
       console.error("Error saving whiteboard:", error);
-      setToast({ message: "Failed to save whiteboard", type: "error" });
+
+      showToast("Failed to save whiteboard", "error")
     }
   }, [params.id, uniqueStickyNotes, textFontSize, textStyles]);
 
@@ -3207,14 +3211,7 @@ const drawElement = useCallback(
       onMouseLeave={handleMouseUp}
       onClick={() => setColorPicker(null)}
     >
-      {/* Toast notifications */}
-      {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(null)}
-        />
-      )}
+     
 
       {/* Collaboration Panel */}
       <div className="className=absolute top-0 right-0">
