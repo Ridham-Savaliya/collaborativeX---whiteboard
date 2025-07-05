@@ -32,6 +32,8 @@ import {
   X
 } from "lucide-react";
 import { useParams } from "next/navigation";
+import dotenv from 'dotenv'
+dotenv.config();
 
 // Socket Types
 interface UserPresence {
@@ -1464,7 +1466,8 @@ const Canvas: React.FC<CanvasProps> = ({
 
     setConnectionState({ status: 'connecting' });
 
-    const socket = io('http://localhost:3001', {
+
+    const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL, {
       auth: { token },
       transports: ['websocket', 'polling'],
       timeout: 10000,
