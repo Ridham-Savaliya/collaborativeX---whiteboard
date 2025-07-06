@@ -23,6 +23,9 @@ import axios from "axios";
 import { useTheme } from "../context/ThemeContext";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next"; // Import useTranslation
+import useSocket from "../components/useSocket";
+import { useToast } from "../utills/ToastProvider";
+
 
 interface UserProfile {
   name?: string;
@@ -114,6 +117,7 @@ const Profile: React.FC = () => {
   const [token, setToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [AllAchievements, setAllAchievements] = useState<Achievement[]>([]);
+  const { showToast } = useToast()
 
   useEffect(() => {
     const storedToken = localStorage.getItem("token");
@@ -216,7 +220,7 @@ const Profile: React.FC = () => {
     };
 
     fetchData();
-  }, [token ]);
+  }, [token]);
 
   const handleUpdateProfilePicture = async () => {
     if (!selectedFile || !token) return;
@@ -253,7 +257,7 @@ const Profile: React.FC = () => {
         setUser(updatedUser);
         setFormData((prev) => ({ ...prev, profilePicture: profilePictureUrl }));
         setError(null);
-        toast.success(t("success.profilePicture"));
+        showToast(t("success.profilePicture"), "success")
       } else {
         throw new Error(t("errors.updateProfilePicture"));
       }
@@ -261,6 +265,8 @@ const Profile: React.FC = () => {
       console.error("Error updating profile picture:", err);
       setError(t("errors.updateProfilePicture"));
       toast.error(t("errors.updateProfilePicture"));
+      showToast(t("errors.updateProfilePicture"), "success")
+
     }
   };
 
@@ -319,7 +325,8 @@ const Profile: React.FC = () => {
           preferences: updatedPreferences,
         }));
         setTheme(updatedPreferences.theme);
-        toast.success(data?.message || t("success.preferencesUpdated"));
+        showToast(data?.message, "success")
+
         setError(null);
       } else {
         throw new Error(t("errors.updatePreferences"));
@@ -361,7 +368,8 @@ const Profile: React.FC = () => {
         setUser(updatedUser);
         setEditing(false);
         setError(null);
-        toast.success(t("success.profileUpdated"));
+
+        showToast(t("success.profileUpdated"), "success")
       } else {
         throw new Error(t("errors.updateProfile"));
       }
@@ -522,11 +530,10 @@ const Profile: React.FC = () => {
                     <li key={item.id}>
                       <button
                         onClick={() => setActiveTab(item.id)}
-                        className={`w-full flex items-center px-4 py-3 rounded-xl text-left transition-all ${
-                          activeTab === item.id
-                            ? "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-200 shadow-md"
-                            : "text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-purple-600 dark:hover:text-purple-400"
-                        }`}
+                        className={`w-full flex items-center px-4 py-3 rounded-xl text-left transition-all ${activeTab === item.id
+                          ? "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-200 shadow-md"
+                          : "text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-purple-600 dark:hover:text-purple-400"
+                          }`}
                       >
                         <item.icon className="w-5 h-5 mr-3" />
                         {item.label}
@@ -795,11 +802,10 @@ const Profile: React.FC = () => {
                       mergedAchievements.map((achievement) => (
                         <div
                           key={achievement._id}
-                          className={`p-6 rounded-xl border-2 transition-all ${
-                            achievement.unlocked
-                              ? "border-purple-200 bg-purple-50 dark:border-purple-700 dark:bg-purple-900"
-                              : "border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800 opacity-50"
-                          }`}
+                          className={`p-6 rounded-xl border-2 transition-all ${achievement.unlocked
+                            ? "border-purple-200 bg-purple-50 dark:border-purple-700 dark:bg-purple-900"
+                            : "border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800 opacity-50"
+                            }`}
                         >
                           <div className="flex items-center space-x-4">
                             <div className="text-3xl">{achievement.icon}</div>

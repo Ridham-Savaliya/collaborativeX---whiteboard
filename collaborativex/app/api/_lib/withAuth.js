@@ -23,7 +23,7 @@ export default function withAuth(Component) {
         if (isExpired) {
           localStorage.removeItem("token");
           setIsShowExpired(true);
-          setTimeout(() => router.replace("/login"), 30000);
+          setTimeout(() => router.replace("/login"), 3000);
         } else {
           setIsLoading(false);
         }
@@ -62,7 +62,7 @@ export default function withAuth(Component) {
               continue. 😊
             </p>
             <button
-              onClick={() => (window.location.href = "/login")}
+              onClick={() =>router.replace("/login")}
               className="bg-purple-500 hover:bg-purple-600 text-white font-semibold px-6 py-2 rounded-full transition-all duration-300 shadow-lg"
             >
               Go to Login

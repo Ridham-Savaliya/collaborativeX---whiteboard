@@ -10,7 +10,7 @@ export async function POST(req: NextRequest, res: NextResponse) {
   await connectDB();
 
   const authResult: any = await authenticate(req);
-  if (authResult instanceof NextResponse) return authResult;  
+  if (authResult instanceof NextResponse) return authResult;
 
   const user = authResult;
   const body = await req.json();
@@ -54,8 +54,8 @@ export async function POST(req: NextRequest, res: NextResponse) {
     {
       $push: {
         whiteboards: newWhiteboard._id,
-      },  
-      $set:{isOnboarded:true},
+      },
+      $set: { isOnboarded: true },
       ...(collaboratorsArray.length
         ? {
           $addToSet: {
@@ -75,16 +75,15 @@ export async function POST(req: NextRequest, res: NextResponse) {
     await userRecord.save();
   }
 
-  collaborators.forEach((email:string) => {
+  collaborators.forEach((email: string) => {
 
-    const invitationLink =  `http://localhost:3000/whiteboard/${newWhiteboard._id}?collaborator=${email}`
+    const invitationLink = `http://localhost:3000/whiteboard/${newWhiteboard._id}?collaborator=${email}`
 
     console.log(invitationLink)
 
-    
-  if(newWhiteboard.collaborators)
-  {
-    sendMail(email,'CollaborativeX has invited you to collaborate on Whiteboard',`
+
+    if (newWhiteboard.collaborators) {
+      sendMail(email, 'CollaborativeX has invited you to collaborate on Whiteboard', `
      <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -167,18 +166,14 @@ export async function POST(req: NextRequest, res: NextResponse) {
 </html>
 
       `)
-  }
+    }
 
   });
 
-    return NextResponse.json({ whiteboard: newWhiteboard }, { status: 201 });
+  return NextResponse.json({ whiteboard: newWhiteboard }, { status: 201 });
 }
 
-
-
-
-
-export async function GET(req: NextRequest) {
+export async function GET(req: NextRequest, res: NextResponse) {
   await connectDB();
   type AuthResult = { userId: string } | NextResponse;
 
@@ -190,9 +185,22 @@ export async function GET(req: NextRequest) {
 
   const owner = authResult.userId;
 
-  const whiteboards = await Whiteboard.find({ owner: owner }).select("_id name purpose collaborators createdAt")
+  const searchParams = req.nextUrl.searchParams;
+  const page = parseInt(searchParams.get('page') || "1");
+  const limit = parseInt(searchParams.get('limit') || "12");
+  const skip = (page - 1) * limit;
 
-  return NextResponse.json({ message: "Whiteboards for the user has been found!", whiteboards: whiteboards }, { status: 200 })
+  try {
+
+    const total = await Whiteboard.find({ owner: owner }).countDocuments();
+    const whiteboards = await Whiteboard.find({ owner: owner }).select("_id name purpose collaborators createdAt").skip(skip).limit(limit).sort({ createdAt: -1 })
+
+    return NextResponse.json({ message: "Whiteboards for the user has been found!",limit,totalDocs:total, skip, totalPage: Math.ceil(total / limit),page, whiteboards: whiteboards }, { status: 200 })
+
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json({ message: "Failed to fetch whiteboards" }, { status: 500 })
+  }
 
 }
 

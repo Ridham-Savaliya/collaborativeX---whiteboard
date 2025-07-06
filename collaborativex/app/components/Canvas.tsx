@@ -1463,15 +1463,16 @@ const Canvas: React.FC<CanvasProps> = ({
     setConnectionState({ status: 'connecting' });
 
 
-    const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL, {
-      auth: { token },
-      transports: ['websocket', 'polling'],
-      timeout: 10000,
-      reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionAttempts: 5,
-      maxReconnectionDelay: 5000,
-    });
+  const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL, {
+  auth: { token },                         // Authentication token sent on connection
+  transports: ['websocket', 'polling'],   // Preferred transport mechanisms
+  timeout: 10000,                          // 10s timeout for connection attempt
+  reconnection: true,                      // Enable automatic reconnection
+  reconnectionDelay: 1000,                 // Start reconnection attempts after 1s
+  reconnectionAttempts: 10,                // Try reconnecting 10 times max
+  maxReconnectionDelay: 7000,              // Max delay between attempts is 7s
+});
+
 
     socketRef.current = socket;
 

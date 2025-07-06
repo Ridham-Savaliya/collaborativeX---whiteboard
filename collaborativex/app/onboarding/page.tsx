@@ -53,7 +53,7 @@ const Onboarding = () => {
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const {showToast} = useToast()
+  const { showToast } = useToast()
 
 
   useEffect(() => {
@@ -95,16 +95,23 @@ const Onboarding = () => {
     }
   };
 
+  const [page, setPage] = useState(1);
+
   useEffect(() => {
     if (token) {
-      fetchWhiteboards();
+      fetchWhiteboards(page);
     }
-  }, [token]);
+  }, [page,token]);
 
-  const fetchWhiteboards = async () => {
+  const [totalPage, setTotalPage] = useState(0)
+  const [limit, setLimit] = useState(12);
+  const [totalDocs, setTotalDocs] = useState(0)
+  console.log(totalDocs)
+
+  const fetchWhiteboards = async (page?: number) => {
     setIsLoading(true);
     try {
-      const response = await fetch("/api/whiteboard", {
+      const response = await fetch(`/api/whiteboard?page=${page}&limit=${limit}`, {
         method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -113,7 +120,10 @@ const Onboarding = () => {
       if (response.ok) {
         const data = await response.json();
         setWhiteboards(Array.isArray(data.whiteboards) ? data.whiteboards : []);
-        showToast("whiteboards loaded!","success")
+        setTotalDocs(data?.totalDocs)
+        setTotalPage(data?.totalPage)
+        setPage(data?.page)
+        showToast("whiteboards loaded!", "success")
       } else {
         console.error(t("errors.fetchWhiteboards"));
         setWhiteboards([]);
@@ -125,6 +135,14 @@ const Onboarding = () => {
       setIsLoading(false);
     }
   };
+
+  const handleNext = () => {
+    if (page < totalPage) setPage((p) => p + 1)
+  }
+
+  const handlePrev = () => {
+    if (page > 1) setPage((p) => p - 1)
+  }
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -156,7 +174,7 @@ const Onboarding = () => {
               : board
           )
         );
-        showToast("you made it favorite!","success")
+        showToast("you made it favorite!", "success")
       }
     } catch (e) {
       console.error(t("errors.toggleFavorite"), e);
@@ -176,7 +194,7 @@ const Onboarding = () => {
         });
         if (response.ok) {
           setWhiteboards(whiteboards.filter((board) => board._id !== id));
-          showToast('you just deleted a whiteboard!',"success")
+          showToast('you just deleted a whiteboard!', "success")
         }
       } catch (e) {
         console.error(t("errors.deleteWhiteboard"), e);
@@ -203,8 +221,8 @@ const Onboarding = () => {
             purpose: onboardingData.purpose,
             collaborators: onboardingData.collaborators
               ? onboardingData.collaborators
-                  .split(",")
-                  .map((email) => email.trim())
+                .split(",")
+                .map((email) => email.trim())
               : [],
           }),
         });
@@ -234,10 +252,10 @@ const Onboarding = () => {
 
   const filteredWhiteboards = Array.isArray(whiteboards)
     ? whiteboards
-        .filter((board) =>
-          board.name?.toLowerCase().includes(searchTerm.toLowerCase())
-        )
-        .filter((board) => !showFavoritesOnly || board.isFavorite)
+      .filter((board) =>
+        board.name?.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+      .filter((board) => !showFavoritesOnly || board.isFavorite)
     : [];
 
   const LoadingSkeleton = () => {
@@ -252,9 +270,8 @@ const Onboarding = () => {
         {[...Array(4)].map((_, index) => (
           <div
             key={index}
-            className={`group relative bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-3xl border border-white/30 dark:border-gray-700 overflow-hidden ${
-              view === "grid" ? "p-8" : "p-6 flex items-center"
-            }`}
+            className={`group relative bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-3xl border border-white/30 dark:border-gray-700 overflow-hidden ${view === "grid" ? "p-8" : "p-6 flex items-center"
+              }`}
           >
             <div className="animate-pulse space-y-4 w-full">
               <div className="flex items-start justify-between">
@@ -275,11 +292,10 @@ const Onboarding = () => {
                 </div>
               )}
               <div
-                className={`${
-                  view === "grid"
-                    ? "absolute inset-x-0 bottom-0 p-4"
-                    : "flex items-center gap-3 p-4"
-                }`}
+                className={`${view === "grid"
+                  ? "absolute inset-x-0 bottom-0 p-4"
+                  : "flex items-center gap-3 p-4"
+                  }`}
               >
                 <div className="h-10 bg-gradient-to-r from-indigo-500/20 dark:from-indigo-400/20 to-purple-500/20 dark:to-purple-400/20 rounded-xl w-full"></div>
                 <div className="h-10 bg-gradient-to-r from-red-500/20 dark:from-red-600/20 to-pink-500/20 dark:to-pink-600/20 rounded-xl w-1/4"></div>
@@ -337,23 +353,21 @@ const Onboarding = () => {
               {[1, 2, 3].map((step) => (
                 <div key={step} className="flex items-center">
                   <div
-                    className={`w-12 h-12 rounded-full flex items-center justify-center font-semibold transition-all duration-300 ${
-                      step === onboardingStep
-                        ? "bg-gradient-to-r from-indigo-600 dark:from-indigo-400 to-purple-600 dark:to-purple-400 text-white shadow-lg scale-110"
-                        : step < onboardingStep
+                    className={`w-12 h-12 rounded-full flex items-center justify-center font-semibold transition-all duration-300 ${step === onboardingStep
+                      ? "bg-gradient-to-r from-indigo-600 dark:from-indigo-400 to-purple-600 dark:to-purple-400 text-white shadow-lg scale-110"
+                      : step < onboardingStep
                         ? "bg-gradient-to-r from-green-500 dark:from-green-600 to-emerald-500 dark:to-emerald-600 text-white"
                         : "bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500"
-                    }`}
+                      }`}
                   >
                     {step < onboardingStep ? "✓" : step}
                   </div>
                   {step < 3 && (
                     <div
-                      className={`w-16 h-1 mx-2 rounded-full transition-all duration-500 ${
-                        step < onboardingStep
-                          ? "bg-gradient-to-r from-green-500 dark:from-green-600 to-emerald-500 dark:to-emerald-600"
-                          : "bg-gray-200 dark:bg-gray-600"
-                      }`}
+                      className={`w-16 h-1 mx-2 rounded-full transition-all duration-500 ${step < onboardingStep
+                        ? "bg-gradient-to-r from-green-500 dark:from-green-600 to-emerald-500 dark:to-emerald-600"
+                        : "bg-gray-200 dark:bg-gray-600"
+                        }`}
                     />
                   )}
                 </div>
@@ -453,11 +467,10 @@ const Onboarding = () => {
                           purpose: option.value,
                         })
                       }
-                      className={`p-4 rounded-2xl border-2 text-left transition-all duration-200 hover:scale-105 ${
-                        onboardingData.purpose === option.value
-                          ? "border-indigo-500 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 shadow-lg"
-                          : "border-gray-200 dark:border-gray-600 hover:border-indigo-300 dark:hover:border-indigo-400 hover:bg-gray-50 dark:hover:bg-gray-700/20"
-                      }`}
+                      className={`p-4 rounded-2xl border-2 text-left transition-all duration-200 hover:scale-105 ${onboardingData.purpose === option.value
+                        ? "border-indigo-500 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 shadow-lg"
+                        : "border-gray-200 dark:border-gray-600 hover:border-indigo-300 dark:hover:border-indigo-400 hover:bg-gray-50 dark:hover:bg-gray-700/20"
+                        }`}
                     >
                       <div className="flex items-center space-x-4">
                         <span className="text-2xl">{option.icon}</span>
@@ -523,11 +536,10 @@ const Onboarding = () => {
             <button
               onClick={handleOnboardingNext}
               disabled={onboardingStep === 1 && !onboardingData.name.trim()}
-              className={`flex items-center gap-3 px-8 py-4 rounded-2xl text-white font-semibold transition-all duration-200 ${
-                onboardingStep === 1 && !onboardingData.name.trim()
-                  ? "bg-gray-300 dark:bg-gray-600 cursor-not-allowed"
-                  : "bg-gradient-to-r from-indigo-600 dark:from-indigo-400 to-purple-600 dark:to-purple-400 hover:from-indigo-700 dark:hover:from-indigo-300 hover:to-purple-700 dark:hover:to-purple-300 shadow-lg hover:shadow-xl transform hover:scale-105"
-              }`}
+              className={`flex items-center gap-3 px-8 py-4 rounded-2xl text-white font-semibold transition-all duration-200 ${onboardingStep === 1 && !onboardingData.name.trim()
+                ? "bg-gray-300 dark:bg-gray-600 cursor-not-allowed"
+                : "bg-gradient-to-r from-indigo-600 dark:from-indigo-400 to-purple-600 dark:to-purple-400 hover:from-indigo-700 dark:hover:from-indigo-300 hover:to-purple-700 dark:hover:to-purple-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+                }`}
             >
               <span className="text-lg">
                 {onboardingStep === 3 ? t("createWhiteboard") : t("continue")}
@@ -555,7 +567,7 @@ const Onboarding = () => {
               <div className="w-12 h-12 bg-gradient-to-br from-indigo-600 dark:from-indigo-400 to-purple-600 dark:to-purple-400 rounded-2xl flex items-center justify-center shadow-lg">
                 <span className="text-white font-bold text-xl">C</span>
               </div>
-           
+
               <div>
 
                 <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 dark:from-indigo-400 to-purple-600 dark:to-purple-400 bg-clip-text text-transparent">
@@ -571,11 +583,10 @@ const Onboarding = () => {
               <div className="flex items-center gap-2 bg-white/60 dark:bg-gray-700/60 backdrop-blur-sm rounded-2xl p-2 border border-white/20 dark:border-gray-600">
                 <button
                   onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
-                  className={`p-3 rounded-xl transition-all duration-200 hover:scale-105 ${
-                    showFavoritesOnly
-                      ? "bg-gradient-to-r from-amber-500 dark:from-amber-600 to-orange-500 dark:to-orange-600 text-white shadow-lg"
-                      : "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600"
-                  }`}
+                  className={`p-3 rounded-xl transition-all duration-200 hover:scale-105 ${showFavoritesOnly
+                    ? "bg-gradient-to-r from-amber-500 dark:from-amber-600 to-orange-500 dark:to-orange-600 text-white shadow-lg"
+                    : "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600"
+                    }`}
                   aria-label={t("showFavoritesOnly")}
                 >
                   <Star
@@ -697,11 +708,10 @@ const Onboarding = () => {
             {filteredWhiteboards.map((whiteboard, index) => (
               <div
                 key={whiteboard._id}
-                className={`group relative bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-3xl border border-white/30 dark:border-gray-700 transition-all duration-300 hover:scale-105 hover:bg-white/90 dark:hover:bg-gray-800/90 hover:shadow-2xl overflow-hidden animate-fade-in ${
-                  view === "grid"
-                    ? "shadow-lg hover:shadow-2xl"
-                    : "shadow-md hover:shadow-xl flex items-center"
-                }`}
+                className={`group relative bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-3xl border border-white/30 dark:border-gray-700 transition-all duration-300 hover:scale-105 hover:bg-white/90 dark:hover:bg-gray-800/90 hover:shadow-2xl overflow-hidden animate-fade-in ${view === "grid"
+                  ? "shadow-lg hover:shadow-2xl"
+                  : "shadow-md hover:shadow-xl flex items-center"
+                  }`}
                 style={{ animationDelay: `${index * 100}ms` }}
               >
                 {view === "grid" && (
@@ -714,9 +724,8 @@ const Onboarding = () => {
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-grow">
                       <h2
-                        className={`font-bold text-gray-800 dark:text-gray-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors duration-200 ${
-                          view === "grid" ? "text-xl mb-3" : "text-lg mb-2"
-                        }`}
+                        className={`font-bold text-gray-800 dark:text-gray-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors duration-200 ${view === "grid" ? "text-xl mb-3" : "text-lg mb-2"
+                          }`}
                       >
                         {whiteboard.name}
                       </h2>
@@ -735,11 +744,10 @@ const Onboarding = () => {
                         e.preventDefault();
                         toggleFavorite(whiteboard._id);
                       }}
-                      className={`p-2.5 rounded-full transition-all duration-200 hover:scale-110 ${
-                        whiteboard.isFavorite
-                          ? "text-amber-500 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20"
-                          : "text-gray-400 dark:text-gray-500 hover:text-amber-500 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20"
-                      }`}
+                      className={`p-2.5 rounded-full transition-all duration-200 hover:scale-110 ${whiteboard.isFavorite
+                        ? "text-amber-500 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20"
+                        : "text-gray-400 dark:text-gray-500 hover:text-amber-500 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20"
+                        }`}
                       aria-label={
                         whiteboard.isFavorite
                           ? t("removeFromFavorites")
@@ -758,9 +766,8 @@ const Onboarding = () => {
                   </div>
 
                   <div
-                    className={`flex items-center text-sm text-gray-500 dark:text-gray-400 ${
-                      view === "grid" ? "mb-6" : "mb-0"
-                    }`}
+                    className={`flex items-center text-sm text-gray-500 dark:text-gray-400 ${view === "grid" ? "mb-6" : "mb-0"
+                      }`}
                   >
                     <Clock size={16} className="mr-2" />
                     <span className="font-medium">
@@ -772,9 +779,8 @@ const Onboarding = () => {
                     whiteboard.collaborators &&
                     whiteboard.collaborators.length > 0 && (
                       <div
-                        className={`flex items-center ${
-                          view === "grid" ? "mt-4" : "ml-4"
-                        }`}
+                        className={`flex items-center ${view === "grid" ? "mt-4" : "ml-4"
+                          }`}
                       >
                         <Users
                           size={16}
@@ -793,37 +799,46 @@ const Onboarding = () => {
                 </div>
 
                 <div
-                  className={`${
-                    view === "grid"
-                      ? "absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-white/90 dark:from-gray-800/90 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300"
-                      : "flex items-center gap-3 p-4"
-                  }`}
+                  className={`${view === "grid"
+                    ? "absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-white/90 dark:from-gray-800/90 to-transparent transition-all duration-300 opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                    : "flex items-center gap-3 p-4"
+                    } flex flex-col sm:flex-row gap-3 sm:gap-2 w-full`}
                 >
-                  <button
-                    onClick={() =>
-                      navigateWithLoader(
-                        router,
-                        `/whiteboard/${whiteboard._id}`
-                      )
-                    }
-                    className="flex-1 text-center px-4 py-3 mr-2 bg-gradient-to-r from-indigo-600 dark:from-indigo-400 to-purple-600 dark:to-purple-400 text-white rounded-xl font-semibold hover:from-indigo-700 dark:hover:from-indigo-300 hover:to-purple-700 dark:hover:to-purple-300 transition-all duration-200 hover:scale-105 shadow-lg"
-                    aria-label={t("openBoard", { name: whiteboard.name })}
-                  >
-                    {t("openBoard")}
-                  </button>
-                  <button
-                    className="px-4 py-3 bg-gradient-to-r from-red-500 dark:from-red-600 to-pink-500 dark:to-pink-600 text-white rounded-xl font-semibold hover:from-red-600 dark:hover:from-red-500 hover:to-pink-600 dark:hover:to-pink-500 transition-all duration-200 hover:scale-105 shadow-lg"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      deleteWhiteboard(whiteboard._id);
-                    }}
-                    aria-label={t("deleteBoard", { name: whiteboard.name })}
-                  >
-                    {view === "grid" ? t("delete") : "🗑️"}
-                  </button>
+                  <div className="flex flex-row container mx-auto   gap-4 w-full">
+                    <button
+                      onClick={() => navigateWithLoader(router, `/whiteboard/${whiteboard._id}`)}
+                      className="w-full max-w-[50%] sm:w-[50%]  sm:max-w-none  mx-auto sm:mx-0 px-3 py-2 sm:px-4 sm:py-2 text-sm sm:text-base text-center bg-gradient-to-r from-indigo-600 dark:from-indigo-400 to-purple-600 dark:to-purple-400 text-white rounded-xl font-semibold sm:focus:ring-2 sm:focus:ring-purple-400 sm:hover:from-indigo-700 sm:dark:hover:from-indigo-300 sm:hover:to-purple-700 sm:dark:hover:to-purple-300 transition-all duration-200 sm:hover:scale-105 shadow-lg"
+                    >
+                      {t("openBoard")}
+                    </button>
+
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        deleteWhiteboard(whiteboard._id);
+                      }}
+                      className="w-full sm:w-[50%] max-w-[50%] mr-0    sm:max-w-none mx-auto sm:mx-0 px-3 py-2 sm:px-4 sm:py-2 text-sm sm:text-base text-center bg-gradient-to-r from-red-500 dark:from-red-600 to-pink-500 dark:to-pink-600 text-white rounded-xl font-semibold sm:hover:from-red-600 sm:dark:hover:from-red-500 sm:hover:to-pink-600 sm:dark:hover:to-pink-500 transition-all duration-200 sm:hover:scale-105 shadow-lg"
+                    >
+                      {view === "grid" ? t("delete") : "🗑️"}
+                    </button>
+                  </div>
+
                 </div>
+
               </div>
             ))}
+          </div>
+        )}
+
+        {!isLoading && (
+          <div className="w-full mt-10 flex justify-between items-center ">
+            <button onClick={handlePrev} disabled={page === 1}
+              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 focus:ring-2  focus:border-purple-300 text-white rounded-md disabled:opacity-50"
+            >previous</button>
+            <span>page {page} <span className="text-purple-600 font-bold tracking-wider">of</span> {totalPage}</span>
+            <button onClick={handleNext} disabled={page === totalPage}
+              className="px-4 py-2 focus:ring-2 hover:bg-purple-700  focus:border-purple-300 bg-purple-600 text-white rounded-md disabled:opacity-50"
+            >Next</button>
           </div>
         )}
       </main>
