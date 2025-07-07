@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import connectDB from "@/app/api/_lib/db";
 import User from "../../models/User";
+import { sendMail } from "@/app/utills/sendMail";
 
 export async function POST(req: NextRequest) {
   await connectDB();
@@ -43,6 +44,8 @@ export async function POST(req: NextRequest) {
       token,
       user: { id: user._id, email: user.email, name: user.name }
     });
+
+
   } catch (error) {
     return NextResponse.json({ message: (error as Error).message }, { status: 500 });
   }

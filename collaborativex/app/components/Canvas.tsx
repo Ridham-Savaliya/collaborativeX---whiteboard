@@ -676,8 +676,8 @@ const CollaborationPanel: React.FC<{
                 <button
                   onClick={handleCollaborationCollapse}
                   className="p-2 bg-gradient-to-br from-purple-500 to-purple-700 text-white rounded-full hover:from-purple-400 hover:to-purple-600 transition-all duration-300"
-                  title="Profile"
-                  aria-label="Profile"
+                  title="Collaboration"
+                  aria-label="collaboration"
                 >
                   <Users size={20} />
                 </button>
@@ -1468,9 +1468,9 @@ const Canvas: React.FC<CanvasProps> = ({
   transports: ['websocket', 'polling'],   // Preferred transport mechanisms
   timeout: 10000,                          // 10s timeout for connection attempt
   reconnection: true,                      // Enable automatic reconnection
-  reconnectionDelay: 1000,                 // Start reconnection attempts after 1s
-  reconnectionAttempts: 10,                // Try reconnecting 10 times max
-  maxReconnectionDelay: 7000,              // Max delay between attempts is 7s
+  reconnectionDelay:500,                 // Start reconnection attempts after 1s
+  reconnectionAttempts: 12,                // Try reconnecting 10 times max
+  maxReconnectionDelay:500,              // Max delay between attempts is 7s
 });
 
 
@@ -2276,6 +2276,7 @@ const Canvas: React.FC<CanvasProps> = ({
 
       // Emit socket event
       const updatedNote = newNotes.find(note => note.id === noteId);
+      console.log(updatedNote)
       if (updatedNote) {
         emit('stickyNoteUpdate', updatedNote);
       }

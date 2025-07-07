@@ -8,6 +8,7 @@ import { toast } from "react-toastify";
 import { useGlobalLoader } from "../hooks/useGlobalLoader";
 import { useToast } from "../utills/ToastProvider";
 
+
 const AuthPage = () => {
   const router = useRouter();
   const { navigateWithLoader } = useGlobalLoader();
@@ -57,7 +58,8 @@ const AuthPage = () => {
     console.log(postRegister)
 
     if (password !== confirmPassword) {
-      toast.error("Passwords do not match");
+
+      showToast("Passwords do not match","error")
       setIsLoading(false);
       return;
     }
@@ -81,7 +83,7 @@ const AuthPage = () => {
       }
 
       // toast.success("Registered successfully!");
-      showToast("Registered successfully!","error");
+      showToast("Registered successfully!","success");
 
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Registration failed");
@@ -103,7 +105,8 @@ const AuthPage = () => {
       
       navigateWithLoader(router, "/onboarding"); // 
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Login failed");
+
+      showToast(error.response?.data?.message || "Login failed","error")
     } finally {
       setIsLoading(false);
     }
@@ -117,12 +120,14 @@ const AuthPage = () => {
         const res = await axios.post("/api/auth/forget-password", {
           email: formData.email,
         });
-        toast.success(res.data?.message);
+
+        showToast(res.data?.message,"success")
         setOtpId(res.data?.otpId);
         setStep(2);
       } else {
         if (otpDetails.newPassword !== otpDetails.confirmNewPassword) {
-          toast.error("Passwords do not match");
+
+          showToast("Passwords do not match","warning")
           return;
         }
 
@@ -133,12 +138,14 @@ const AuthPage = () => {
           cPassword: otpDetails.confirmNewPassword,
         });
 
-        toast.success(res.data?.message || "Password reset successful!");
+
+        showToast(res.data?.message || "Password reset successful!","success")
         setIsForgetPwd(false);
         setStep(1);
       }
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Reset failed");
+
+      showToast(error?.response?.data?.message || "Reset failed","error")
     } finally {
       setIsLoading(false);
     }

@@ -6,7 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { IoShareSocialOutline } from "react-icons/io5";
 import { jwtDecode } from "jwt-decode";
 import axios from "axios";
-import { ToastContainer,toast } from "react-toastify";
+import { useToast } from "../utills/ToastProvider";
 import Whiteboard from "../api/models/Whiteboard";
 
 interface RightNavBarProps {
@@ -24,6 +24,7 @@ const RightNavBar: React.FC<RightNavBarProps> = ({ saveWhiteboard, exportAsPDF, 
       const params = useParams()
   const [isDirty, setIsDirty] = useState(true); // Assume changes are not saved initially
   const router = useRouter();
+const {showToast} = useToast()
 
   // Warn on unsaved changes
   useEffect(() => {
@@ -74,12 +75,14 @@ const handleInvite = async (e: any) => {
     );
 
     if (res?.status === 200) {
-      toast.success(res?.data?.message || "Invitation sent!");
+
+      showToast(res?.data?.message || "Invitation sent!","success")
       setinviteeData(""); // Clear the input
       setisInviting(false)
     }
   } catch (error: any) {
-    toast.error(error?.response?.data?.message || "Error sending invites");
+
+    showToast(error?.response?.data?.message || "Error sending invites","error")
     console.error("Error at inviting:", error.message);
   } finally {
 
@@ -162,8 +165,8 @@ const handleInvite = async (e: any) => {
       onClick={() => setshowInviteModel((prev) => !prev)}
 
         className="p-2 bg-gray-700/90 text-white rounded-full hover:bg-gray-600 transition-all duration-300"
-        title="Save Whiteboard"
-        aria-label="Save Whiteboard"
+        title="Share Whiteboard"
+        aria-label="Share Whiteboard"
       >
         <ScreenShare className="w-6 h-5" />
 

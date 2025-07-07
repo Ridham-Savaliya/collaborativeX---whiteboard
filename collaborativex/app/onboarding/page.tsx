@@ -20,6 +20,7 @@ import { jwtDecode } from "jwt-decode";
 import withAuth from "../api/_lib/withAuth";
 import { useGlobalLoader } from "../hooks/useGlobalLoader";
 import { useToast } from "../utills/ToastProvider";
+import axios from "axios";
 
 interface Whiteboard {
   _id: string;
@@ -95,13 +96,45 @@ const Onboarding = () => {
     }
   };
 
+useEffect(() => {
+  const sendWelcomeMail = async () => {
+    const token = localStorage.getItem('token')
+
+    try {
+      const res = await axios.post(
+        "/api/user/welcomeMail",
+        {}, // No body content needed in this case
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (res.status === 200) {
+        console.log(res.data.message);
+      }
+    } catch (err) {
+      console.error("Failed to send welcome mail:", err);
+    }
+  };
+
+  const timer = setTimeout(() => {
+    sendWelcomeMail();
+  }, 4000);
+
+  return () => clearTimeout(timer); // Cleanup if component unmounts
+}, []);
+
+
+
   const [page, setPage] = useState(1);
 
   useEffect(() => {
     if (token) {
       fetchWhiteboards(page);
     }
-  }, [page,token]);
+  }, [page, token]);
 
   const [totalPage, setTotalPage] = useState(0)
   const [limit, setLimit] = useState(12);
