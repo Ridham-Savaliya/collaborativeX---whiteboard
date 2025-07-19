@@ -3,17 +3,27 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { jwtDecode } from "jwt-decode";
 
+import { useParams } from "next/navigation";
+
 export default function withAuth(Component) {
   return function AuthenticatedComponent(props) {
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(true);
     const [isShowExpired, setIsShowExpired] = useState(false);
 
+    const Queryparams = new URLSearchParams(window.location.search).get(
+      "collaborator"
+    );
+    const params = useParams();
+    const postLogin = `/whiteboard/${params.id}?collaborator=${Queryparams}`;
+
     useEffect(() => {
       try {
         const token = localStorage.getItem("token");
         if (!token) {
-          router.replace("/login");
+          if (params && Queryparams) {
+            router.replace(`/login?postLogin=${postLogin}`);
+          }
           return;
         }
 
@@ -62,7 +72,7 @@ export default function withAuth(Component) {
               continue. 😊
             </p>
             <button
-              onClick={() =>router.replace("/login")}
+              onClick={() => router.replace("/login")}
               className="bg-purple-500 hover:bg-purple-600 text-white font-semibold px-6 py-2 rounded-full transition-all duration-300 shadow-lg"
             >
               Go to Login

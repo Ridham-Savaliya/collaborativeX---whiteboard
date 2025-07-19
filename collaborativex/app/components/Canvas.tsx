@@ -33,11 +33,15 @@ import {
 } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useToast } from "../utills/ToastProvider";
+import Videocall from "./videocall/index";
+import Draggable from "react-draggable";
+import axios from "axios";
 // Socket Types
 interface UserPresence {
-  email: string;
+  userId: string;
   username: string;
-  joined: boolean;
+  email: string;
+  joined?: boolean;
   socketId?: string;
   color?: string;
 }
@@ -326,12 +330,15 @@ const ConnectionStatus: React.FC<{
   );
 };
 
+
 // User Presence Component
 const UserPresence: React.FC<{
   users: UserPresence[];
   currentUser?: string;
 }> = ({ users, currentUser }) => {
   const activeUsers = users.filter(user => user.joined);
+
+  console.log("active users of the canvas", activeUsers)
 
   return (
     <div className="flex items-center gap-3 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 px-4 py-3">
@@ -1366,6 +1373,7 @@ const Canvas: React.FC<CanvasProps> = ({
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [panStart, setPanStart] = useState<Point | null>(null);
 
+
   // UI components states
   const [colorPicker, setColorPicker] = useState<{
     noteId: string;
@@ -1384,7 +1392,7 @@ const Canvas: React.FC<CanvasProps> = ({
   const latencyCheckRef = useRef<number | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { showToast } = useToast()
-
+  console.log("connectedUsers", connectedUsers)
   // Sticky note colors
   const stickyNoteColors = [
     "#FEF7CD",
@@ -1400,6 +1408,9 @@ const Canvas: React.FC<CanvasProps> = ({
   const tempTextState = useRef<TextElement | null>(null);
   const tempShapeState = useRef<ShapeElement | null>(null);
   const newTextIdRef = useRef<string | null>(null);
+  const [activeTools, setActiveTools] = useState<string[]>([]);
+
+
 
   // Debounced save function
   const debouncedSaveToHistory = useCallback(
@@ -1456,6 +1467,8 @@ const Canvas: React.FC<CanvasProps> = ({
   const params = useParams();
   const whiteboardId = params.id;
 
+
+
   // Socket initialization and management
   useEffect(() => {
     if (!whiteboardId || !token) return;
@@ -1463,15 +1476,15 @@ const Canvas: React.FC<CanvasProps> = ({
     setConnectionState({ status: 'connecting' });
 
 
-  const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL, {
-  auth: { token },                         // Authentication token sent on connection
-  transports: ['websocket', 'polling'],   // Preferred transport mechanisms
-  timeout: 10000,                          // 10s timeout for connection attempt
-  reconnection: true,                      // Enable automatic reconnection
-  reconnectionDelay:500,                 // Start reconnection attempts after 1s
-  reconnectionAttempts: 12,                // Try reconnecting 10 times max
-  maxReconnectionDelay:500,              // Max delay between attempts is 7s
-});
+    const socket = io(`${process.env.NEXT_PUBLIC_SOCKET_URL}/whiteboard`, {
+      auth: { token },                         // Authentication token sent on connection
+      transports: ['websocket', 'polling'],   // Preferred transport mechanisms
+      timeout: 10000,                          // 10s timeout for connection attempt
+      reconnection: true,                      // Enable automatic reconnection
+      reconnectionDelay: 500,                 // Start reconnection attempts after 1s
+      reconnectionAttempts: 12,                // Try reconnecting 10 times max
+      maxReconnectionDelay: 500,              // Max delay between attempts is 7s
+    });
 
 
     socketRef.current = socket;
@@ -1791,8 +1804,11 @@ const Canvas: React.FC<CanvasProps> = ({
             break;
 
           case "circle":
-            contentContext.ellipse(cx, cy, width / 2, height / 2, 0, 0, Math.PI * 2);
+            const radiusX = Math.abs(width / 2);
+            const radiusY = Math.abs(height / 2);
+            contentContext.ellipse(cx, cy, radiusX, radiusY, 0, 0, Math.PI * 2);
             break;
+
 
           case "line":
             contentContext.moveTo(x, y);
@@ -3205,6 +3221,15 @@ const Canvas: React.FC<CanvasProps> = ({
     }
   };
 
+  const toggleTool = (tool: string) => {
+    setActiveTools(prev =>
+      prev.includes(tool)
+        ? prev.filter(t => t !== tool) // Turn off
+        : [...prev, tool]              // Turn on
+    );
+  };
+
+
   return (
     <div
       ref={containerRef}
@@ -3213,7 +3238,7 @@ const Canvas: React.FC<CanvasProps> = ({
       onMouseLeave={handleMouseUp}
       onClick={() => setColorPicker(null)}
     >
-     
+
 
       {/* Collaboration Panel */}
       <div className="className=absolute top-0 right-0">
@@ -3384,12 +3409,55 @@ const Canvas: React.FC<CanvasProps> = ({
       </div>
 
       {/* Toolbar and navbar */}
-      <CanvasToolbar exportAsPNG={exportAsPNG} exportAsPDF={exportAsPDF} />
+      <CanvasToolbar exportAsPNG={exportAsPNG} exportAsPDF={exportAsPDF} onToolSelect={toggleTool} />
       <NavBar
         saveWhiteboard={saveWhiteboard}
         exportAsPNG={exportAsPNG}
         exportAsPDF={exportAsPDF}
       />
+
+      {/* Video call component */}
+      <div className="absolute inset-0 z-40 pointer-events-none">
+        <div className="pointer-events-auto">
+          <Videocall
+            showLobby={activeTools.includes("videoCall")} // Controls lobby visibility
+            Users={connectedUsers} // Should be of type UserPresence[]
+            roomId={
+              typeof whiteboardId === "string"
+                ? whiteboardId
+                : Array.isArray(whiteboardId)
+                  ? whiteboardId[0]
+                  : "default-room-id"
+            }
+          />
+        </div>
+      </div>
+
+
+      {activeTools.includes('shapeRecognize') && (
+        // <ShapeRecognizer />
+        <div className="absolute top-4 right-4 z-50">
+          {/* <VideoCall roomId={roomId} userId={userId} /> */}
+          <div>this is shapeRecognize</div>
+        </div>
+      )}
+
+
+      {activeTools.includes('voice') && (
+        <div className="absolute top-4 right-4 z-50">
+          {/* <VideoCall roomId={roomId} userId={userId} /> */}
+          <div>this is Voice to Draw</div>
+        </div>
+      )}
+
+      {activeTools.includes('templates') && (
+        <div className="absolute top-4 right-4 z-50">
+          {/* <VideoCall roomId={roomId} userId={userId} /> */}
+          <div>this is templates</div>
+        </div>
+      )}
+
+
     </div>
   );
 };

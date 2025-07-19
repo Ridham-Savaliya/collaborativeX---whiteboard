@@ -47,6 +47,11 @@ export async function POST(req: NextRequest, res: NextResponse) {
     history: [],
   });
 
+if (Array.isArray(collaboratorsArray) && collaboratorsArray.length > 0) {
+  newWhiteboard.isShared = true;
+}
+
+
   await newWhiteboard.save();
 
   const userRecord = await User.findByIdAndUpdate(

@@ -15,7 +15,11 @@ export async function POST(req: NextRequest) {
 
     const { email, name } = authResult as AuthenticatedUser;
 
-    await sendMail(email, 'Welcome to CollaborativeX', `
+
+    const isExisted:any = await User.find({email:email})
+    if(isExisted.isOnboarded)
+    {
+       await sendMail(email, 'Welcome to CollaborativeX', `
       <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -86,8 +90,8 @@ export async function POST(req: NextRequest) {
 </html>
 
       `)
-
-
+    }
+   
     return NextResponse.json({ message: "new user got welcome email" }, { status: 200 })
 
 }

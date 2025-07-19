@@ -7,6 +7,7 @@ import axios from "axios";
 import { toast } from "react-toastify";
 import { useGlobalLoader } from "../hooks/useGlobalLoader";
 import { useToast } from "../utills/ToastProvider";
+import { useParams } from "next/navigation";
 
 
 const AuthPage = () => {
@@ -83,7 +84,7 @@ const AuthPage = () => {
       }
 
       // toast.success("Registered successfully!");
-      showToast("Registered successfully!","success");
+      showToast(`Welcome,${name}!`,"success");
 
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Registration failed");
@@ -100,10 +101,18 @@ const AuthPage = () => {
     try {
       const res = await axios.post("/api/auth/login", { email, password });
       localStorage.setItem("token", res.data.token);
-      // toast.success(res.data.message);
-      showToast(res.data.message)
+
+      showToast(`welcome,${res.data?.name}`)
+      const params = new URLSearchParams(window.location.search).get('postLogin')
+      if(params)
+      {
+        navigateWithLoader(router,params)
+      }
+      else{
+
+        navigateWithLoader(router, "/onboarding"); 
+      }
       
-      navigateWithLoader(router, "/onboarding"); // 
     } catch (error: any) {
 
       showToast(error.response?.data?.message || "Login failed","error")

@@ -21,24 +21,15 @@ function cn(...inputs: (string | undefined | null | false | 0)[]) {
 
 type ToolbarProps = {
   onToolSelect: (tool: string) => void;
-  onExport: (type: "png" | "pdf") => void;
-  onUndo: () => void;
-  onRedo: () => void;
   exportAsPNG: () => void;
   exportAsPDF: () => void;
-  canUndo: boolean;
-  canRedo: boolean;
 };
 
 const CanvasToolbar: React.FC<ToolbarProps> = ({
   onToolSelect,
-  onExport,
   exportAsPDF,
   exportAsPNG,
-  onUndo,
-  onRedo,
-  canUndo,
-  canRedo,
+
 }) => {
   const [activeToolGroup, setActiveToolGroup] = useState<string | null>(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
@@ -66,13 +57,13 @@ const CanvasToolbar: React.FC<ToolbarProps> = ({
 
   const handlePNG = async () => {
     setisExportingPNG(true);
-    await exportAsPNG(); // Assume this returns a promise.
+    exportAsPNG(); // Assume this returns a promise.
     setisExportingPNG(false);
   };
 
   const handlePDF = async () => {
     setisExportingPDF(true);
-    await exportAsPDF(); // Assume this returns a promise.
+    exportAsPDF(); // Assume this returns a promise.
     setisExportingPDF(false);
   };
 
@@ -183,7 +174,7 @@ const CanvasToolbar: React.FC<ToolbarProps> = ({
 
       {/* Upgrade Modal for Premium Features */}
       {showUpgradeModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+        <div className="fixed  inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-[#962aef] rounded-xl p-6 max-w-md w-full mx-4">
             <h3 className="text-xl font-bold mb-2">Premium Feature</h3>
             <p className="mb-4">

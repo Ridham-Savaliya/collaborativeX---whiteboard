@@ -31,7 +31,8 @@ export async function POST(req: NextRequest) {
         { expiresIn: '1h' })
 
         // console.log(process.env.NEXTAUTH_SECRET)
+        const name = isExisted.name
 
-    return NextResponse.json({ token, message: "Login successfully!" }, { status: 200 });
+    return NextResponse.json({ token,name, message: "Login successfully!" }, { status: 200 });
 
 }

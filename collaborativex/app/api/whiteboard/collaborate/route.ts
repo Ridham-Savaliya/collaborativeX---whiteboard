@@ -37,3 +37,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: "user is eligible to collaborate!", success: 'pass', email }, { status: 200 })
 
 }
+
+

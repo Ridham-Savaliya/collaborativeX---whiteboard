@@ -36,6 +36,7 @@ export async function POST(req: NextRequest) {
   const preinvitees: string[] = isWhiteboardExist.collaborators || [];
   const newInvitees = [...new Set([...preinvitees, ...inviteeData])]; // remove duplicates
   isWhiteboardExist.collaborators = newInvitees;
+  isWhiteboardExist.isShared = true;
 
   await isWhiteboardExist.save();
 
