@@ -1,13 +1,24 @@
-// Frontend: VideocallLobby Component
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { DndContext, useDraggable, PointerSensor, useSensor } from '@dnd-kit/core';
 import { Video, Users, Phone, GripVertical, X } from 'lucide-react';
 
-export default function VideoCallLobby({ onlineUsers, onRequest, onClose, currentUserId }) {
+interface UserPresence {
+  userId: string;
+  username: string;
+}
+
+interface VideoCallLobbyProps {
+  onlineUsers: UserPresence[];
+  onRequest: (userIds: string[]) => void;
+  onClose: () => void;
+  currentUserId: string;
+}
+
+export default function VideoCallLobby({ onlineUsers, onRequest, onClose, currentUserId }: VideoCallLobbyProps) {
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
-  const [selectedUserIds, setSelectedUserIds] = useState([]);
-  const dragRef = useRef(null);
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const dragRef = useRef<HTMLDivElement | null>(null);
 
   const CONTAINER_WIDTH = 320;
   const CONTAINER_MIN_HEIGHT = 360;
@@ -37,10 +48,10 @@ export default function VideoCallLobby({ onlineUsers, onRequest, onClose, curren
     };
   }, []);
 
-  function DraggableContainer({ children }) {
+  function DraggableContainer({ children }: { children: React.ReactNode }) {
     const { attributes, listeners, setNodeRef, transform } = useDraggable({ id: 'video-call-lobby' });
     const containerHeight = Math.min(CONTAINER_MAX_HEIGHT, Math.max(CONTAINER_MIN_HEIGHT, window.innerHeight * 0.7));
-    const style = {
+    const style: React.CSSProperties = {
       position: 'absolute',
       left: position.x + (transform?.x ?? 0),
       top: position.y + (transform?.y ?? 0),
@@ -58,13 +69,14 @@ export default function VideoCallLobby({ onlineUsers, onRequest, onClose, curren
           dragRef.current = node;
         }}
         style={style}
-        className={`bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl shadow-xl rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden flex flex-col transition-all duration-300 ${isDragging ? 'shadow-2xl ring-2 ring-purple-500/30 scale-[1.01]' : 'shadow-lg'}`}
+        className={`bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl shadow-xl rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden flex flex-col transition-all duration-300 ${
+          isDragging ? 'shadow-2xl ring-2 ring-purple-500/30 scale-[1.01]' : 'shadow-lg'
+        }`}
       >
         <div
           {...listeners}
           {...attributes}
           className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-purple-600 to-violet-600 cursor-move select-none"
-          style={{ backgroundColor: '#9333ea' }}
         >
           <div className="flex items-center gap-2">
             <GripVertical className="w-3 h-3 text-purple-200" />
@@ -92,7 +104,7 @@ export default function VideoCallLobby({ onlineUsers, onRequest, onClose, curren
   }
 
   const handleDragStart = () => setIsDragging(true);
-  const handleDragEnd = (event) => {
+  const handleDragEnd = (event: any) => {
     const { delta } = event;
     setIsDragging(false);
     const containerHeight = Math.min(CONTAINER_MAX_HEIGHT, Math.max(CONTAINER_MIN_HEIGHT, window.innerHeight * 0.7));
@@ -104,9 +116,10 @@ export default function VideoCallLobby({ onlineUsers, onRequest, onClose, curren
     });
   };
 
-  const getInitials = (name) => name.split(' ').map((word) => word[0]).join('').toUpperCase().slice(0, 2);
+  const getInitials = (name: string): string =>
+    name.split(' ').map((word) => word[0]).join('').toUpperCase().slice(0, 2);
 
-  const handleCheckboxChange = useCallback((userId) => {
+  const handleCheckboxChange = useCallback((userId: string) => {
     setSelectedUserIds((prev) => {
       if (prev.includes(userId)) {
         return prev.filter((id) => id !== userId);

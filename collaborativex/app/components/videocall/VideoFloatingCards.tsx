@@ -1,8 +1,19 @@
-// Frontend: VideoCallWindow Component
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { GripVertical, Mic, MicOff, Video, VideoOff, X, Phone, Check, XCircle } from 'lucide-react';
 
-const VideoCallWindow = ({
+interface VideoCallWindowProps {
+  stream: MediaStream | null;
+  username: string;
+  userId: string;
+  isLocal?: boolean;
+  customPosition: { x: number; y: number };
+  onEndCall: () => void;
+  onAcceptCall?: () => void;
+  onRejectCall?: () => void;
+  isIncomingCall?: boolean;
+}
+
+const VideoCallWindow: React.FC<VideoCallWindowProps> = ({
   stream,
   username,
   userId,
@@ -13,12 +24,12 @@ const VideoCallWindow = ({
   onRejectCall,
   isIncomingCall = false,
 }) => {
-  const videoRef = useRef(null);
-  const cardRef = useRef(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const cardRef = useRef<HTMLDivElement | null>(null);
   const [position, setPosition] = useState(customPosition);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOn, setIsVideoOn] = useState(true);
-  const audioRef = useRef(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     const videoElement = videoRef.current;
@@ -42,20 +53,20 @@ const VideoCallWindow = ({
     setPosition(customPosition);
   }, [customPosition]);
 
-  const handleDrag = useCallback((e) => {
+  const handleDrag = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const card = cardRef.current;
     if (!card) return;
     const shiftX = e.clientX - card.getBoundingClientRect().left;
     const shiftY = e.clientY - card.getBoundingClientRect().top;
 
-    const moveAt = (pageX, pageY) => {
+    const moveAt = (pageX: number, pageY: number) => {
       setPosition({
         x: Math.max(0, pageX - shiftX),
         y: Math.max(0, pageY - shiftY),
       });
     };
 
-    const onMouseMove = (e) => moveAt(e.pageX, e.pageY);
+    const onMouseMove = (e: MouseEvent) => moveAt(e.pageX, e.pageY);
     document.addEventListener('mousemove', onMouseMove);
     document.onmouseup = () => {
       document.removeEventListener('mousemove', onMouseMove);

@@ -1,6 +1,18 @@
-// Frontend: useSignalingClient Hook
 import { useEffect, useRef } from 'react';
 import { Socket, io } from 'socket.io-client';
+
+interface SignalingClientOptions {
+  userId: string;
+  roomId: string;
+  onIncomingCall: (fromUserId: string) => void;
+  onCallAccepted: (fromUserId: string) => void;
+  onCallRejected: (fromUserId: string) => void;
+  onSignal: (fromUserId: string, data: any) => void;
+  onCallEnded: (reason: string) => void;
+  onUserLeft: (userId: string) => void;
+  onUserJoined: (userId: string) => void;
+  onCurrentParticipants: (participants: string[]) => void;
+}
 
 export function useSignalingClient({
   userId,
@@ -13,11 +25,11 @@ export function useSignalingClient({
   onUserLeft,
   onUserJoined,
   onCurrentParticipants,
-}) {
-  const socketRef = useRef(null);
+}: SignalingClientOptions) {
+  const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
-    const socket = io('http://localhost:3001/video', {
+    const socket = io(`colloboartivex-backend-production.up.railway.app/video`, {
       transports: ['websocket'],
       reconnection: true,
       reconnectionAttempts: 5,
@@ -29,37 +41,38 @@ export function useSignalingClient({
       socket.emit('join-room', { roomId, userId });
     });
 
-    socket.on('incoming-call', ({ fromUserId, toUserId }) => {
+    socket.on('incoming-call', ({ fromUserId, toUserId }: { fromUserId: string; toUserId: string }) => {
       if (toUserId === userId) {
         onIncomingCall(fromUserId);
       }
     });
 
-    socket.on('call-accepted', ({ fromUserId }) => {
+    socket.on('call-accepted', ({ fromUserId }: { fromUserId: string }) => {
       onCallAccepted(fromUserId);
     });
 
-    socket.on('call-rejected', ({ fromUserId }) => {
+    socket.on('call-rejected', ({ fromUserId }: { fromUserId: string }) => {
       onCallRejected(fromUserId);
     });
 
-    socket.on('signal', ({ from, data }) => {
+    // FIX: onSignal now passes from (userId) and data
+    socket.on('signal', ({ from, data }: { from: string; data: any }) => {
       onSignal(from, data);
     });
 
-    socket.on('call-ended-by-owner', ({ reason }) => {
+    socket.on('call-ended-by-owner', ({ reason }: { reason: string }) => {
       onCallEnded(reason);
     });
 
-    socket.on('user-left-call', ({ userId }) => {
+    socket.on('user-left-call', ({ userId }: { userId: string }) => {
       onUserLeft(userId);
     });
 
-    socket.on('user-joined-call', ({ userId }) => {
+    socket.on('user-joined-call', ({ userId }: { userId: string }) => {
       onUserJoined(userId);
     });
 
-    socket.on('current-participants', ({ participants }) => {
+    socket.on('current-participants', ({ participants }: { participants: string[] }) => {
       onCurrentParticipants(participants);
     });
 
@@ -73,19 +86,19 @@ export function useSignalingClient({
     };
   }, [roomId, userId, onIncomingCall, onCallAccepted, onCallRejected, onSignal, onCallEnded, onUserLeft, onUserJoined, onCurrentParticipants]);
 
-  const startCall = (targetUserIds, isTurn) => {
+  const startCall = (targetUserIds: string[], isTurn: boolean) => {
     socketRef.current?.emit('start-call', { roomId, fromUserId: userId, userIds: targetUserIds, isTurn });
   };
 
-  const acceptCall = (fromUserId) => {
+  const acceptCall = (fromUserId: string) => {
     socketRef.current?.emit('accept-call', { roomId, userId, fromUserId });
   };
 
-  const rejectCall = (fromUserId) => {
+  const rejectCall = (fromUserId: string) => {
     socketRef.current?.emit('reject-call', { roomId, userId, fromUserId });
   };
 
-  const sendSignal = (toUserId, data) => {
+  const sendSignal = (toUserId: string, data: any) => {
     socketRef.current?.emit('signal', { from: userId, to: toUserId, data });
   };
 

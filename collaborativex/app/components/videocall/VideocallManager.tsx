@@ -1,16 +1,44 @@
-// Frontend: VideocallManager Component
 import React, { useEffect, useRef, useState } from 'react';
 import Peer from 'simple-peer';
 import VideoCallWindow from './VideoFloatingCards';
 import { useSignalingClient } from '../../hooks/useSignalingClient';
 
-export const VideocallManager = ({ roomId, localUserId, localUsername, targetIds, onEndCall, Users = [] }) => {
-  const [localStream, setLocalStream] = useState(null);
-  const [peers, setPeers] = useState({});
-  const peersRef = useRef({});
-  const turnTimerRef = useRef(null);
+interface UserPresence {
+  userId: string;
+  username: string;
+}
 
-  const handleSignal = (fromUserId, data) => {
+interface VideocallManagerProps {
+  roomId: string;
+  localUserId: string;
+  localUsername: string;
+  targetIds: string[];
+  onEndCall: () => void;
+  Users: UserPresence[];
+}
+
+interface PeerData {
+  peer: Peer.Instance;
+  stream: MediaStream | null;
+  userId: string;
+}
+
+export const VideocallManager: React.FC<VideocallManagerProps> = ({
+  roomId,
+  localUserId,
+  localUsername,
+  targetIds, // Note: No longer used for initial creation
+  onEndCall,
+  Users,
+}) => {
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+  const [peers, setPeers] = useState<Record<string, PeerData>>({});
+  const peersRef = useRef<Record<string, Peer.Instance>>({});
+  const turnTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // FIX: Use userId consistently in signals (not socket.id)
+  const handleSignal = (fromUserId: string, data: any) => {
+    console.log(`[webrtc] Received signal from ${fromUserId}`);
     let peer = peersRef.current[fromUserId];
     if (!peer && localStream) {
       peer = new Peer({ initiator: false, trickle: false, stream: localStream });
@@ -18,37 +46,34 @@ export const VideocallManager = ({ roomId, localUserId, localUsername, targetIds
         socket?.emit('signal', { from: localUserId, to: fromUserId, data: signal });
       });
       peer.on('stream', (remoteStream) => {
+        console.log(`[webrtc] Received stream from ${fromUserId}`);
         setPeers((prev) => ({
           ...prev,
-          [fromUserId]: { ...prev[fromUserId], stream: remoteStream },
+          [fromUserId]: { ...prev[fromUserId], stream: remoteStream, peer, userId: fromUserId },
         }));
       });
       peer.on('error', (err) => {
         console.error(`[webrtc] Peer error with ${fromUserId}:`, err);
-        alert(`Connection error with ${Users.find((u) => u.userId === fromUserId)?.username || fromUserId}`);
       });
       peersRef.current[fromUserId] = peer;
-      addPeer(fromUserId, peer);
+      setPeers((prev) => ({
+        ...prev,
+        [fromUserId]: { peer, stream: null, userId: fromUserId },
+      }));
     }
     peer.signal(data);
   };
 
-  const { socket, sendSignal } = useSignalingClient({
+  const { socket } = useSignalingClient({
     userId: localUserId,
     roomId,
-    onIncomingCall: () => {},
-    onCallAccepted: (fromUserId) => {
-      if (localStream && socket?.id) {
-        const peer = createPeer(fromUserId, socket.id, localStream);
-        peersRef.current[fromUserId] = peer;
-        addPeer(fromUserId, peer);
-      }
+    onIncomingCall: () => { },
+    onCallAccepted: (fromUserId: string) => {
+      maybeCreatePeer(fromUserId);
     },
-    onCallRejected: () => {},
-    onCallEnded: (reason) => {
-      endCall(reason);
-    },
-    onUserLeft: (userId) => {
+    onCallRejected: () => { },
+    onCallEnded: (reason: string) => endCall(reason),
+    onUserLeft: (userId: string) => {
       if (peersRef.current[userId]) {
         peersRef.current[userId].destroy();
         delete peersRef.current[userId];
@@ -60,23 +85,11 @@ export const VideocallManager = ({ roomId, localUserId, localUsername, targetIds
       });
     },
     onSignal: handleSignal,
-    onUserJoined: (userId) => {
-      if (localStream && socket?.id && !peersRef.current[userId]) {
-        const peer = createPeer(userId, socket.id, localStream);
-        peersRef.current[userId] = peer;
-        addPeer(userId, peer);
-      }
+    onUserJoined: (userId: string) => {
+      maybeCreatePeer(userId);
     },
-    onCurrentParticipants: (participants) => {
-      if (localStream && socket?.id) {
-        participants.forEach((userId) => {
-          if (!peersRef.current[userId]) {
-            const peer = createPeer(userId, socket.id, localStream);
-            peersRef.current[userId] = peer;
-            addPeer(userId, peer);
-          }
-        });
-      }
+    onCurrentParticipants: (participants: string[]) => {
+      participants.forEach((userId) => maybeCreatePeer(userId));
     },
   });
 
@@ -85,11 +98,16 @@ export const VideocallManager = ({ roomId, localUserId, localUsername, targetIds
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         setLocalStream(stream);
-      } catch (err) {
-        console.error('[webrtc] Error accessing local media:', err);
-        alert('Unable to access camera or microphone. Please grant permissions and try again.');
+      } catch (err:any) {
+        if (err.name === 'NotReadableError') {
+          alert('Camera or microphone is in use by another application. Please close it and try again.');
+        } else {
+          console.error('[wbrtc] Error accessing local media:', err);
+          alert('Unable to access camera or microphone.');
+        }
       }
     };
+
     startLocalMedia();
     return () => {
       localStream?.getTracks().forEach((track) => track.stop());
@@ -97,26 +115,20 @@ export const VideocallManager = ({ roomId, localUserId, localUsername, targetIds
   }, []);
 
   useEffect(() => {
-    if (!socket || !roomId || !localStream || !socket.connected || !socket.id) {
-      return;
-    }
+    if (!socket || !roomId || !localStream || !socket.connected) return;
     socket.emit('join-room', { roomId, userId: localUserId });
-    targetIds.forEach((targetId) => {
-      if (!peersRef.current[targetId]) {
-        const peer = createPeer(targetId, socket.id, localStream);
-        peersRef.current[targetId] = peer;
-        addPeer(targetId, peer);
-      }
-    });
+    // FIX: Removed premature creation for targetIds here. Handled via events instead.
+
     return () => {
       Object.values(peersRef.current).forEach((peer) => peer.destroy());
       peersRef.current = {};
       setPeers({});
     };
-  }, [socket, localStream, targetIds, roomId, localUserId]);
+  }, [socket, localStream, roomId, localUserId]);
 
   useEffect(() => {
     if (!socket || !socket.connected) return;
+    // FIX: Turn timer only if needed (assuming isTurn from startCall; for simplicity, kept as 2min)
     turnTimerRef.current = setTimeout(() => {
       socket.emit('end-call', { roomId, userId: localUserId });
       endCall('TURN timeout');
@@ -126,25 +138,27 @@ export const VideocallManager = ({ roomId, localUserId, localUsername, targetIds
     };
   }, [socket, roomId, localUserId]);
 
-  const createPeer = (userIdToSignal, callerId, stream) => {
-    const peer = new Peer({ initiator: true, trickle: false, stream });
+  // FIX: Added initiator election (only initiate if localUserId < userId)
+  const maybeCreatePeer = (userId: string) => {
+    if (peersRef.current[userId] || !localStream || !socket) return;
+    if (localUserId >= userId) return; // Other side will initiate
+
+    console.log(`[webrtc] Creating initiator peer to ${userId}`);
+    const peer = new Peer({ initiator: true, trickle: false, stream: localStream });
     peer.on('signal', (signal) => {
-      socket?.emit('signal', { from: callerId, to: userIdToSignal, data: signal });
+      socket.emit('signal', { from: localUserId, to: userId, data: signal });
     });
     peer.on('stream', (remoteStream) => {
+      console.log(`[webrtc] Received stream from ${userId}`);
       setPeers((prev) => ({
         ...prev,
-        [userIdToSignal]: { ...prev[userIdToSignal], stream: remoteStream },
+        [userId]: { ...prev[userId], stream: remoteStream },
       }));
     });
     peer.on('error', (err) => {
-      console.error(`[webrtc] Peer error with ${userIdToSignal}:`, err);
-      alert(`Connection error with ${Users.find((u) => u.userId === userIdToSignal)?.username || userIdToSignal}`);
+      console.error(`[webrtc] Peer error with ${userId}:`, err);
     });
-    return peer;
-  };
-
-  const addPeer = (userId, peer) => {
+    peersRef.current[userId] = peer;
     setPeers((prev) => ({
       ...prev,
       [userId]: { peer, stream: null, userId },
@@ -189,7 +203,7 @@ export const VideocallManager = ({ roomId, localUserId, localUsername, targetIds
             userId={peerObj.userId}
             isLocal={false}
             customPosition={{ x: 50 + Math.random() * 100, y: 50 + Math.random() * 100 }}
-            onEndCall={() => {}}
+            onEndCall={() => { }}
           />
         ) : null
       )}

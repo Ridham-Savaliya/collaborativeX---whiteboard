@@ -1,26 +1,36 @@
-// Frontend: Videocall Component
 import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import VideoCallLobby from './VideocallLobby';
-import {VideocallManager} from './VideocallManager';
+import { VideocallManager } from './VideocallManager';
 import { useSignalingClient } from '../../hooks/useSignalingClient';
 import { jwtDecode } from 'jwt-decode';
+import { Check, XCircle } from 'lucide-react';
 
 const VideoCallWindow = dynamic(() => import('./VideoFloatingCards'), { ssr: false });
 
-const Videocall = ({ showLobby, Users, roomId }:any) => {
+interface UserPresence {
+  userId: string;
+  username: string;
+}
+
+interface VideocallProps {
+  showLobby: boolean;
+  Users: UserPresence[];
+  roomId: string;
+}
+
+const Videocall: React.FC<VideocallProps> = ({ showLobby, Users, roomId }) => {
   const [callActive, setCallActive] = useState(false);
   const [isLobbyVisible, setIsLobbyVisible] = useState(false);
-  const [targetIds, setTargetIds] = useState([]);
-  const [localUserId, setLocalUserId] = useState('');
-  const [incomingCall, setIncomingCall] = useState(null);
-  const [participants, setParticipants] = useState([]);
+  const [localUserId, setLocalUserId] = useState<string>('');
+  const [incomingCall, setIncomingCall] = useState<string | null>(null);
+  const [participants, setParticipants] = useState<string[]>([]);
 
   useEffect(() => {
     try {
-      const token:any = localStorage.getItem('token');
+      const token = localStorage.getItem('token');
       if (token) {
-        const decoded = jwtDecode(token);
+        const decoded: any = jwtDecode(token);
         setLocalUserId(decoded.userId);
       } else {
         alert('No authentication token found. Please log in.');
@@ -31,44 +41,41 @@ const Videocall = ({ showLobby, Users, roomId }:any) => {
     }
   }, []);
 
-  const { socket, startCall, acceptCall, rejectCall, endCall, leaveCall } = useSignalingClient({
+  const { socket, startCall, acceptCall, rejectCall, endCall } = useSignalingClient({
     userId: localUserId,
     roomId,
-    onIncomingCall: (fromUserId) => {
-      setIncomingCall(fromUserId);
-    },
-    onCallAccepted: (fromUserId) => {
+    onIncomingCall: (fromUserId: string) => setIncomingCall(fromUserId),
+    onCallAccepted: (fromUserId: string) => {
       setParticipants((prev) => [...new Set([...prev, fromUserId])]);
       setCallActive(true);
       setIncomingCall(null);
     },
-    onCallRejected: (fromUserId) => {
+    onCallRejected: (fromUserId: string) => {
       setIncomingCall(null);
-      alert(`${Users.find((u) => u.userId === fromUserId)?.username || 'A user'} rejected the call.`);
+      // Reduced alert frequency
+      console.log(`${Users.find((u) => u.userId === fromUserId)?.username || 'A user'} rejected the call.`);
     },
-    onCallEnded: (reason) => {
+    onCallEnded: (reason: string) => {
       setCallActive(false);
       setParticipants([]);
       setIncomingCall(null);
-      alert(`Call ended: ${reason}`);
+      console.log(`Call ended: ${reason}`);
     },
-    onUserLeft: (userId) => {
+    onUserLeft: (userId: string) => {
       setParticipants((prev) => prev.filter((id) => id !== userId));
-      alert(`${Users.find((u) => u.userId === userId)?.username || userId} has left the call.`);
     },
     onSignal: () => {},
-    onUserJoined: (userId) => {
+    onUserJoined: (userId: string) => {
       setParticipants((prev) => [...new Set([...prev, userId])]);
-      alert(`${Users.find((u) => u.userId === userId)?.username || userId} has joined the call.`);
     },
-    onCurrentParticipants: (currentParticipants) => {
+    onCurrentParticipants: (currentParticipants: string[]) => {
       setParticipants((prev) => [...new Set([...prev, ...currentParticipants])]);
     },
   });
 
   useEffect(() => {
-    setIsLobbyVisible(showLobby && !callActive && !incomingCall);
-  }, [showLobby, callActive, incomingCall]);
+    setIsLobbyVisible(showLobby);
+  }, [showLobby]);
 
   useEffect(() => {
     if (!socket || !localUserId) return;
@@ -77,12 +84,11 @@ const Videocall = ({ showLobby, Users, roomId }:any) => {
     });
   }, [socket, roomId, localUserId]);
 
-  const handleRequestCall = (userIds) => {
-    setTargetIds(userIds);
+  const handleRequestCall = (userIds: string[]) => {
+    setParticipants(userIds);
     setCallActive(true);
     setIsLobbyVisible(false);
     startCall(userIds, true);
-    alert('Waiting for others to join...');
   };
 
   const handleEndCall = () => {
@@ -114,32 +120,36 @@ const Videocall = ({ showLobby, Users, roomId }:any) => {
         />
       )}
       {incomingCall && (
-        <VideoCallWindow
-          stream={null}
-          username={Users.find((u) => u.userId === incomingCall)?.username || 'Unknown'}
-          userId={incomingCall}
-          isLocal={false}
-          customPosition={{ x: window.innerWidth - 300, y: window.innerHeight - 100 }}
-          isIncomingCall={true}
-          onAcceptCall={() => {
-            if (incomingCall) {
-              acceptCall(incomingCall);
-              setCallActive(true);
-              setParticipants((prev) => [...new Set([...prev, incomingCall])]);
-              setIncomingCall(null);
-            }
-          }}
-          onRejectCall={() => {
-            if (incomingCall) {
-              rejectCall(incomingCall);
-              setIncomingCall(null);
-            }
-          }}
-        />
+        <div className="fixed bottom-5 right-5 bg-black/80 text-white rounded-lg p-4 shadow-xl animate-slideUp z-50 max-w-sm">
+          <div className="flex items-center gap-4">
+            <span className="text-sm">Incoming call from {Users.find((u) => u.userId === incomingCall)?.username || 'Unknown'}</span>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  acceptCall(incomingCall);
+                  setCallActive(true);
+                  setParticipants((prev) => [...new Set([...prev, incomingCall])]);
+                  setIncomingCall(null);
+                }}
+                className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-full transition-all duration-200 flex items-center gap-1"
+              >
+                <Check className="w-4 h-4" /> Accept
+              </button>
+              <button
+                onClick={() => {
+                  rejectCall(incomingCall);
+                  setIncomingCall(null);
+                }}
+                className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-full transition-all duration-200 flex items-center gap-1"
+              >
+                <XCircle className="w-4 h-4" /> Reject
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
 };
-
 
 export default Videocall;
