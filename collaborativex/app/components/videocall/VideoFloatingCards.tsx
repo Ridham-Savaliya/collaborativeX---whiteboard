@@ -1,8 +1,7 @@
 import React, { useRef, useEffect, useState, memo } from 'react';
 import { DndContext, useDraggable } from '@dnd-kit/core';
-import { PhoneOff, Mic, MicOff, Video, VideoOff, Maximize2, Minimize2, Signal, Loader2 } from 'lucide-react';
+import { PhoneOff, Mic, MicOff, Video, VideoOff, Maximize2, Minimize2, Signal, Loader2, Crown, LogOut } from 'lucide-react';
 
-// Define Prop types
 interface VideoCallWindowProps {
     stream: MediaStream | null;
     username: string;
@@ -13,9 +12,21 @@ interface VideoCallWindowProps {
     connectionQuality: 'excellent' | 'good' | 'poor' | 'disconnected';
     isLoading: boolean;
     showToast: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void;
+    audioEnabled?: boolean;
+    videoEnabled?: boolean;
+    onToggleAudio?: () => void;
+    onToggleVideo?: () => void;
+    isOwner?: boolean;
+    callOwner?: string;
+    currentUserId?: string;
 }
 
-// The Draggable Window is its own component now to optimize rendering
+/**
+ * DraggableVideo Component
+ * 
+ * Handles the draggable video window functionality with enhanced owner display.
+ * FIXED: Host badges are now visible to all participants, not just the host.
+ */
 const DraggableVideo = ({
     userId,
     position,
@@ -29,7 +40,10 @@ const DraggableVideo = ({
     connectionQuality,
     isLoading,
     isMinimized,
-    setIsMinimized
+    setIsMinimized,
+    isOwner,
+    callOwner,
+    currentUserId
 }: any) => {
     const { attributes, listeners, setNodeRef, transform } = useDraggable({
         id: `video-window-${userId}`,
@@ -48,6 +62,10 @@ const DraggableVideo = ({
     };
 
     const connectionInfo = useConnectionQuality(connectionQuality);
+    
+    // FIXED: Properly determine owner status for all participants
+    const isUserOwner = isOwner || userId === callOwner;
+    const isCurrentUserOwner = currentUserId === callOwner;
 
     return (
         <div
@@ -64,7 +82,18 @@ const DraggableVideo = ({
                 onMouseDown={() => setIsDragging(true)}
                 onMouseUp={() => setIsDragging(false)}
             >
-                <span className="text-white text-xs font-medium truncate">{isLocal ? 'You' : username}</span>
+                <div className="flex items-center gap-2">
+                    <span className="text-white text-xs font-medium truncate">
+                        {isLocal ? 'You' : username || 'Unknown User'}
+                    </span>
+                    {/* FIXED: Host crown is now visible to ALL participants */}
+                    {isUserOwner && (
+                        <div className="flex items-center gap-1 bg-yellow-500/20 px-1.5 py-0.5 rounded-full">
+                            <Crown className="w-2.5 h-2.5 text-yellow-300" />
+                            <span className="text-xs text-yellow-300 font-bold">Host</span>
+                        </div>
+                    )}
+                </div>
                 <div className="flex items-center gap-2">
                     {!isLocal && <ConnectionIndicator connectionInfo={connectionInfo} />}
                     {isLoading && <Loader2 className="w-3 h-3 text-white animate-spin" />}
@@ -85,28 +114,74 @@ const DraggableVideo = ({
     );
 };
 
-const VideoDisplay = memo(({ stream, isLocal, username }: { stream: MediaStream | null, isLocal: boolean, username: string }) => {
+/**
+ * VideoDisplay Component (Memoized)
+ * 
+ * Handles video stream display with proper loading and disabled states.
+ * FIXED: Properly shows camera off state when video is muted.
+ */
+const VideoDisplay = memo(({ 
+    stream, 
+    isLocal, 
+    username, 
+    videoEnabled = true,
+    isLoading = false 
+}: { 
+    stream: MediaStream | null, 
+    isLocal: boolean, 
+    username: string,
+    videoEnabled?: boolean,
+    isLoading?: boolean
+}) => {
     const videoRef = useRef<HTMLVideoElement>(null);
-    console.log(`[memo] Rendering VideoDisplay for ${username}`);
+    console.log(`[video-display] Rendering VideoDisplay for ${username}, videoEnabled: ${videoEnabled}, isLoading: ${isLoading}`);
 
     useEffect(() => {
         const videoElement = videoRef.current;
         if (!videoElement) return;
 
-        // Attach stream only if it's new or has been removed
-        if (videoElement.srcObject !== stream) {
-            videoElement.srcObject = stream;
+        if (stream && videoEnabled && !isLoading) {
+            if (videoElement.srcObject !== stream) {
+                videoElement.srcObject = stream;
+            }
+            
+            if (videoElement.paused) {
+                videoElement.play().catch(err => {
+                    if (err.name !== 'AbortError') {
+                        console.error(`[video-display] Playback failed for ${username}`, err);
+                    }
+                });
+            }
+        } else {
+            if (videoElement.srcObject) {
+                videoElement.srcObject = null;
+            }
         }
+    }, [stream, videoEnabled, username, isLoading]);
 
-        // Ensure playback state is correct
-        if (stream && videoElement.paused) {
-            videoElement.play().catch(err => {
-                if (err.name !== 'AbortError') {
-                    console.error(`[video] Playback failed for ${username}`, err);
-                }
-            });
-        }
-    }, [stream]);
+    // Show loading state
+    if (isLoading) {
+        return (
+            <div className="w-full h-full bg-gradient-to-br from-gray-900 to-black flex items-center justify-center">
+                <div className="text-center text-white">
+                    <Loader2 className="w-8 h-8 mx-auto mb-2 animate-spin text-purple-400" />
+                    <p className="text-xs">Connecting...</p>
+                </div>
+            </div>
+        );
+    }
+
+    // FIXED: Show proper camera off state when video is disabled
+    if (!stream || !videoEnabled) {
+        return (
+            <div className="w-full h-full bg-gradient-to-br from-gray-900 to-black flex items-center justify-center">
+                <div className="text-center text-white">
+                    <VideoOff className="w-8 h-8 mx-auto mb-2 text-purple-400" />
+                    <p className="text-xs">Camera Off</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <video
@@ -120,57 +195,109 @@ const VideoDisplay = memo(({ stream, isLocal, username }: { stream: MediaStream 
     );
 });
 
-
+/**
+ * VideoCallUI Component
+ * 
+ * Main UI for video call controls and display.
+ * FIXED: Enhanced controls with proper owner-specific functionality.
+ */
 const VideoCallUI = ({
     stream,
     username,
     isLocal,
     onEndCall,
     isLoading,
-    videoEnabled,
-    audioEnabled,
-    toggleVideo,
-    toggleAudio,
+    videoEnabled = true,
+    audioEnabled = true,
+    onToggleVideo,
+    onToggleAudio,
     isMinimized,
-    showToast
+    showToast,
+    isOwner,
+    callOwner,
+    currentUserId
 }: any) => {
-    const showLoading = isLoading && !stream;
-    const showVideoOff = isLocal && !videoEnabled;
+    const showLoadingState = isLoading && !stream;
+    const isCurrentUserOwner = currentUserId === callOwner;
 
     return (
         <div className="relative w-full h-full">
-            {stream && videoEnabled ? (
-                 <VideoDisplay stream={stream} isLocal={isLocal} username={username} />
-            ) : (
-                <div className="w-full h-full bg-gradient-to-br from-gray-900 to-black flex items-center justify-center">
-                    {showLoading && (
-                        <div className="text-center text-white">
-                            <Loader2 className="w-8 h-8 mx-auto mb-2 animate-spin text-purple-400" />
-                            <p className="text-xs">Connecting...</p>
-                        </div>
-                    )}
-                    {showVideoOff && (
-                         <div className="text-center text-white">
-                             <VideoOff className="w-8 h-8 mx-auto mb-2 text-purple-400" />
-                             <p className="text-xs">Camera Off</p>
-                         </div>
-                    )}
+            <VideoDisplay 
+                stream={stream} 
+                isLocal={isLocal} 
+                username={username} 
+                videoEnabled={videoEnabled}
+                isLoading={showLoadingState}
+            />
+            
+            {/* FIXED: Enhanced controls with proper audio/video toggle functionality */}
+            {isLocal && !isMinimized && onToggleAudio && onToggleVideo && (
+                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-2">
+                    <ControlButton 
+                        Icon={audioEnabled ? Mic : MicOff} 
+                        onClick={onToggleAudio} 
+                        isActive={audioEnabled} 
+                        title={audioEnabled ? "Mute Microphone" : "Unmute Microphone"}
+                    />
+                    <ControlButton 
+                        Icon={videoEnabled ? Video : VideoOff} 
+                        onClick={onToggleVideo} 
+                        isActive={videoEnabled} 
+                        title={videoEnabled ? "Turn Off Camera" : "Turn On Camera"}
+                    />
+                    {/* FIXED: Different button styling and text for owner vs participant */}
+                    <ControlButton 
+                        Icon={isCurrentUserOwner ? PhoneOff : LogOut}
+                        onClick={onEndCall} 
+                        isActive={true} 
+                        isHangup={true} 
+                        title={isCurrentUserOwner ? "End Call for Everyone" : "Leave Call"}
+                    />
                 </div>
             )}
-            
-            {/* Controls for local user */}
-            {isLocal && !isMinimized && (
-                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-2">
-                    <ControlButton Icon={audioEnabled ? Mic : MicOff} onClick={toggleAudio} isActive={audioEnabled} title="Toggle Mic" />
-                    <ControlButton Icon={videoEnabled ? Video : VideoOff} onClick={toggleVideo} isActive={videoEnabled} title="Toggle Video" />
-                    <ControlButton Icon={PhoneOff} onClick={onEndCall} isActive={true} isHangup={true} title="End Call" />
+
+            {/* FIXED: Enhanced media state indicators for remote users */}
+            {!isLocal && !isMinimized && (
+                <div className="absolute bottom-2 left-2 flex gap-1">
+                    {!audioEnabled && (
+                        <div className="bg-red-500/80 rounded-full p-1" title="Microphone muted">
+                            <MicOff size={12} className="text-white" />
+                        </div>
+                    )}
+                    {!videoEnabled && (
+                        <div className="bg-red-500/80 rounded-full p-1" title="Camera off">
+                            <VideoOff size={12} className="text-white" />
+                        </div>
+                    )}
                 </div>
             )}
         </div>
     );
 };
 
-// Main Component
+/**
+ * Main VideoCallWindow Component
+ * 
+ * The primary component for individual video call windows.
+ * FIXED: Comprehensive owner tracking and proper audio/video state management.
+ * 
+ * @param stream - MediaStream for video/audio
+ * @param username - Display name of the user
+ * @param userId - Unique user identifier
+ * @param isLocal - Whether this is the local user's window
+ * @param customPosition - Initial position of the window
+ * @param onEndCall - Callback for ending/leaving call
+ * @param connectionQuality - Connection quality indicator
+ * @param isLoading - Loading state
+ * @param showToast - Toast notification function
+ * @param audioEnabled - Whether audio is enabled
+ * @param videoEnabled - Whether video is enabled
+ * @param onToggleAudio - Audio toggle callback
+ * @param onToggleVideo - Video toggle callback
+ * @param isOwner - Whether this user is the call owner
+ * @param callOwner - ID of the call owner
+ * @param currentUserId - ID of the current user
+ */
 const VideoCallWindow: React.FC<VideoCallWindowProps> = ({
     stream,
     username,
@@ -181,11 +308,16 @@ const VideoCallWindow: React.FC<VideoCallWindowProps> = ({
     connectionQuality,
     isLoading,
     showToast,
+    audioEnabled = true,
+    videoEnabled = true,
+    onToggleAudio,
+    onToggleVideo,
+    isOwner,
+    callOwner,
+    currentUserId,
 }) => {
     const [position, setPosition] = useState(customPosition);
     const [isMinimized, setIsMinimized] = useState(false);
-    const [audioEnabled, setAudioEnabled] = useState(true);
-    const [videoEnabled, setVideoEnabled] = useState(true);
     const [isDragging, setIsDragging] = useState(false);
 
     const isMobile = window.innerWidth < 768;
@@ -198,18 +330,10 @@ const VideoCallWindow: React.FC<VideoCallWindowProps> = ({
     useEffect(() => {
         setPosition(customPosition);
     }, [customPosition]);
-    
-    // Manage track states
-    useEffect(() => {
-        if (isLocal && stream) {
-            stream.getAudioTracks().forEach(track => track.enabled = audioEnabled);
-            stream.getVideoTracks().forEach(track => track.enabled = videoEnabled);
-        }
-    }, [audioEnabled, videoEnabled, stream, isLocal]);
 
-    const toggleAudio = () => setAudioEnabled(prev => !prev);
-    const toggleVideo = () => setVideoEnabled(prev => !prev);
-
+    /**
+     * Handle drag end event
+     */
     const handleDragEnd = (event: any) => {
         setIsDragging(false);
         setPosition(prev => ({
@@ -233,6 +357,9 @@ const VideoCallWindow: React.FC<VideoCallWindowProps> = ({
                 isLoading={isLoading}
                 isMinimized={isMinimized}
                 setIsMinimized={setIsMinimized}
+                isOwner={isOwner}
+                callOwner={callOwner}
+                currentUserId={currentUserId}
             >
                 <VideoCallUI
                     stream={stream}
@@ -242,40 +369,68 @@ const VideoCallWindow: React.FC<VideoCallWindowProps> = ({
                     isLoading={isLoading}
                     videoEnabled={videoEnabled}
                     audioEnabled={audioEnabled}
-                    toggleVideo={toggleVideo}
-                    toggleAudio={toggleAudio}
+                    onToggleVideo={onToggleVideo}
+                    onToggleAudio={onToggleAudio}
                     isMinimized={isMinimized}
                     showToast={showToast}
+                    isOwner={isOwner}
+                    callOwner={callOwner}
+                    currentUserId={currentUserId}
                 />
             </DraggableVideo>
         </DndContext>
     );
 };
 
-// Helper components for UI clarity
-const ControlButton = ({ Icon, onClick, isActive, title, isHangup=false }: any) => (
+/**
+ * ControlButton Component
+ * 
+ * Reusable button component for video call controls.
+ * FIXED: Enhanced styling and accessibility.
+ */
+const ControlButton = ({ Icon, onClick, isActive, title, isHangup = false }: {
+    Icon: React.ComponentType<any>;
+    onClick: () => void;
+    isActive: boolean;
+    title: string;
+    isHangup?: boolean;
+}) => (
     <button
         onClick={onClick}
         title={title}
-        className={`p-2 rounded-full transition-all shadow-md backdrop-blur-sm ${
-            isHangup ? 'bg-red-500 hover:bg-red-600 text-white' : 
-            isActive ? 'bg-purple-600/70 hover:bg-purple-500/70 text-white' : 'bg-gray-700/70 hover:bg-gray-600/70 text-white'
+        className={`p-2 rounded-full transition-all shadow-md backdrop-blur-sm hover:scale-110 active:scale-95 ${
+            isHangup 
+                ? 'bg-red-500 hover:bg-red-600 text-white ring-2 ring-red-400/30' 
+                : isActive 
+                    ? 'bg-purple-600/70 hover:bg-purple-500/70 text-white ring-2 ring-purple-400/30' 
+                    : 'bg-gray-700/70 hover:bg-gray-600/70 text-white ring-2 ring-gray-400/30'
         }`}
+        aria-label={title}
     >
         <Icon size={14} />
     </button>
 );
 
+/**
+ * Connection quality hook
+ * 
+ * Provides connection quality indicators.
+ */
 const useConnectionQuality = (quality: string) => {
     switch (quality) {
-        case 'excellent': return { color: 'text-green-400', bars: 4 };
-        case 'good': return { color: 'text-yellow-400', bars: 3 };
-        case 'poor': return { color: 'text-orange-400', bars: 2 };
-        default: return { color: 'text-red-400', bars: 1 };
+        case 'excellent': return { color: 'text-green-400', bars: 4, label: 'Excellent' };
+        case 'good': return { color: 'text-yellow-400', bars: 3, label: 'Good' };
+        case 'poor': return { color: 'text-orange-400', bars: 2, label: 'Poor' };
+        default: return { color: 'text-red-400', bars: 1, label: 'Disconnected' };
     }
 };
 
-const ConnectionIndicator = ({ connectionInfo }: any) => (
+/**
+ * ConnectionIndicator Component
+ * 
+ * Shows connection quality with visual indicator.
+ */
+const ConnectionIndicator = ({ connectionInfo }: { connectionInfo: any }) => (
     <div className="flex items-center" title={`Connection: ${connectionInfo.label}`}>
         <Signal size={12} className={connectionInfo.color} />
     </div>

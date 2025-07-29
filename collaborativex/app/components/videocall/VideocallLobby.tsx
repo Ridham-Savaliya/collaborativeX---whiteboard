@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { DndContext, useDraggable, PointerSensor, useSensor } from '@dnd-kit/core';
-import { Video, Users, Phone, GripVertical, X, Smartphone } from 'lucide-react';
+import { Video, Users, Phone, GripVertical, X, Smartphone, UserPlus, Crown, Loader2 } from 'lucide-react';
 
 interface UserPresence {
   userId: string;
@@ -15,12 +15,22 @@ interface VideoCallLobbyProps {
   onRequest: (userIds: string[]) => void;
   onClose: () => void;
   currentUserId: string;
+  isCallActive?: boolean;
+  callOwner?: string; // FIXED: Add call owner info
 }
 
-export default function VideoCallLobby({ onlineUsers, onRequest, onClose, currentUserId }: VideoCallLobbyProps) {
+export default function VideoCallLobby({ 
+  onlineUsers, 
+  onRequest, 
+  onClose, 
+  currentUserId,
+  isCallActive = false,
+  callOwner
+}: VideoCallLobbyProps) {
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false); // FIXED: Add loading state
   const dragRef = useRef<HTMLDivElement | null>(null);
 
   const CONTAINER_WIDTH = 320;
@@ -28,9 +38,11 @@ export default function VideoCallLobby({ onlineUsers, onRequest, onClose, curren
   const CONTAINER_MAX_HEIGHT = 480;
   const VIEWPORT_MARGIN = 16;
 
-  // Detect mobile device
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-  const maxSelectable = isMobile ? 1 : 3; // 1-to-1 on mobile, up to 4 total on desktop
+  const maxSelectable = isMobile ? 1 : 3;
+  
+  // FIXED: Check if current user is the call owner
+  const isCurrentUserOwner = callOwner === currentUserId;
 
   const sensors = useSensor(PointerSensor, { activationConstraint: { distance: 6 } });
 
@@ -91,14 +103,24 @@ export default function VideoCallLobby({ onlineUsers, onRequest, onClose, curren
           <div className="flex items-center gap-2">
             <GripVertical className="w-3 h-3 text-purple-200" />
             <div className="w-6 h-6 bg-white/20 rounded-lg flex items-center justify-center">
-              <Video className="w-3 h-3 text-white" />
+              {isCallActive ? <UserPlus className="w-3 h-3 text-white" /> : <Video className="w-3 h-3 text-white" />}
             </div>
             <h3 className="font-semibold text-sm text-white">
-              {isMobile ? '1-to-1 Call' : 'Group Call'}
+              {isCallActive 
+                ? 'Invite to Call'
+                : isMobile ? '1-to-1 Call' : 'Group Call'
+              }
             </h3>
+            {/* FIXED: Add owner badge */}
+            {isCallActive && isCurrentUserOwner && (
+              <div className="flex items-center gap-1 bg-yellow-500/20 px-2 py-1 rounded-full">
+                <Crown className="w-3 h-3 text-yellow-300" />
+                <span className="text-xs text-yellow-300 font-medium">Host</span>
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-2">
-            {isMobile && (
+            {isMobile && !isCallActive && (
               <div className="text-purple-100">
                 <Smartphone className="w-3 h-3" />
               </div>
@@ -120,55 +142,84 @@ export default function VideoCallLobby({ onlineUsers, onRequest, onClose, curren
     );
   }
 
-  const handleDragStart = () => setIsDragging(true);
-  const handleDragEnd = (event: any) => {
-    const { delta } = event;
-    setIsDragging(false);
-    const containerHeight = Math.min(CONTAINER_MAX_HEIGHT, Math.max(CONTAINER_MIN_HEIGHT, window.innerHeight * 0.7));
-    const newX = position.x + delta.x;
-    const newY = position.y + delta.y;
-    setPosition({
-      x: Math.max(VIEWPORT_MARGIN, Math.min(window.innerWidth - CONTAINER_WIDTH - VIEWPORT_MARGIN, newX)),
-      y: Math.max(VIEWPORT_MARGIN, Math.min(window.innerHeight - containerHeight - VIEWPORT_MARGIN, newY)),
-    });
-  };
-
   const getInitials = (name: string): string =>
     name.split(' ').map((word) => word[0]).join('').toUpperCase().slice(0, 2);
 
   const handleCheckboxChange = useCallback((userId: string) => {
+    if (isProcessing) return; // FIXED: Prevent selection during processing
+    
     setSelectedUserIds((prev) => {
       if (prev.includes(userId)) {
         return prev.filter((id) => id !== userId);
       } else if (prev.length < maxSelectable) {
         return [...prev, userId];
       } else {
-        // Don't show alert - just return previous state
         return prev;
       }
     });
-  }, [maxSelectable]);
+  }, [maxSelectable, isProcessing]);
 
-  const handleCallSelectedUsers = useCallback(() => {
-    if (selectedUserIds.length === 0) {
-      return; // Don't show alert - button should be disabled
+  const handleCallSelectedUsers = useCallback(async () => {
+    if (selectedUserIds.length === 0 || isProcessing) {
+      return;
     }
     
-    onRequest(selectedUserIds);
-    setSelectedUserIds([]);
-  }, [selectedUserIds, onRequest]);
+    setIsProcessing(true); // FIXED: Set loading state
+    
+    try {
+      await onRequest(selectedUserIds);
+      setSelectedUserIds([]);
+    } catch (error) {
+      console.error('Error starting call:', error);
+    } finally {
+      // Reset loading state after a delay to prevent rapid clicking
+      setTimeout(() => {
+        setIsProcessing(false);
+      }, 2000);
+    }
+  }, [selectedUserIds, onRequest, isProcessing]);
 
   const availableUsers = onlineUsers.filter((user) => user.userId !== currentUserId);
 
   return (
-    <DndContext sensors={[sensors]} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+    <DndContext sensors={[sensors]} onDragStart={() => setIsDragging(true)} onDragEnd={(event) => {
+      setIsDragging(false);
+      const { delta } = event;
+      const containerHeight = Math.min(CONTAINER_MAX_HEIGHT, Math.max(CONTAINER_MIN_HEIGHT, window.innerHeight * 0.7));
+      const newX = position.x + delta.x;
+      const newY = position.y + delta.y;
+      setPosition({
+        x: Math.max(VIEWPORT_MARGIN, Math.min(window.innerWidth - CONTAINER_WIDTH - VIEWPORT_MARGIN, newX)),
+        y: Math.max(VIEWPORT_MARGIN, Math.min(window.innerHeight - containerHeight - VIEWPORT_MARGIN, newY)),
+      });
+    }}>
       <DraggableContainer>
-        {/* Mobile device info banner */}
-        {isMobile && (
+        {/* Info banner */}
+        {(isMobile && !isCallActive) && (
           <div className="px-4 py-3 bg-purple-50 dark:bg-purple-900/30 border-b border-purple-200 dark:border-purple-700/50">
             <div className="flex items-center gap-2 text-purple-800 dark:text-purple-200">
               <Smartphone className="w-4 h-4" />
               <span className="text-xs font-medium">Mobile: 1-to-1 calls only</span>
+            </div>
+          </div>
+        )}
+
+        {isCallActive && (
+          <div className="px-4 py-3 bg-blue-50 dark:bg-blue-900/30 border-b border-blue-200 dark:border-blue-700/50">
+            <div className="flex items-center gap-2 text-blue-800 dark:text-blue-200">
+              <UserPlus className="w-4 h-4" />
+              <span className="text-xs font-medium">
+                {isCurrentUserOwner 
+                  ? 'Select users to invite to your call' 
+                  : 'Select users to invite to the active call'
+                }
+              </span>
+              {isCurrentUserOwner && (
+                <div className="ml-auto flex items-center gap-1 bg-yellow-500/20 px-2 py-0.5 rounded-full">
+                  <Crown className="w-3 h-3 text-yellow-600" />
+                  <span className="text-xs text-yellow-600 font-medium">Host</span>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -190,7 +241,7 @@ export default function VideoCallLobby({ onlineUsers, onRequest, onClose, curren
                       type="checkbox"
                       checked={selectedUserIds.includes(user.userId)}
                       onChange={() => handleCheckboxChange(user.userId)}
-                      disabled={!selectedUserIds.includes(user.userId) && selectedUserIds.length >= maxSelectable}
+                      disabled={(!selectedUserIds.includes(user.userId) && selectedUserIds.length >= maxSelectable) || isProcessing}
                       className="form-checkbox h-4 w-4 text-purple-600 transition duration-150 ease-in-out rounded focus:ring-purple-500 cursor-pointer dark:bg-gray-700 dark:border-gray-600 dark:checked:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed"
                     />
                     <div className="relative flex-shrink-0">
@@ -203,11 +254,25 @@ export default function VideoCallLobby({ onlineUsers, onRequest, onClose, curren
                         {getInitials(user.username)}
                       </div>
                       <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white dark:border-gray-800"></div>
+                      {/* FIXED: Show owner badge for call owner */}
+                      {isCallActive && user.userId === callOwner && (
+                        <div className="absolute -top-1 -left-1 w-5 h-5 bg-yellow-500 rounded-full border-2 border-white dark:border-gray-800 flex items-center justify-center">
+                          <Crown className="w-2.5 h-2.5 text-white" />
+                        </div>
+                      )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h4 className="font-medium text-sm text-gray-900 dark:text-white truncate">
-                        {user.username}
-                      </h4>
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-medium text-sm text-gray-900 dark:text-white truncate">
+                          {user.username}
+                        </h4>
+                        {isCallActive && user.userId === callOwner && (
+                          <div className="flex items-center gap-1 bg-yellow-500/20 px-1.5 py-0.5 rounded-full">
+                            <Crown className="w-2.5 h-2.5 text-yellow-600" />
+                            <span className="text-xs text-yellow-600 font-medium">Host</span>
+                          </div>
+                        )}
+                      </div>
                       <p className="text-xs text-gray-500 dark:text-gray-400">Online</p>
                     </div>
                   </div>
@@ -231,36 +296,52 @@ export default function VideoCallLobby({ onlineUsers, onRequest, onClose, curren
           )}
         </div>
 
-        {/* Enhanced Action Button with purple theme */}
+        {/* Action Button */}
         {availableUsers.length > 0 && (
           <div className="p-4 border-t border-purple-200/50 dark:border-purple-700/50 bg-gradient-to-r from-purple-50/50 to-violet-50/50 dark:from-purple-900/20 dark:to-violet-900/20">
             <button
               onClick={handleCallSelectedUsers}
-              disabled={selectedUserIds.length === 0}
+              disabled={selectedUserIds.length === 0 || isProcessing}
               className={`flex items-center justify-center w-full gap-2 px-4 py-3 text-white font-semibold rounded-xl shadow-md transition-all duration-200 ${
-                selectedUserIds.length > 0 
+                selectedUserIds.length > 0 && !isProcessing
                   ? 'bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 active:scale-98 shadow-lg hover:shadow-xl transform hover:scale-[1.02]' 
                   : 'bg-gray-400 cursor-not-allowed opacity-60'
               }`}
             >
-              <Phone className="w-5 h-5" />
-              <span>
-                {isMobile 
-                  ? `Start Call ${selectedUserIds.length > 0 ? `(${selectedUserIds.length})` : ''}` 
-                  : `Start Group Call ${selectedUserIds.length > 0 ? `(${selectedUserIds.length})` : ''}`
-                }
-              </span>
+              {/* FIXED: Show loading state */}
+              {isProcessing ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>
+                    {isCallActive ? 'Sending Invites...' : 'Starting Call...'}
+                  </span>
+                </>
+              ) : (
+                <>
+                  {isCallActive ? <UserPlus className="w-5 h-5" /> : <Phone className="w-5 h-5" />}
+                  <span>
+                    {isCallActive 
+                      ? `Invite Selected ${selectedUserIds.length > 0 ? `(${selectedUserIds.length})` : ''}` 
+                      : isMobile 
+                        ? `Start Call ${selectedUserIds.length > 0 ? `(${selectedUserIds.length})` : ''}` 
+                        : `Start Group Call ${selectedUserIds.length > 0 ? `(${selectedUserIds.length})` : ''}`
+                    }
+                  </span>
+                </>
+              )}
             </button>
             
-            {/* Selection info with purple theme */}
+            {/* Selection info */}
             <div className="mt-3 text-center">
               <p className="text-xs text-purple-600 dark:text-purple-400 font-medium">
-                {isMobile 
-                  ? 'Select 1 user for video call' 
-                  : `Select up to ${maxSelectable} users (${selectedUserIds.length}/${maxSelectable} selected)`
+                {isCallActive 
+                  ? `Select users to invite (${selectedUserIds.length} selected)`
+                  : isMobile 
+                    ? 'Select 1 user for video call' 
+                    : `Select up to ${maxSelectable} users (${selectedUserIds.length}/${maxSelectable} selected)`
                 }
               </p>
-              {selectedUserIds.length >= maxSelectable && (
+              {!isCallActive && selectedUserIds.length >= maxSelectable && (
                 <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
                   {isMobile ? 'Mobile supports 1-to-1 calls only' : 'Maximum participants reached'}
                 </p>

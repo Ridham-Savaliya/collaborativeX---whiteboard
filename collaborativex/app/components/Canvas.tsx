@@ -3421,7 +3421,7 @@ const Canvas: React.FC<CanvasProps> = ({
         <div className="pointer-events-auto">
           <Videocall
             showLobby={activeTools.includes("videoCall")} // Controls lobby visibility
-            Users={connectedUsers} // Should be of type UserPresence[]
+            users={connectedUsers} // Should be of type UserPresence[]
             roomId={
               typeof whiteboardId === "string"
                 ? whiteboardId
