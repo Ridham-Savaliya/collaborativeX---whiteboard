@@ -6,7 +6,7 @@ import { CallEndCountdown } from './videoCountDown';
 import { useSignalingClient } from '../../hooks/useSignalingClient';
 import { useToast } from "../../utills/ToastProvider";
 import { jwtDecode } from 'jwt-decode';
-import { Check, XCircle, Phone, Signal, Users, Crown, AlertTriangle, PhoneOff, Loader2 } from 'lucide-react';
+import { Check, XCircle, Phone, Signal, Users, Crown, AlertTriangle, PhoneOff, Loader2, LogOut } from 'lucide-react';
 
 const VideoCallWindow = dynamic(() => import('./VideoFloatingCards'), { ssr: false });
 
@@ -25,20 +25,12 @@ interface VideocallProps {
 }
 
 /**
- * 🔧 FULLY DEBUGGED: Main Videocall Component
+ * 🔧 FIXED: Main Videocall Component with All Bug Fixes
  * 
- * CRITICAL FIXES IMPLEMENTED:
- * ✅ Bug #1: Users can now properly end/leave calls
- * ✅ Bug #2: Participants are notified when users leave
- * ✅ Bug #3: Automatic page reload after call termination  
- * ✅ Bug #4: Owner's camera/audio properly turned off when ending call
- * 
- * Features:
- * - Enhanced call termination with proper role management
- * - Real-time participant notifications
- * - Automatic resource cleanup and page reload
- * - Comprehensive media stream management
- * - Professional UI with host badges and status indicators
+ * Bug Fixes Applied:
+ * ✅ Bug #1: Proper call termination - owner ends for all, participants leave individually
+ * ✅ Bug #2: Working incoming call sound notifications
+ * ✅ Bug #3: Owner notifications for user actions (leave, reject, timeout)
  */
 const Videocall: React.FC<VideocallProps> = ({ showLobby, users, roomId }) => {
   // Core call state
@@ -62,7 +54,7 @@ const Videocall: React.FC<VideocallProps> = ({ showLobby, users, roomId }) => {
     isOwner?: boolean
   }>>([]);
   
-  // 🔧 ENHANCED: Call termination state management (addresses all bugs)
+  // Call termination state management
   const [isIncomingCallSoundPlaying, setIsIncomingCallSoundPlaying] = useState(false);
   const [connectionQuality, setConnectionQuality] = useState<'excellent' | 'good' | 'poor' | 'disconnected'>('excellent');
   const [isEndingCall, setIsEndingCall] = useState(false);
@@ -107,7 +99,7 @@ const Videocall: React.FC<VideocallProps> = ({ showLobby, users, roomId }) => {
   }, [showToast]);
 
   /**
-   * Enhanced incoming call handler with comprehensive owner tracking
+   * 🔧 FIX Bug #2: Enhanced incoming call handler with sound
    */
   const onIncomingCall = useCallback((fromUserId: string, fromUsername?: string, isInvite?: boolean, isOwner?: boolean) => {
     if (isEndingCall || isProcessingCallEnd) return;
@@ -173,44 +165,13 @@ const Videocall: React.FC<VideocallProps> = ({ showLobby, users, roomId }) => {
   }, [getUserName, showToast]);
 
   /**
-   * 🔧 CRITICAL FIX: Enhanced call ended handler (addresses ALL bugs)
-   * 
-   * This is the main fix that addresses:
-   * - Bug #3: Automatic page reload for participants
-   * - Bug #4: Proper media cleanup for owners
-   * - Bug #2: Proper notifications for all participants
+   * 🔧 FIX Bug #1 & #3: Enhanced call ended handler with proper cleanup and notifications
    */
   const onCallEnded = useCallback((reason: string, endedBy?: string) => {
-    console.log(`[videocall] CRITICAL: Call ended - ${reason} by: ${endedBy}`);
+    console.log(`[videocall] Call ended - ${reason} by: ${endedBy}`);
     
     setIsProcessingCallEnd(true);
     setIsEndingCall(true);
-    
-    // 🔧 FIX: Immediate media cleanup for ALL users (addresses Bug #4)
-    const forceStopAllMediaStreams = () => {
-      console.log('[videocall] CRITICAL: Force stopping all media streams');
-      
-      try {
-        // Stop any active getUserMedia streams
-        navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-          .then(stream => {
-            stream.getTracks().forEach(track => {
-              console.log(`[videocall] Force stopping ${track.kind} track`);
-              track.stop();
-              track.enabled = false;
-            });
-          })
-          .catch(() => {
-            // Expected if no active streams
-            console.log('[videocall] No active streams to clean up');
-          });
-      } catch (error) {
-        console.warn('[videocall] Error during media cleanup:', error);
-      }
-    };
-    
-    // Immediate cleanup
-    forceStopAllMediaStreams();
     
     // Clear all call states
     setCallActive(false);
@@ -233,7 +194,7 @@ const Videocall: React.FC<VideocallProps> = ({ showLobby, users, roomId }) => {
     
     showToast(fullMessage, 'info');
     
-    // 🔧 CRITICAL FIX: Different handling for owners vs participants
+    // Different handling for owners vs participants
     const isCurrentUserOwner = callOwner === localUserId;
     const shouldReload = !isCurrentUserOwner && (
       reason === 'ENDED_BY_OWNER' || 
@@ -242,18 +203,16 @@ const Videocall: React.FC<VideocallProps> = ({ showLobby, users, roomId }) => {
     );
     
     if (shouldReload) {
-      // 🔧 FIX: Participant reload with countdown (addresses Bug #3)
+      // Participant reload with countdown
       console.log('[videocall] PARTICIPANT: Starting countdown for page reload');
       setCountdownReason(fullMessage);
       setShowCountdown(true);
     } else {
-      // 🔧 FIX: Owner cleanup without reload (addresses Bug #4)
+      // Owner cleanup without reload
       console.log('[videocall] OWNER: Performing cleanup without reload');
       setCallOwner(undefined);
       
-      // Additional cleanup for owner
       setTimeout(() => {
-        forceStopAllMediaStreams();
         setIsEndingCall(false);
         setIsProcessingCallEnd(false);
         console.log('[videocall] Owner cleanup completed');
@@ -262,46 +221,25 @@ const Videocall: React.FC<VideocallProps> = ({ showLobby, users, roomId }) => {
   }, [showToast, callOwner, localUserId]);
 
   /**
-   * 🔧 CRITICAL FIX: Handle countdown completion (addresses Bug #3)
-   * 
-   * This ensures participants get automatic page reload after call end
+   * Handle countdown completion for participants
    */
   const onCountdownComplete = useCallback(() => {
-    console.log('[videocall] CRITICAL: Countdown complete, executing page reload');
+    console.log('[videocall] Countdown complete, executing page reload');
     
     try {
-      // Final media cleanup before reload
-      navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-        .then(stream => {
-          stream.getTracks().forEach(track => {
-            console.log(`[videocall] Final cleanup: stopping ${track.kind} track`);
-            track.stop();
-            track.enabled = false;
-          });
-        })
-        .catch(() => {
-          console.log('[videocall] No streams to clean up before reload');
-        })
-        .finally(() => {
-          // 🔧 CRITICAL: Execute page reload for participants
-          console.log('[videocall] Executing page reload...');
-          
-          // Use multiple reload methods for cross-browser compatibility
-          if (window.location.reload) {
-            window.location.reload();
-          } else {
-            window.location.href = window.location.href;
-          }
-        });
+      if (window.location.reload) {
+        window.location.reload();
+      } else {
+        window.location.href = window.location.href;
+      }
     } catch (error) {
-      console.error('[videocall] Error during final cleanup:', error);
-      // Fallback reload
+      console.error('[videocall] Error during page reload:', error);
       window.location.href = window.location.href;
     }
   }, []);
 
   /**
-   * 🔧 ENHANCED: Handle user leaving (addresses Bug #2)
+   * 🔧 FIX Bug #3: Handle user leaving with owner notification
    */
   const onUserLeft = useCallback((userId: string, username?: string) => {
     if (isEndingCall || isProcessingCallEnd) return;
@@ -310,7 +248,6 @@ const Videocall: React.FC<VideocallProps> = ({ showLobby, users, roomId }) => {
     console.log(`[videocall] User ${userName} left the call`);
     
     setParticipants(prev => prev.filter(p => p.userId !== userId));
-    showToast(`${userName} left the call`, 'info');
     
     // Check if call should end due to no participants
     setParticipants(prev => {
@@ -397,8 +334,16 @@ const Videocall: React.FC<VideocallProps> = ({ showLobby, users, roomId }) => {
     }
   }, [showToast]);
 
-  // Initialize signaling client
-  const { socket, startCall, acceptCall, rejectCall, endCall, inviteUsers } = useSignalingClient({
+  /**
+   * 🔧 FIX Bug #3: Handle call notifications (for owner)
+   */
+  const onCallNotification = useCallback((message: string, type: 'success' | 'error' | 'warning' | 'info') => {
+    console.log('[videocall] Call notification:', type, message);
+    showToast(message, type);
+  }, [showToast]);
+
+  // Initialize signaling client with all event handlers
+  const { socket, startCall, acceptCall, rejectCall, endCall, leaveCall, inviteUsers } = useSignalingClient({
     userId: localUserId,
     username: localUsername,
     roomId,
@@ -411,6 +356,7 @@ const Videocall: React.FC<VideocallProps> = ({ showLobby, users, roomId }) => {
     onUserJoined,
     onCurrentParticipants,
     onConnectionQuality,
+    onCallNotification, // 🔧 FIX Bug #3: Pass notification handler
   });
 
   // Sync lobby visibility
@@ -511,10 +457,10 @@ const Videocall: React.FC<VideocallProps> = ({ showLobby, users, roomId }) => {
   }, [callActive, getUserName, inviteUsers, showToast, isEndingCall, isProcessingCallEnd]);
 
   /**
-   * 🔧 ENHANCED: Handle call ending with confirmation (addresses Bug #1)
+   * 🔧 FIX Bug #1: Handle call ending/leaving with proper distinction
    */
   const handleEndCall = useCallback(() => {
-    console.log('[videocall] User requesting to end call');
+    console.log('[videocall] User requesting to end/leave call');
     
     if (participants.length === 0) {
       showToast('No active call to end', 'warning');
@@ -530,15 +476,25 @@ const Videocall: React.FC<VideocallProps> = ({ showLobby, users, roomId }) => {
   }, [participants.length, isEndingCall, isProcessingCallEnd]);
 
   /**
-   * Confirm call ending action
+   * 🔧 FIX Bug #1: Confirm call ending action with proper owner/participant handling
    */
   const confirmEndCall = useCallback(() => {
-    console.log('[videocall] Confirmed call ending');
+    console.log('[videocall] Confirmed call ending/leaving');
     setShowEndConfirmation(false);
     setIsProcessingCallEnd(true);
-    endCall();
-    showToast('Ending call...', 'info');
-  }, [endCall, showToast]);
+    
+    const isCurrentUserOwner = callOwner === localUserId;
+    
+    if (isCurrentUserOwner) {
+      // Owner ends call for everyone
+      endCall();
+      showToast('Ending call for everyone...', 'info');
+    } else {
+      // Participant leaves call
+      leaveCall();
+      showToast('Leaving call...', 'info');
+    }
+  }, [endCall, leaveCall, showToast, callOwner, localUserId]);
 
   /**
    * Handle accepting an incoming call
@@ -596,26 +552,22 @@ const Videocall: React.FC<VideocallProps> = ({ showLobby, users, roomId }) => {
     showToast(message, 'info');
   }, [incomingCall, rejectCall, showToast]);
 
-  // 🔧 ENHANCED: Cleanup effect for proper resource management
-  useEffect(() => {
-    return () => {
-      console.log('[videocall] Component unmounting, final cleanup');
-      try {
-        navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-          .then(stream => {
-            stream.getTracks().forEach(track => {
-              track.stop();
-              track.enabled = false;
-            });
-          })
-          .catch(() => {
-            // Expected if no active streams
-          });
-      } catch (error) {
-        console.warn('[videocall] Cleanup error on unmount:', error);
-      }
-    };
-  }, []);
+  // Don't render anything if cleaning up
+  // if (isCleaningUp.current) {
+  //   return (
+  //     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+  //       <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 text-center max-w-sm w-full mx-4">
+  //         <div className="animate-spin w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+  //         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+  //           Ending Call...
+  //         </h3>
+  //         <p className="text-gray-600 dark:text-gray-300 text-sm">
+  //           Cleaning up resources and connections
+  //         </p>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   return (
     <>
@@ -645,7 +597,7 @@ const Videocall: React.FC<VideocallProps> = ({ showLobby, users, roomId }) => {
         />
       )}
 
-      {/* 🔧 ENHANCED: Call end confirmation dialog */}
+      {/* 🔧 FIX Bug #1: Enhanced call end confirmation dialog with owner/participant distinction */}
       {showEndConfirmation && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-2xl max-w-md w-full mx-4 border border-red-200 dark:border-red-700">
@@ -654,12 +606,12 @@ const Videocall: React.FC<VideocallProps> = ({ showLobby, users, roomId }) => {
                 <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" />
               </div>
               <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                End Call?
+                {callOwner === localUserId ? 'End Call?' : 'Leave Call?'}
               </h3>
               <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed">
                 {callOwner === localUserId 
                   ? `This will end the call for all ${participants.length + 1} participants. Other participants will be disconnected and their screens will reload automatically.`
-                  : 'Are you sure you want to leave this call?'
+                  : 'Are you sure you want to leave this call? The call will continue for other participants.'
                 }
               </p>
               {callOwner === localUserId && (
@@ -686,7 +638,7 @@ const Videocall: React.FC<VideocallProps> = ({ showLobby, users, roomId }) => {
                 {isProcessingCallEnd ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
-                  <PhoneOff className="w-4 h-4" />
+                  callOwner === localUserId ? <PhoneOff className="w-4 h-4" /> : <LogOut className="w-4 h-4" />
                 )}
                 {callOwner === localUserId ? 'End Call' : 'Leave Call'}
               </button>
@@ -695,7 +647,7 @@ const Videocall: React.FC<VideocallProps> = ({ showLobby, users, roomId }) => {
         </div>
       )}
 
-      {/* 🔧 CRITICAL: Countdown component for automatic reload */}
+      {/* Countdown component for automatic reload */}
       {showCountdown && (
         <CallEndCountdown
           onComplete={onCountdownComplete}
@@ -705,7 +657,7 @@ const Videocall: React.FC<VideocallProps> = ({ showLobby, users, roomId }) => {
         />
       )}
 
-      {/* 🔧 ENHANCED: Incoming call UI with owner badges */}
+      {/* Enhanced incoming call UI with proper sound indication */}
       {incomingCall && !isEndingCall && !isProcessingCallEnd && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-fadeIn">
           <div className="bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-2xl max-w-sm w-full mx-4 animate-slideUp border border-purple-200 dark:border-purple-700">
@@ -745,6 +697,14 @@ const Videocall: React.FC<VideocallProps> = ({ showLobby, users, roomId }) => {
                   </div>
                 )}
               </div>
+              
+              {/* 🔧 FIX Bug #2: Sound indicator */}
+              {isIncomingCallSoundPlaying && (
+                <div className="flex items-center justify-center gap-2 text-sm text-purple-600 dark:text-purple-400 mb-2">
+                  <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
+                  <span>Playing ringtone...</span>
+                </div>
+              )}
               
               <div className="mt-4 flex items-center justify-center gap-2 text-sm text-gray-500 dark:text-gray-400">
                 <Signal className="w-4 h-4" />
@@ -798,42 +758,6 @@ const Videocall: React.FC<VideocallProps> = ({ showLobby, users, roomId }) => {
               </div>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* 🔧 ENHANCED: Call status indicator with processing state */}
-      {(callActive || isEndingCall || isProcessingCallEnd) && (
-        <div className="fixed top-6 left-6 bg-gradient-to-r from-purple-600 to-violet-600 text-white px-6 py-3 rounded-2xl shadow-lg z-40 flex items-center gap-3 border border-purple-400/30 backdrop-blur-sm">
-          <div className="relative">
-            <div className={`w-3 h-3 ${isEndingCall || isProcessingCallEnd ? 'bg-red-400' : 'bg-white'} rounded-full ${isEndingCall || isProcessingCallEnd ? 'animate-pulse' : 'animate-pulse'}`}></div>
-            <div className={`absolute inset-0 w-3 h-3 ${isEndingCall || isProcessingCallEnd ? 'bg-red-400' : 'bg-white'} rounded-full animate-ping opacity-40`}></div>
-          </div>
-          <div>
-            <div className="font-semibold text-sm flex items-center gap-2">
-              {isProcessingCallEnd ? 'Processing...' : isEndingCall ? 'Ending Call...' : 'Call Active'}
-              {!isEndingCall && !isProcessingCallEnd && callOwner === localUserId && (
-                <div className="flex items-center gap-1 bg-yellow-500/20 px-2 py-0.5 rounded-full">
-                  <Crown className="w-3 h-3 text-yellow-300" />
-                  <span className="text-xs text-yellow-300 font-bold">Host</span>
-                </div>
-              )}
-            </div>
-            <div className="text-xs opacity-90">
-              {isProcessingCallEnd ? 'Please wait...' : isEndingCall ? 'Cleaning up resources...' : `${participants.length + 1} participant${participants.length === 0 ? '' : 's'}`}
-            </div>
-          </div>
-          
-          {!isEndingCall && !isProcessingCallEnd && (
-            <div className="ml-2 flex items-center gap-1">
-              <Signal className={`w-4 h-4 ${
-                connectionQuality === 'excellent' ? 'text-green-300' :
-                connectionQuality === 'good' ? 'text-yellow-300' :
-                connectionQuality === 'poor' ? 'text-orange-300' :
-                'text-red-300'
-              }`} />
-              <span className="text-xs capitalize">{connectionQuality}</span>
-            </div>
-          )}
         </div>
       )}
 
