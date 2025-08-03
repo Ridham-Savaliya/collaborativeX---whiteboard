@@ -17,6 +17,9 @@
 /.next/
 /out/
 
+echo backend/ >> .gitignore
+
+
 # production
 /build
 
