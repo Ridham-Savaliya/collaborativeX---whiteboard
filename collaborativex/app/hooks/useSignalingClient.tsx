@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
+import { useToast } from '../utills/ToastProvider';
 
 interface UseSignalingClientProps {
   userId: string;
@@ -51,7 +52,7 @@ export const useSignalingClient = ({
   const connectionQualityTimer = useRef<NodeJS.Timeout>();
   const incomingCallAudio = useRef<HTMLAudioElement | null>(null);
   const isCleaningUp = useRef(false);
-
+  const { showToast } = useToast()
   // Store callbacks in refs to avoid dependency issues
   const callbacksRef = useRef({
     onIncomingCall,
@@ -239,6 +240,7 @@ export const useSignalingClient = ({
 
         newSocket.on('connect_error', (error) => {
           console.error('[signaling] Connection error:', error);
+          showToast('There is some issue at server side!', 'error')
           reconnectAttempts.current++;
           if (!isCleaningUp.current) {
             callbacksRef.current.onConnectionQuality?.('disconnected');
@@ -372,6 +374,7 @@ export const useSignalingClient = ({
 
         return newSocket;
       } catch (error) {
+        showToast('There is some issue at server side!', 'error')
         console.error('[signaling] Failed to create socket:', error);
         if (!isCleaningUp.current) {
           callbacksRef.current.onCallNotification?.('Failed to connect to call server', 'error');

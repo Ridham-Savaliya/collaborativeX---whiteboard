@@ -56,15 +56,21 @@ const CanvasToolbar: React.FC<ToolbarProps> = ({
   };
 
   const handlePNG = async () => {
-    setisExportingPNG(true);
-    exportAsPNG(); // Assume this returns a promise.
-    setisExportingPNG(false);
+    try {
+      setisExportingPNG(true);
+      await exportAsPNG();  // Make sure this is async
+    } finally {
+      setisExportingPNG(false);
+    }
   };
 
   const handlePDF = async () => {
-    setisExportingPDF(true);
-    exportAsPDF(); // Assume this returns a promise.
-    setisExportingPDF(false);
+    try {
+      setisExportingPDF(true);
+      await exportAsPDF();  // Make sure this is async
+    } finally {
+      setisExportingPDF(false);
+    }
   };
 
   const renderToolGroup = (group: string) => {
@@ -73,25 +79,37 @@ const CanvasToolbar: React.FC<ToolbarProps> = ({
         return (
           <div className="absolute bottom-full mb-2 p-2 bg-white/90 backdrop-blur-md rounded-lg shadow-xl flex gap-2">
             <button
-              className="p-2 rounded-md transition-all hover:bg-purple-50 flex items-center gap-1"
+              className="p-2 rounded-md transition-all hover:bg-purple-50 flex items-center gap-1 disabled:opacity-50"
               onClick={handlePNG}
               title="Export as PNG"
+              disabled={isExportingPNG}
             >
-              <FileImage size={20} color="#9a2ff3" />
-              <span className="text-sm  text-[#9a2ff3]">
-                {isExportingPNG ? <span>Exporting...</span> : <span>PNG</span>}
-              </span>
+              {isExportingPNG ? (
+                <span className="text-sm text-[#9a2ff3]">Exporting...</span>
+              ) : (
+                <>
+                  <FileImage size={20} color="#9a2ff3" />
+                  <span className="text-sm text-[#9a2ff3]">PNG</span>
+                </>
+              )}
             </button>
+
             <button
-              className="p-2 rounded-md transition-all hover:bg-purple-50 flex items-center gap-1"
+              className="p-2 rounded-md transition-all hover:bg-purple-50 flex items-center gap-1 disabled:opacity-50"
               onClick={handlePDF}
               title="Export as PDF"
+              disabled={isExportingPDF}
             >
-              <FileText size={20} color="#9a2ff3" />
-              <span className="text-sm text-[#9a2ff3]">
-                {isExportingPDF ? <span>Exporting...</span> : <span>PDF</span>}
-              </span>
+              {isExportingPDF ? (
+                <span className="text-sm text-[#9a2ff3]">Exporting...</span>
+              ) : (
+                <>
+                  <FileText size={20} color="#9a2ff3" />
+                  <span className="text-sm text-[#9a2ff3]">PDF</span>
+                </>
+              )}
             </button>
+
           </div>
         );
       default:

@@ -12,8 +12,21 @@ import axios from "axios";
 import { useParams } from "next/navigation";
 import { jwtDecode } from "jwt-decode";
 import { useToast } from "@/app/utills/ToastProvider";
+import { Bouncy } from 'ldrs/react'
+import 'ldrs/react/Bouncy.css'
+import { Treadmill } from 'ldrs/react'
+import 'ldrs/react/Treadmill.css'
+import { Zoomies } from 'ldrs/react'
+import 'ldrs/react/Zoomies.css'
 
+import { LineSpinner } from 'ldrs/react'
+import 'ldrs/react/LineSpinner.css'
+import { Cardio } from 'ldrs/react'
+import 'ldrs/react/Cardio.css'
 
+// Default values shown
+
+// Default values shown
 
 
 const WhiteboardPage: React.FC = () => {
@@ -74,11 +87,23 @@ const WhiteboardPage: React.FC = () => {
   let inviteeEmail = new URLSearchParams(window.location.search).get('collaborator');
   const [ShowIsNotRegisteredModel, setShowIsNotRegisteredModel] = useState(false)
   const [ShowIsNotInvitedModel, setShowIsNotInvitedModel] = useState(false)
+  const [isLoading, setIsLoading] = useState(true);
+
   const Wid = useParams();
   const WhiteboardId = Wid.id;
   console.log(Wid.id)
   console.log(inviteeEmail)
   console.log("🔄 Build version: 470a846")
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 2000); // Show for 3 seconds
+
+    return () => clearTimeout(timer);
+  }, []);
+
+
 
   useEffect(() => {
 
@@ -144,8 +169,6 @@ const WhiteboardPage: React.FC = () => {
       CheckCollaborators();
     }
   }, []);
-
-
 
   useEffect(() => {
     const startTime = Date.now(); // Track when user opened the page
@@ -264,15 +287,15 @@ const WhiteboardPage: React.FC = () => {
         })
 
       } catch (error: any) {
-   const status = error?.response?.status;
-    const reason = error?.response?.data?.reason;
-    const message = error?.response?.data?.message;
+        const status = error?.response?.status;
+        const reason = error?.response?.data?.reason;
+        const message = error?.response?.data?.message;
 
-    if (status === 401 && reason === 'not_authorized') {
-      setisUnauthorizedAttempt(true); // ✅ NOW it will work!
-    }
+        if (status === 401 && reason === 'not_authorized') {
+          setisUnauthorizedAttempt(true); // ✅ NOW it will work!
+        }
 
-    showToast(message || 'Access denied to whiteboard', 'error');
+        showToast(message || 'Access denied to whiteboard', 'error');
       }
 
     }
@@ -283,12 +306,28 @@ const WhiteboardPage: React.FC = () => {
 
 
   return (
+
+
     <div className="flex h-screen overflow-hidden  font-sans">
+
+      {isLoading && (
+        <div className="fixed inset-0 z-50 flex justify-center items-center bg-whie/30 backdrop-blur-sm">
+
+          <Cardio
+            size="50"
+            stroke="4"
+            speed="2"
+            color="#8d03ea"
+          />
+
+        </div>
+      )}
+
 
       {isUnauthorizedAttempt && (
         <div className="absolute inset-0 h-screen container mx-auto w-full flex flex-col justify-center items-center z-50 bg-gradient-to-b from-purple-400 to-purple-500">
           <h1 className="font-bold text-xl text-center text-white tracking-wide shadow-0 sm:shadow-2xs">This Whiteboard is not made public by it's owner or it doesn't exist yet!</h1>
-                    <button className="mt-2 p-3 hover:font-bold text-white hover:border-1 focus:ring-1 ring-white hover:border-white bg-purple-500 shadow-2xl hover:scale-110 transition-all duration-200 ease-in-out font-semibold rounded-2xl " onClick={() => navigateWithLoader(router, "/")} >Go to homepage</button>
+          <button className="mt-2 p-3 hover:font-bold text-white hover:border-1 focus:ring-1 ring-white hover:border-white bg-purple-500 shadow-2xl hover:scale-110 transition-all duration-200 ease-in-out font-semibold rounded-2xl " onClick={() => navigateWithLoader(router, "/")} >Go to homepage</button>
         </div>
       )}
 

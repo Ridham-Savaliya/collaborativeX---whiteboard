@@ -16,6 +16,7 @@ import { FaArrowRight } from "react-icons/fa";
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 import { useTheme } from "../context/ThemeContext";
+import CommingSoon from './templates/Commingsoon'
 import {
   Users,
   Activity,
@@ -36,6 +37,11 @@ import { useToast } from "../utills/ToastProvider";
 import Videocall from "./videocall/index";
 import Draggable from "react-draggable";
 import axios from "axios";
+import Kanban from "./templates/Kanban";
+import Mindmaps from './templates/Mindmaps.tsx'
+import { ReactFlowProvider } from "reactflow";
+
+
 // Socket Types
 interface UserPresence {
   userId: string;
@@ -1372,7 +1378,10 @@ const Canvas: React.FC<CanvasProps> = ({
   const [isPanning, setIsPanning] = useState(false);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [panStart, setPanStart] = useState<Point | null>(null);
+  const [currentTemplate, setcurrentTemplate] = useState('')
+  const [showingTemplate, setshowingTemplate] = useState(false)
 
+  // const [is, setis] = useState(second)
 
   // UI components states
   const [colorPicker, setColorPicker] = useState<{
@@ -1408,9 +1417,9 @@ const Canvas: React.FC<CanvasProps> = ({
   const tempTextState = useRef<TextElement | null>(null);
   const tempShapeState = useRef<ShapeElement | null>(null);
   const newTextIdRef = useRef<string | null>(null);
-  const [activeTools, setActiveTools] = useState<string[]>([]);
+  const [activeTool, setActiveTool] = useState<string | null>(null);
 
-
+  console.log(activeTool)
 
   // Debounced save function
   const debouncedSaveToHistory = useCallback(
@@ -1489,6 +1498,15 @@ const Canvas: React.FC<CanvasProps> = ({
 
     socketRef.current = socket;
 
+    socket.io.engine.on('error', (err: any) => {
+      showToast('A network error occurred', 'error');
+    });
+
+    socket.io.engine.on('upgradeError', (err: any) => {
+      showToast('WebSocket upgrade failed', 'error');
+    });
+
+
     // Connection event handlers
     socket.on('connect', () => {
       console.log('Socket connected:', socket.id);
@@ -1504,11 +1522,10 @@ const Canvas: React.FC<CanvasProps> = ({
 
       measureLatency();
       const latencyInterval = setInterval(measureLatency, 30000);
-
-
-
       return () => clearInterval(latencyInterval);
     });
+
+
 
     socket.on('disconnect', (reason) => {
       console.log('Socket disconnected:', reason);
@@ -1522,20 +1539,24 @@ const Canvas: React.FC<CanvasProps> = ({
       } else if (reason === 'transport close') {
         addError('Connection lost due to network issues', 'NETWORK_ERROR');
       }
-
-
-
       showToast("Disconnected from collaborative session", "error")
     });
 
-    socket.on('connect_error', (error) => {
-      console.error('Socket connection error:', error);
+    socket.on('connect_error', (error: any) => {
+      const msg = error.message?.toLowerCase();
+
+      let displayMsg = 'Failed to connect to server';
+      if (msg.includes('timeout')) displayMsg = 'Connection timed out';
+      else if (msg.includes('websocket error')) displayMsg = 'Unable to establish WebSocket connection';
+      else if (msg.includes('invalid credentials')) displayMsg = 'Authentication failed';
+
+      showToast(displayMsg, 'error');
       setConnectionState(prev => ({
         ...prev,
         status: 'error',
         reconnectAttempts: (prev.reconnectAttempts || 0) + 1
       }));
-      addError(`Connection failed: ${error.message}`, 'CONNECTION_ERROR');
+      addError(`Connection failed: ${displayMsg}`, 'CONNECTION_ERROR');
     });
 
     socket.on('reconnect', (attemptNumber) => {
@@ -3222,12 +3243,26 @@ const Canvas: React.FC<CanvasProps> = ({
   };
 
   const toggleTool = (tool: string) => {
-    setActiveTools(prev =>
-      prev.includes(tool)
-        ? prev.filter(t => t !== tool) // Turn off
-        : [...prev, tool]              // Turn on
-    );
+    setActiveTool(prev => (prev === tool ? null : tool));
   };
+
+
+
+
+  const handleShowTemplate = (currentTemplate: string) => {
+    if (currentTemplate) {
+      setcurrentTemplate(currentTemplate)
+      setshowingTemplate(true)
+    }
+
+    console.log('current template', currentTemplate, showingTemplate);
+
+  }
+
+  const handleCloseTemplate = () => {
+    setshowingTemplate(false)
+    setcurrentTemplate('');
+  }
 
 
   return (
@@ -3420,7 +3455,7 @@ const Canvas: React.FC<CanvasProps> = ({
       <div className="absolute inset-0 z-40 pointer-events-none">
         <div className="pointer-events-auto">
           <Videocall
-            showLobby={activeTools.includes("videoCall")} // Controls lobby visibility
+            showLobby={activeTool === "videoCall"} // Controls lobby visibility
             users={connectedUsers} // Should be of type UserPresence[]
             roomId={
               typeof whiteboardId === "string"
@@ -3434,7 +3469,7 @@ const Canvas: React.FC<CanvasProps> = ({
       </div>
 
 
-      {activeTools.includes('shapeRecognize') && (
+      {activeTool === "shapeRecognize" && (
         // <ShapeRecognizer />
         <div className="absolute top-4 right-4 z-50">
           {/* <VideoCall roomId={roomId} userId={userId} /> */}
@@ -3443,20 +3478,103 @@ const Canvas: React.FC<CanvasProps> = ({
       )}
 
 
-      {activeTools.includes('voice') && (
+      {activeTool === "voice" && (
         <div className="absolute top-4 right-4 z-50">
           {/* <VideoCall roomId={roomId} userId={userId} /> */}
           <div>this is Voice to Draw</div>
         </div>
       )}
 
-      {activeTools.includes('templates') && (
-        <div className="absolute top-4 right-4 z-50">
-          {/* <VideoCall roomId={roomId} userId={userId} /> */}
-          <div>this is templates</div>
-        </div>
-      )}
+{activeTool === "templates" && !showingTemplate && (
+  <div className="absolute top-1/4 left-1/2 transform -translate-x-1/2 z-50">
+    <div className="handle w-[90vw] max-w-sm bg-white rounded-2xl shadow-2xl border border-gray-200 p-6 cursor-move relative">
+      <h2 className="text-xl font-semibold text-gray-800 text-center mb-4">Choose a Template</h2>
 
+      <button
+        onClick={() => toggleTool('templates')}
+        className="absolute top-2 right-2 bg-red-500 text-white p-1 px-2 rounded-full hover:bg-red-400"
+        title="Close Template Menu"
+      >
+        ✕
+      </button>
+
+      <ul className="flex flex-col gap-4">
+        <li
+          id="kanban"
+          onClick={() => handleShowTemplate('kanban')}
+          className="bg-gray-100 hover:bg-purple-100 transition-colors duration-200 px-4 py-3 rounded-lg cursor-pointer text-gray-800 text-sm font-medium shadow group"
+        >
+          <div className="font-semibold flex items-center gap-2">🗂️ Kanban Board</div>
+          <p className="text-xs mt-1 text-gray-600 group-hover:text-purple-700">
+            Track tasks. Stay in flow.
+          </p>
+        </li>
+
+        <li
+          id="mindmap"
+          onClick={() => handleShowTemplate('mindmap')}
+          className="bg-gray-100 hover:bg-purple-100 transition-colors duration-200 px-4 py-3 rounded-lg cursor-pointer text-gray-800 text-sm font-medium shadow group"
+        >
+          <div className="font-semibold flex items-center gap-2">🧠 Mind Map</div>
+          <p className="text-xs mt-1 text-gray-600 group-hover:text-purple-700">
+            Brainstorm fast. Connect ideas.
+          </p>
+        </li>
+
+        <li
+          id="project-outline"
+          onClick={() => handleShowTemplate('project-outline')}
+          className="bg-gray-100 hover:bg-purple-100 transition-colors duration-200 px-4 py-3 rounded-lg cursor-pointer text-gray-800 text-sm font-medium shadow group"
+        >
+          <div className="font-semibold flex items-center gap-2">📝 Project Outline</div>
+          <p className="text-xs mt-1 text-gray-600 group-hover:text-purple-700">
+            Plan smarter. See the big picture.
+          </p>
+        </li>
+
+        <li
+          id="flowchart"
+          onClick={() => handleShowTemplate('flowchart')}
+          className="bg-gray-100 hover:bg-purple-100 transition-colors duration-200 px-4 py-3 rounded-lg cursor-pointer text-gray-800 text-sm font-medium shadow group"
+        >
+          <div className="font-semibold flex items-center gap-2">📊 Flowchart</div>
+          <p className="text-xs mt-1 text-gray-600 group-hover:text-purple-700">
+            Map steps. Clear logic.
+          </p>
+        </li>
+      </ul>
+    </div>
+  </div>
+)}
+
+
+{showingTemplate && (
+  <div className="absolute  top-[15%] left-1/2 transform -translate-x-1/2 z-50 w-[90vw] sm:w-[80vw] h-[70vh] bg-purple-100 rounded-xl shadow-2xl border border-gray-300 p-4 overflow-y-auto scrollbar-custom">
+    <div className="flex justify-between items-center mb-4">
+      <h2 className="text-lg font-semibold text-gray-800 capitalize">{currentTemplate.replace('-', ' ')}</h2>
+    <button
+  onClick={handleCloseTemplate}
+  className="px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white font-semibold rounded-full shadow-md hover:shadow-lg transition-all duration-300 ease-in-out"
+>
+  ✕ Close
+</button>
+
+    </div>
+
+    {/* Render appropriate template */}
+    <div className="h-full scrollbar-custom">
+      {currentTemplate === 'kanban' && <Kanban boardId={whiteboardId} socket={socketRef.current} />}
+      {currentTemplate === 'mindmap' && 
+      <ReactFlowProvider>
+      <Mindmaps socketRef={socketRef.current} whiteboardId={whiteboardId}/>
+      </ReactFlowProvider>
+      
+      }
+      {currentTemplate === 'project-outline' && <CommingSoon type="project-outline" />}
+      {currentTemplate === 'flowchart' &&<CommingSoon type="flowchart"/>}
+    </div>
+  </div>
+)}
 
     </div>
   );

@@ -868,7 +868,7 @@ useEffect(() => {
             <button onClick={handlePrev} disabled={page === 1}
               className="px-4 py-2 bg-purple-600 hover:bg-purple-700 focus:ring-2  focus:border-purple-300 text-white rounded-md disabled:opacity-50"
             >previous</button>
-            <span>page {page} <span className="text-purple-600 font-bold tracking-wider">of</span> {totalPage}</span>
+            <span className="text-purple-600">page {page} <span className="text-purple-600 font-bold tracking-wider">of</span> {totalPage}</span>
             <button onClick={handleNext} disabled={page === totalPage}
               className="px-4 py-2 focus:ring-2 hover:bg-purple-700  focus:border-purple-300 bg-purple-600 text-white rounded-md disabled:opacity-50"
             >Next</button>

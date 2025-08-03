@@ -328,7 +328,7 @@ const Videocall: React.FC<VideocallProps> = ({ showLobby, users, roomId }) => {
   const onConnectionQuality = useCallback((quality: 'excellent' | 'good' | 'poor' | 'disconnected') => {
     setConnectionQuality(quality);
     if (quality === 'poor') {
-      showToast('Connection quality is poor', 'warning');
+      // showToast('Connection quality is poor', 'warning');
     } else if (quality === 'disconnected') {
       showToast('Connection lost - trying to reconnect...', 'error');
     }
@@ -375,6 +375,7 @@ const Videocall: React.FC<VideocallProps> = ({ showLobby, users, roomId }) => {
 
     const handleConnectError = (error: any) => {
       console.error('[videocall] Socket connection error:', error);
+      showToast("there is some issue at server",'warning')
       if (!isProcessingCallEnd) {
         showToast('Connection error. Please check your internet connection.', 'error');
       }

@@ -1,48 +1,54 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { jwtDecode } from "jwt-decode";
-
-import { useParams } from "next/navigation";
+import { useGlobalLoader } from "@/app/hooks/useGlobalLoader";
 
 export default function withAuth(Component) {
   return function AuthenticatedComponent(props) {
     const router = useRouter();
+    const params = useParams();
+
     const [isLoading, setIsLoading] = useState(true);
     const [isShowExpired, setIsShowExpired] = useState(false);
-
-    const Queryparams = new URLSearchParams(window.location.search).get(
-      "collaborator"
-    );
-    const params = useParams();
-    const postLogin = `/whiteboard/${params.id}?collaborator=${Queryparams}`;
+    const [queryParam, setQueryParam] = useState(null);
+    const { navigateWithLoader } = useGlobalLoader();
 
     useEffect(() => {
-      try {
+      if (typeof window !== "undefined") {
+        const collaborator = new URLSearchParams(window.location.search).get("collaborator");
+        setQueryParam(collaborator);
+
         const token = localStorage.getItem("token");
+
         if (!token) {
-          if (params && Queryparams) {
-            router.replace(`/login?postLogin=${postLogin}`);
+          if (params?.id && collaborator) {
+            const postLogin = `/whiteboard/${params.id}?collaborator=${collaborator}`;
+            router.replace(`/login?postLogin=${encodeURIComponent(postLogin)}`);
+          } else {
+            router.replace("/login");
           }
           return;
         }
 
-        const decoded = jwtDecode(token);
-        const isExpired = decoded.exp * 1000 < Date.now();
+        try {
+          const decoded = jwtDecode(token);
+          const isExpired = decoded.exp * 1000 < Date.now();
 
-        if (isExpired) {
+          if (isExpired) {
+            localStorage.removeItem("token");
+            setIsShowExpired(true);
+            setTimeout(() => router.replace("/login"), 3000);
+          } else {
+            setIsLoading(false);
+          }
+        } catch (err) {
+          console.error("Invalid token", err);
           localStorage.removeItem("token");
-          setIsShowExpired(true);
-          setTimeout(() => router.replace("/login"), 3000);
-        } else {
-          setIsLoading(false);
+          router.replace("/login");
         }
-      } catch (err) {
-        console.error("Invalid token", err);
-        localStorage.removeItem("token");
-        router.replace("/login");
       }
-    }, [router]);
+    }, [router, params]);
 
     if (isShowExpired) {
       return (
@@ -72,7 +78,7 @@ export default function withAuth(Component) {
               continue. 😊
             </p>
             <button
-              onClick={() => router.replace("/login")}
+              onClick={() => navigateWithLoader(router,'/login')}
               className="bg-purple-500 hover:bg-purple-600 text-white font-semibold px-6 py-2 rounded-full transition-all duration-300 shadow-lg"
             >
               Go to Login

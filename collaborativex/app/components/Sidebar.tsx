@@ -158,7 +158,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           <div className="h-full px-2 py-5 flex flex-col items-center justify-start">
             <div className="mb-4">
               <img
-                src="/logo2.png"
+                src="https://res.cloudinary.com/dzrzfsu9u/image/upload/v1754029573/promotions/idqhwlol6i3cgzgyyitw.png"
                 alt="Logo"
                 className="w-10 h-10 rounded-full object-contain transition-all duration-300 transform hover:scale-110 shadow-lg hover:shadow-purple-500/30 dark:hover:shadow-purple-700/30"
               />
