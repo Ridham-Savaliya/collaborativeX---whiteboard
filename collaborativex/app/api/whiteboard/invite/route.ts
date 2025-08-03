@@ -20,28 +20,35 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: "Invalid request data" }, { status: 400 });
   }
 
-   inviteeData
-  .flatMap((item: string) => item.split(","))
-  .map((email: string) => email.trim())
-  .filter((email: string) => email.length > 0); // optional: remove empty strings
+  // Clean and flatten invitee emails
+  const cleanedInvitees = inviteeData
+    .flatMap((item: string) => item.split(","))
+    .map((email: string) => email.trim())
+    .filter((email: string) => email.length > 0);
 
   // Find the whiteboard
-  const isWhiteboardExist = await Whiteboard.findById({ _id: WhiteboardId });
-
+  const isWhiteboardExist = await Whiteboard.findById(WhiteboardId);
   if (!isWhiteboardExist) {
     return NextResponse.json({ message: "Whiteboard not found" }, { status: 404 });
   }
 
   // Merge new invitees into collaborators list
-  const preinvitees: string[] = isWhiteboardExist.collaborators || [];
-  const newInvitees = [...new Set([...preinvitees, ...inviteeData])]; // remove duplicates
-  isWhiteboardExist.collaborators = newInvitees;
-  isWhiteboardExist.isShared = true;
+  const preInvitees: string[] = isWhiteboardExist.collaborators || [];
+  const newInvitees = [...new Set([...preInvitees, ...cleanedInvitees])]; // remove duplicates
 
-  await isWhiteboardExist.save();
+  // Update only specific fields to avoid schema validation on elements
+  await Whiteboard.updateOne(
+    { _id: WhiteboardId },
+    {
+      $set: {
+        collaborators: newInvitees,
+        isShared: true,
+      },
+    }
+  );
 
   // Send invite email to each invitee
-  inviteeData.forEach((email: string) => {
+  cleanedInvitees.forEach((email: string) => {
     const invitationLink = `https://collaborativex-whiteboard.vercel.app/whiteboard/${isWhiteboardExist._id}?collaborator=${email}`;
 
     sendMail(
@@ -120,8 +127,7 @@ export async function POST(req: NextRequest) {
   });
 
   return NextResponse.json(
-    { message: "Invitation to collaborators has been sent via emails!" ,inviteeData},
-    
+    { message: "Invitation to collaborators has been sent via emails!", inviteeData: cleanedInvitees },
     { status: 200 }
   );
 }
