@@ -21,15 +21,25 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 // Provider component
 export const UserProvider = ({ children }: { children: ReactNode }) => {
     const [user, setUserName] = useState<User>({ name: "" });
+useEffect(() => {
+  if (!user.name) {
+    const token = localStorage.getItem('token');
 
-    useEffect(() => {
-        if (!user.name) {
-            const token: any = localStorage.getItem('token');
-            const decode: any = jwtDecode(token)
-            setUserName({ name: decode.name })
+    // 🔒 Check if token exists and is a valid string
+    if (typeof token === 'string') {
+      try {
+        const decoded: any = jwtDecode(token);
+        if (decoded?.name) {
+          setUserName({ name: decoded.name });
         }
+      } catch (err) {
+        console.error("Token decoding failed:", err);
+        localStorage.removeItem("token"); // optional cleanup
+      }
+    }
+  }
+}, []);
 
-    }, [])
 
     return (
         <UserContext.Provider value={{ user, setUserName }}>
