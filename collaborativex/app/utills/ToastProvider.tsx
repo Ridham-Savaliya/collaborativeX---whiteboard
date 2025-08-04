@@ -50,7 +50,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
     <ToastContext.Provider value={{ showToast }}>
       {children}
 
-    <div className="fixed top-5 right-5 left-5 sm:left-auto sm:right-5 z-[9999] flex flex-col space-y-3 w-auto sm:max-w-sm overflow-y-auto overflow-x-hidden">
+    <div className="fixed top-5 left-8 left-8 sm:right-auto sm:left-16 z-[9999] flex flex-col space-y-3 w-auto sm:max-w-sm overflow-y-auto overflow-x-hidden">
   {toasts.map((toast) => (
     <div
       key={toast.id}

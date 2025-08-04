@@ -6,6 +6,7 @@ import { LoaderProvider } from "./hooks/useGlobalLoader";
 import GlobalLoader from "./components/GlobalLoader";
 import { ThemeProvider } from "./context/ThemeContext";
 import I18nProvider from "./components/I18nProvider";
+import { UserProvider } from "./context/Usercontext";
 import { ToastProvider } from "./utills/ToastProvider";
 
 
@@ -127,20 +128,22 @@ export default function RootLayout({
             <LoaderProvider>
               <GlobalLoader />
               <ToastProvider>
+                <UserProvider>
 
-                <ToastContainer
-                  position="top-right"
-                  autoClose={4000}
-                  theme="dark" // Perfect for your UI
-                  toastStyle={{
-                    background: "#1e293b", // slate-800
-                    color: "#e2e8f0", // gray-200
-                    fontWeight: "bold",
-                    borderLeft: "5px solid #8b8efb", // your brand accent
-                  }}
-                />
+                  <ToastContainer
+                    position="top-right"
+                    autoClose={4000}
+                    theme="dark" // Perfect for your UI
+                    toastStyle={{
+                      background: "#1e293b", // slate-800
+                      color: "#e2e8f0", // gray-200
+                      fontWeight: "bold",
+                      borderLeft: "5px solid #8b8efb", // your brand accent
+                    }}
+                  />
 
-                {children}
+                  {children}
+                </UserProvider>
               </ToastProvider>
             </LoaderProvider>
           </ThemeProvider>

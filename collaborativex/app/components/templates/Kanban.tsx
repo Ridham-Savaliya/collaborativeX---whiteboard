@@ -111,7 +111,7 @@ const TaskCard = ({ task, index, columnId, onEdit, onDelete }: {
               <textarea
                 value={editContent}
                 onChange={(e) => setEditContent(e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                className="w-full text-black p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                 rows={3}
                 autoFocus
                 placeholder="Describe your task..."
@@ -203,7 +203,7 @@ const AddTaskForm = ({ onAdd, columnColor }: { onAdd: (content: string, priority
   };
 
   return (
-    <motion.div layout className="mb-4">
+    <motion.div layout className="mb-4 text-black">
       <AnimatePresence mode="wait">
         {!isExpanded ? (
           <motion.button
@@ -230,7 +230,7 @@ const AddTaskForm = ({ onAdd, columnColor }: { onAdd: (content: string, priority
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Describe your task..."
-              className="w-full p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              className="w-full p-3 border  border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
               rows={3}
               autoFocus
             />

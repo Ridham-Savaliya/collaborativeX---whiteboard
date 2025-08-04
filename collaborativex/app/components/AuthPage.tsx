@@ -7,7 +7,10 @@ import axios from "axios";
 import { toast } from "react-toastify";
 import { useGlobalLoader } from "../hooks/useGlobalLoader";
 import { useToast } from "../utills/ToastProvider";
+import validator from 'validator'
 import { useParams } from "next/navigation";
+import { frameData, warning } from "framer-motion";
+import { min } from "lodash";
 
 
 const AuthPage = () => {
@@ -20,7 +23,7 @@ const AuthPage = () => {
   const [isForgetPwd, setIsForgetPwd] = useState(false);
   const [otpId, setOtpId] = useState(null);
   const [step, setStep] = useState(1);
-  const {showToast} = useToast()
+  const { showToast } = useToast()
 
   const [formData, setFormData] = useState({
     email: "",
@@ -45,11 +48,6 @@ const AuthPage = () => {
     setOtpDetails((prev) => ({ ...prev, [name]: value }));
   };
 
-  useEffect(() => {
-
-    
-  }, [])
-
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,9 +56,34 @@ const AuthPage = () => {
     const postRegister = new URLSearchParams(window.location.search).get('postRegister');
     console.log(postRegister)
 
+
+    if (
+      !validator.matches(name, /^[a-zA-Z\s'-]+$/) ||
+      !validator.isLength(name, { min: 2, max: 20 })
+    ) {
+      showToast("Enter 2–20 letters, spaces, - or ' only for the name!", 'warning');
+      setIsLoading(false);
+      return;
+    }
+
+
+    if (!validator.isEmail(email)) {
+      showToast("Please enter a valid email!", "warning")
+      setIsLoading(false);
+      return;
+
+    }
+
+    if (!validator.isStrongPassword(password)) {
+      showToast('Try to keep the password strenth higher!', 'warning')
+      setIsLoading(false);
+      return;
+
+    }
+
     if (password !== confirmPassword) {
 
-      showToast("Passwords do not match","error")
+      showToast("Passwords do not match", "error")
       setIsLoading(false);
       return;
     }
@@ -84,7 +107,7 @@ const AuthPage = () => {
       }
 
       // toast.success("Registered successfully!");
-      showToast(`Welcome,${name}!`,"success");
+      showToast(`Welcome,${name}!`, "success");
 
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Registration failed");
@@ -100,22 +123,39 @@ const AuthPage = () => {
 
     try {
       const res = await axios.post("/api/auth/login", { email, password });
+
+      if (!validator.isEmail(email)) {
+        showToast("Please enter a valid email", "warning");
+        setIsLoading(false);
+        return;
+      }
+
+      if (!password || password.length < 6 || !validator.isStrongPassword(password)) {
+        if (!password || password.length < 6) {
+          showToast("Password must be at least 6 characters", "warning");
+        } else if (!validator.isStrongPassword(password)) {
+          showToast("Try to keep the password strength higher!", "warning");
+        }
+        setIsLoading(false);
+        return;
+      }
+
+
       localStorage.setItem("token", res.data.token);
 
       showToast(`welcome,${res.data?.name}`)
       const params = new URLSearchParams(window.location.search).get('postLogin')
-      if(params)
-      {
-        navigateWithLoader(router,params)
+      if (params) {
+        navigateWithLoader(router, params)
       }
-      else{
+      else {
 
-        navigateWithLoader(router, "/onboarding"); 
+        navigateWithLoader(router, "/onboarding");
       }
-      
+
     } catch (error: any) {
 
-      showToast(error.response?.data?.message || "Login failed","error")
+      showToast(error.response?.data?.message || "Login failed", "error")
     } finally {
       setIsLoading(false);
     }
@@ -126,17 +166,21 @@ const AuthPage = () => {
     setIsLoading(true);
     try {
       if (step === 1) {
+
+        if (!validator.isEmail(formData.email)) {
+          showToast("enter a valid email", 'warning');
+        }
         const res = await axios.post("/api/auth/forget-password", {
           email: formData.email,
         });
 
-        showToast(res.data?.message,"success")
+        showToast(res.data?.message, "success")
         setOtpId(res.data?.otpId);
         setStep(2);
       } else {
         if (otpDetails.newPassword !== otpDetails.confirmNewPassword) {
 
-          showToast("Passwords do not match","warning")
+          showToast("Passwords do not match", "warning")
           return;
         }
 
@@ -148,13 +192,13 @@ const AuthPage = () => {
         });
 
 
-        showToast(res.data?.message || "Password reset successful!","success")
+        showToast(res.data?.message || "Password reset successful!", "success")
         setIsForgetPwd(false);
         setStep(1);
       }
     } catch (error: any) {
 
-      showToast(error?.response?.data?.message || "Reset failed","error")
+      showToast(error?.response?.data?.message || "Reset failed", "error")
     } finally {
       setIsLoading(false);
     }

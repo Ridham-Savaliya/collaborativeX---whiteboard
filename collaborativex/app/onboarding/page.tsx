@@ -96,35 +96,35 @@ const Onboarding = () => {
     }
   };
 
-useEffect(() => {
-  const sendWelcomeMail = async () => {
-    const token = localStorage.getItem('token')
+  useEffect(() => {
+    const sendWelcomeMail = async () => {
+      const token = localStorage.getItem('token')
 
-    try {
-      const res = await axios.post(
-        "/api/user/welcomeMail",
-        {}, // No body content needed in this case
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+      try {
+        const res = await axios.post(
+          "/api/user/welcomeMail",
+          {}, // No body content needed in this case
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (res.status === 200) {
+          console.log(res.data.message);
         }
-      );
-
-      if (res.status === 200) {
-        console.log(res.data.message);
+      } catch (err) {
+        console.error("Failed to send welcome mail:", err);
       }
-    } catch (err) {
-      console.error("Failed to send welcome mail:", err);
-    }
-  };
+    };
 
-  const timer = setTimeout(() => {
-    sendWelcomeMail();
-  }, 4000);
+    const timer = setTimeout(() => {
+      sendWelcomeMail();
+    }, 4000);
 
-  return () => clearTimeout(timer); // Cleanup if component unmounts
-}, []);
+    return () => clearTimeout(timer); // Cleanup if component unmounts
+  }, []);
 
 
 
@@ -664,216 +664,220 @@ useEffect(() => {
       </header>
 
       <main className="container mx-auto px-6 py-10 relative z-10">
-        {isLoading ? (
-          <div className="flex flex-col items-center justify-center min-h-[50vh] gap-8">
-            <div className="relative">
-              <div className="w-32 h-32 bg-gradient-to-br from-indigo-100 dark:from-indigo-900/20 to-purple-100 dark:to-purple-900/20 rounded-3xl flex items-center justify-center shadow-2xl">
-                <Loader2
-                  className="w-16 h-16 text-indigo-600 dark:text-indigo-400 animate-spin"
-                />
+        <div className="flex flex-col justify-between sm:h-[60vh] w-screen">
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center min-h-[50vh] gap-8">
+              <div className="relative">
+                <div className="w-32 h-32 bg-gradient-to-br from-indigo-100 dark:from-indigo-900/20 to-purple-100 dark:to-purple-900/20 rounded-3xl flex items-center justify-center shadow-2xl">
+                  <Loader2
+                    className="w-16 h-16 text-indigo-600 dark:text-indigo-400 animate-spin"
+                  />
+                </div>
+                <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-br from-purple-500 dark:from-purple-600 to-pink-500 dark:to-pink-600 rounded-full animate-pulse"></div>
+                <div className="absolute -bottom-2 -left-2 w-6 h-6 bg-gradient-to-br from-blue-500 dark:from-blue-600 to-cyan-500 dark:to-cyan-600 rounded-full animate-pulse delay-500"></div>
               </div>
-              <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-br from-purple-500 dark:from-purple-600 to-pink-500 dark:to-pink-600 rounded-full animate-pulse"></div>
-              <div className="absolute -bottom-2 -left-2 w-6 h-6 bg-gradient-to-br from-blue-500 dark:from-blue-600 to-cyan-500 dark:to-cyan-600 rounded-full animate-pulse delay-500"></div>
-            </div>
-            <div className="text-center max-w-md">
-              <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-3">
-                {t("loadingYourWhiteboards")}
-              </h2>
-              <p className="text-gray-600 dark:text-gray-400 text-lg">
-                {t("loadingYourWhiteboardsDesc")}
-              </p>
-            </div>
-            <LoadingSkeleton />
-          </div>
-        ) : filteredWhiteboards.length === 0 ? (
-          <div className="flex flex-col items-center justify-center min-h-[70vh] gap-8 animate-fade-in">
-            <div className="relative">
-              <div className="w-32 h-32 bg-gradient-to-br from-indigo-100 dark:from-indigo-900/20 to-purple-100 dark:to-purple-900/20 rounded-3xl flex items-center justify-center shadow-2">
-                <Compass
-                  size={56}
-                  className="text-indigo-600 dark:text-indigo-400"
-                />
-              </div>
-              <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-br from-purple-500 dark:from-purple-600 to-pink-500 dark:to-pink-600 rounded-full animate-pulse"></div>
-              <div className="absolute -bottom-2 -left-2 w-6 h-6 bg-gradient-to-br from-blue-500 dark:from-blue-600 to-cyan-500 dark:to-cyan-600 rounded-full animate-pulse delay-500"></div>
-            </div>
-            {searchTerm ? (
               <div className="text-center max-w-md">
                 <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-3">
-                  {t("noMatchesFound")}
+                  {t("loadingYourWhiteboards")}
                 </h2>
                 <p className="text-gray-600 dark:text-gray-400 text-lg">
-                  {t("noMatchesFoundDesc")}
+                  {t("loadingYourWhiteboardsDesc")}
                 </p>
-                <button
-                  onClick={() => setSearchTerm("")}
-                  className="mt-4 px-6 py-3 bg-indigo-100 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-xl hover:bg-indigo-200 dark:hover:bg-indigo-900/30 transition-all duration-200 font-medium"
-                >
-                  {t("clearSearch")}
-                </button>
               </div>
-            ) : (
-              <div className="text-center max-w-2xl">
-                <h2 className="text-4xl font-bold text-gray-800 dark:text-gray-200 mb-4">
-                  {t("startYourCreativeJourney")}
-                </h2>
-                <p className="text-gray-600 dark:text-gray-400 text-xl mb-8 leading-relaxed">
-                  {t("startYourCreativeJourneyDesc")}
-                </p>
-                <button
-                  onClick={() => setIsOnboarding(true)}
-                  className="inline-flex items-center gap-3 bg-gradient-to-r from-indigo-600 dark:from-indigo-400 to-purple-600 dark:to-purple-400 text-white px-8 py-4 rounded-2xl hover:from-indigo-700 dark:hover:from-indigo-300 hover:to-purple-700 dark:hover:to-purple-300 transition-all duration-200 shadow-xl hover:shadow-2xl hover:scale-105 text-lg font-semibold"
-                >
-                  <Plus size={24} />
-                  <span>{t("createYourFirstWhiteboard")}</span>
-                </button>
+              <LoadingSkeleton />
+            </div>
+          ) : filteredWhiteboards.length === 0 ? (
+            <div className="flex flex-col items-center justify-center min-h-[70vh] gap-8 animate-fade-in">
+              <div className="relative">
+                <div className="w-32 h-32 bg-gradient-to-br from-indigo-100 dark:from-indigo-900/20 to-purple-100 dark:to-purple-900/20 rounded-3xl flex items-center justify-center shadow-2">
+                  <Compass
+                    size={56}
+                    className="text-indigo-600 dark:text-indigo-400"
+                  />
+                </div>
+                <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-br from-purple-500 dark:from-purple-600 to-pink-500 dark:to-pink-600 rounded-full animate-pulse"></div>
+                <div className="absolute -bottom-2 -left-2 w-6 h-6 bg-gradient-to-br from-blue-500 dark:from-blue-600 to-cyan-500 dark:to-cyan-600 rounded-full animate-pulse delay-500"></div>
               </div>
-            )}
-          </div>
-        ) : (
-          <div
-            className={
-              view === "grid"
-                ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8"
-                : "flex flex-col gap-4"
-            }
-          >
-            {filteredWhiteboards.map((whiteboard, index) => (
-              <div
-                key={whiteboard._id}
-                className={`group relative bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-3xl border border-white/30 dark:border-gray-700 transition-all duration-300 hover:scale-105 hover:bg-white/90 dark:hover:bg-gray-800/90 hover:shadow-2xl overflow-hidden animate-fade-in ${view === "grid"
-                  ? "shadow-lg hover:shadow-2xl"
-                  : "shadow-md hover:shadow-xl flex items-center"
-                  }`}
-                style={{ animationDelay: `${index * 100}ms` }}
-              >
-                {view === "grid" && (
-                  <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-indigo-500 dark:from-indigo-400 to-purple-500 dark:to-purple-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                )}
-
+              {searchTerm ? (
+                <div className="text-center max-w-md">
+                  <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-3">
+                    {t("noMatchesFound")}
+                  </h2>
+                  <p className="text-gray-600 dark:text-gray-400 text-lg">
+                    {t("noMatchesFoundDesc")}
+                  </p>
+                  <button
+                    onClick={() => setSearchTerm("")}
+                    className="mt-4 px-6 py-3 bg-indigo-100 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-xl hover:bg-indigo-200 dark:hover:bg-indigo-900/30 transition-all duration-200 font-medium"
+                  >
+                    {t("clearSearch")}
+                  </button>
+                </div>
+              ) : (
+                <div className="text-center max-w-2xl">
+                  <h2 className="text-4xl font-bold text-gray-800 dark:text-gray-200 mb-4">
+                    {t("startYourCreativeJourney")}
+                  </h2>
+                  <p className="text-gray-600 dark:text-gray-400 text-xl mb-8 leading-relaxed">
+                    {t("startYourCreativeJourneyDesc")}
+                  </p>
+                  <button
+                    onClick={() => setIsOnboarding(true)}
+                    className="inline-flex items-center gap-3 bg-gradient-to-r from-indigo-600 dark:from-indigo-400 to-purple-600 dark:to-purple-400 text-white px-8 py-4 rounded-2xl hover:from-indigo-700 dark:hover:from-indigo-300 hover:to-purple-700 dark:hover:to-purple-300 transition-all duration-200 shadow-xl hover:shadow-2xl hover:scale-105 text-lg font-semibold"
+                  >
+                    <Plus size={24} />
+                    <span>{t("createYourFirstWhiteboard")}</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div
+              className={
+                view === "grid"
+                  ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8"
+                  : "flex flex-col gap-4"
+              }
+            >
+              {filteredWhiteboards.map((whiteboard, index) => (
                 <div
-                  className={`${view === "grid" ? "p-8" : "p-6 flex-grow"}`}
+                  key={whiteboard._id}
+                  className={`group relative bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-3xl border border-white/30 dark:border-gray-700 transition-all duration-300 hover:scale-105 hover:bg-white/90 dark:hover:bg-gray-800/90 hover:shadow-2xl overflow-hidden animate-fade-in ${view === "grid"
+                    ? "shadow-lg hover:shadow-2xl"
+                    : "shadow-md hover:shadow-xl flex items-center"
+                    }`}
+                  style={{ animationDelay: `${index * 100}ms` }}
                 >
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-grow">
-                      <h2
-                        className={`font-bold text-gray-800 dark:text-gray-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors duration-200 ${view === "grid" ? "text-xl mb-3" : "text-lg mb-2"
+                  {view === "grid" && (
+                    <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-indigo-500 dark:from-indigo-400 to-purple-500 dark:to-purple-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  )}
+
+                  <div
+                    className={`${view === "grid" ? "p-8" : "p-6 flex-grow"}`}
+                  >
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex-grow">
+                        <h2
+                          className={`font-bold text-gray-800 dark:text-gray-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors duration-200 ${view === "grid" ? "text-xl mb-3" : "text-lg mb-2"
+                            }`}
+                        >
+                          {whiteboard.name}
+                        </h2>
+                        {whiteboard.purpose && (
+                          <span className="inline-block text-sm text-gray-600 dark:text-gray-400 bg-gradient-to-r from-gray-100 dark:from-gray-700 to-gray-200 dark:to-gray-600 px-3 py-1.5 rounded-full border border-gray-200/50 dark:border-gray-600/50">
+                            {t(
+                              whiteboard.purpose
+                                .toLowerCase()
+                                .replace(/\s/g, "")
+                            )}
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          toggleFavorite(whiteboard._id);
+                        }}
+                        className={`p-2.5 rounded-full transition-all duration-200 hover:scale-110 ${whiteboard.isFavorite
+                          ? "text-amber-500 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20"
+                          : "text-gray-400 dark:text-gray-500 hover:text-amber-500 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20"
                           }`}
-                      >
-                        {whiteboard.name}
-                      </h2>
-                      {whiteboard.purpose && (
-                        <span className="inline-block text-sm text-gray-600 dark:text-gray-400 bg-gradient-to-r from-gray-100 dark:from-gray-700 to-gray-200 dark:to-gray-600 px-3 py-1.5 rounded-full border border-gray-200/50 dark:border-gray-600/50">
-                          {t(
-                            whiteboard.purpose
-                              .toLowerCase()
-                              .replace(/\s/g, "")
-                          )}
-                        </span>
-                      )}
-                    </div>
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        toggleFavorite(whiteboard._id);
-                      }}
-                      className={`p-2.5 rounded-full transition-all duration-200 hover:scale-110 ${whiteboard.isFavorite
-                        ? "text-amber-500 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20"
-                        : "text-gray-400 dark:text-gray-500 hover:text-amber-500 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20"
-                        }`}
-                      aria-label={
-                        whiteboard.isFavorite
-                          ? t("removeFromFavorites")
-                          : t("addToFavorites")
-                      }
-                    >
-                      <Star
-                        size={18}
-                        className={
+                        aria-label={
                           whiteboard.isFavorite
-                            ? "fill-amber-500 dark:fill-amber-400"
-                            : ""
+                            ? t("removeFromFavorites")
+                            : t("addToFavorites")
                         }
-                      />
-                    </button>
+                      >
+                        <Star
+                          size={18}
+                          className={
+                            whiteboard.isFavorite
+                              ? "fill-amber-500 dark:fill-amber-400"
+                              : ""
+                          }
+                        />
+                      </button>
+                    </div>
+
+                    <div
+                      className={`flex items-center text-sm text-gray-500 dark:text-gray-400 ${view === "grid" ? "mb-6" : "mb-0"
+                        }`}
+                    >
+                      <Clock size={16} className="mr-2" />
+                      <span className="font-medium">
+                        {formatDate(whiteboard.createdAt)}
+                      </span>
+                    </div>
+
+                    {(view === "grid" || view === "list") &&
+                      whiteboard.collaborators &&
+                      whiteboard.collaborators.length > 0 && (
+                        <div
+                          className={`flex items-center ${view === "grid" ? "mt-4" : "ml-4"
+                            }`}
+                        >
+                          <Users
+                            size={16}
+                            className="mr-2 text-gray-400 dark:text-gray-500"
+                          />
+                          <span className="text-sm text-gray-500 dark:text-gray-400">
+                            {whiteboard.collaborators.length}{" "}
+                            {t(
+                              whiteboard.collaborators.length > 1
+                                ? "collaborators"
+                                : "collaborator"
+                            )}
+                          </span>
+                        </div>
+                      )}
                   </div>
 
                   <div
-                    className={`flex items-center text-sm text-gray-500 dark:text-gray-400 ${view === "grid" ? "mb-6" : "mb-0"
-                      }`}
+                    className={`${view === "grid"
+                      ? "absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-white/90 dark:from-gray-800/90 to-transparent transition-all duration-300 opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                      : "flex items-center gap-3 p-4"
+                      } flex flex-col sm:flex-row gap-3 sm:gap-2 w-full`}
                   >
-                    <Clock size={16} className="mr-2" />
-                    <span className="font-medium">
-                      {formatDate(whiteboard.createdAt)}
-                    </span>
-                  </div>
-
-                  {(view === "grid" || view === "list") &&
-                    whiteboard.collaborators &&
-                    whiteboard.collaborators.length > 0 && (
-                      <div
-                        className={`flex items-center ${view === "grid" ? "mt-4" : "ml-4"
-                          }`}
+                    <div className="flex flex-row container mx-auto   gap-4 w-full">
+                      <button
+                        onClick={() => navigateWithLoader(router, `/whiteboard/${whiteboard._id}`)}
+                        className="w-full max-w-[50%] sm:w-[50%]  sm:max-w-none  mx-auto sm:mx-0 px-3 py-2 sm:px-4 sm:py-2 text-sm sm:text-base text-center bg-gradient-to-r from-indigo-600 dark:from-indigo-400 to-purple-600 dark:to-purple-400 text-white rounded-xl font-semibold sm:focus:ring-2 sm:focus:ring-purple-400 sm:hover:from-indigo-700 sm:dark:hover:from-indigo-300 sm:hover:to-purple-700 sm:dark:hover:to-purple-300 transition-all duration-200 sm:hover:scale-105 shadow-lg"
                       >
-                        <Users
-                          size={16}
-                          className="mr-2 text-gray-400 dark:text-gray-500"
-                        />
-                        <span className="text-sm text-gray-500 dark:text-gray-400">
-                          {whiteboard.collaborators.length}{" "}
-                          {t(
-                            whiteboard.collaborators.length > 1
-                              ? "collaborators"
-                              : "collaborator"
-                          )}
-                        </span>
-                      </div>
-                    )}
-                </div>
+                        {t("openBoard")}
+                      </button>
 
-                <div
-                  className={`${view === "grid"
-                    ? "absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-white/90 dark:from-gray-800/90 to-transparent transition-all duration-300 opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
-                    : "flex items-center gap-3 p-4"
-                    } flex flex-col sm:flex-row gap-3 sm:gap-2 w-full`}
-                >
-                  <div className="flex flex-row container mx-auto   gap-4 w-full">
-                    <button
-                      onClick={() => navigateWithLoader(router, `/whiteboard/${whiteboard._id}`)}
-                      className="w-full max-w-[50%] sm:w-[50%]  sm:max-w-none  mx-auto sm:mx-0 px-3 py-2 sm:px-4 sm:py-2 text-sm sm:text-base text-center bg-gradient-to-r from-indigo-600 dark:from-indigo-400 to-purple-600 dark:to-purple-400 text-white rounded-xl font-semibold sm:focus:ring-2 sm:focus:ring-purple-400 sm:hover:from-indigo-700 sm:dark:hover:from-indigo-300 sm:hover:to-purple-700 sm:dark:hover:to-purple-300 transition-all duration-200 sm:hover:scale-105 shadow-lg"
-                    >
-                      {t("openBoard")}
-                    </button>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          deleteWhiteboard(whiteboard._id);
+                        }}
+                        className="w-full sm:w-[50%] max-w-[50%] mr-0    sm:max-w-none mx-auto sm:mx-0 px-3 py-2 sm:px-4 sm:py-2 text-sm sm:text-base text-center bg-gradient-to-r from-red-500 dark:from-red-600 to-pink-500 dark:to-pink-600 text-white rounded-xl font-semibold sm:hover:from-red-600 sm:dark:hover:from-red-500 sm:hover:to-pink-600 sm:dark:hover:to-pink-500 transition-all duration-200 sm:hover:scale-105 shadow-lg"
+                      >
+                        {view === "grid" ? t("delete") : "🗑️"}
+                      </button>
+                    </div>
 
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        deleteWhiteboard(whiteboard._id);
-                      }}
-                      className="w-full sm:w-[50%] max-w-[50%] mr-0    sm:max-w-none mx-auto sm:mx-0 px-3 py-2 sm:px-4 sm:py-2 text-sm sm:text-base text-center bg-gradient-to-r from-red-500 dark:from-red-600 to-pink-500 dark:to-pink-600 text-white rounded-xl font-semibold sm:hover:from-red-600 sm:dark:hover:from-red-500 sm:hover:to-pink-600 sm:dark:hover:to-pink-500 transition-all duration-200 sm:hover:scale-105 shadow-lg"
-                    >
-                      {view === "grid" ? t("delete") : "🗑️"}
-                    </button>
                   </div>
 
                 </div>
+              ))}
+            </div>
+          )}
+        </div>
 
-              </div>
-            ))}
-          </div>
-        )}
-
-        {!isLoading && (
-          <div className="w-full mt-10 flex justify-between items-center ">
-            <button onClick={handlePrev} disabled={page === 1}
-              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 focus:ring-2  focus:border-purple-300 text-white rounded-md disabled:opacity-50"
-            >previous</button>
-            <span className="text-purple-600">page {page} <span className="text-purple-600 font-bold tracking-wider">of</span> {totalPage}</span>
-            <button onClick={handleNext} disabled={page === totalPage}
-              className="px-4 py-2 focus:ring-2 hover:bg-purple-700  focus:border-purple-300 bg-purple-600 text-white rounded-md disabled:opacity-50"
-            >Next</button>
-          </div>
-        )}
+        <div>
+          {!isLoading && (
+            <div className="w-full mt-10 flex justify-between items-center ">
+              <button onClick={handlePrev} disabled={page === 1}
+                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 focus:ring-2  focus:border-purple-300 text-white rounded-md disabled:opacity-50"
+              >previous</button>
+              <span className="text-purple-600">page {page} <span className="text-purple-600 font-bold tracking-wider">of</span> {totalPage}</span>
+              <button onClick={handleNext} disabled={page === totalPage}
+                className="px-4 py-2 focus:ring-2 hover:bg-purple-700  focus:border-purple-300 bg-purple-600 text-white rounded-md disabled:opacity-50"
+              >Next</button>
+            </div>
+          )}
+        </div>
       </main>
     </div>
   );

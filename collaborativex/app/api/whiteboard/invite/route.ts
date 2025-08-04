@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
 
   // Send invite email to each invitee
   inviteeData.forEach((email: string) => {
-    const invitationLink = `http://localhost:3000/whiteboard/${isWhiteboardExist._id}?collaborator=${email}`;
+    const invitationLink = `https://collaborativex-whiteboard.vercel.app/whiteboard/${isWhiteboardExist._id}?collaborator=${email}`;
 
     sendMail(
       email,

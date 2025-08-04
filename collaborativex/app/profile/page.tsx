@@ -23,8 +23,8 @@ import axios from "axios";
 import { useTheme } from "../context/ThemeContext";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next"; // Import useTranslation
-import useSocket from "../components/useSocket";
 import { useToast } from "../utills/ToastProvider";
+import { useUser } from "../context/Usercontext";
 
 
 interface UserProfile {
@@ -76,6 +76,7 @@ const Profile: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const currentTab = searchParams.get("activityTab");
+  const { setUserName} = useUser();
 
   const defaultUser: UserProfile = {
     name: "",
@@ -106,6 +107,8 @@ const Profile: React.FC = () => {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [activeTab, setActiveTab] = useState("overview");
   const [isEditing, setEditing] = useState(false);
+  const [isLoading, setIsloading] = useState(false);
+  const [isUploading, setisUploading] = useState(false)
   const [formData, setFormData] = useState({
     name: defaultUser.name,
     bio: defaultUser.bio,
@@ -231,7 +234,7 @@ const Profile: React.FC = () => {
         "upload_preset",
         process.env.NEXT_PUBLIC_CLOUDINARY_PRESET || "colloborativex"
       );
-
+      setisUploading(true);
       const uploadRes = await fetch(
         "https://api.cloudinary.com/v1_1/dsqpc6sp6/image/upload",
         { method: "POST", body: imageData }
@@ -257,6 +260,7 @@ const Profile: React.FC = () => {
         setUser(updatedUser);
         setFormData((prev) => ({ ...prev, profilePicture: profilePictureUrl }));
         setError(null);
+        setisUploading(false);
         showToast(t("success.profilePicture"), "success")
       } else {
         throw new Error(t("errors.updateProfilePicture"));
@@ -354,6 +358,7 @@ const Profile: React.FC = () => {
       return;
     }
     try {
+      setIsloading(true)
       const response = await fetch("/api/user/profile", {
         method: "PATCH",
         headers: {
@@ -367,7 +372,11 @@ const Profile: React.FC = () => {
         const updatedUser = await response.json();
         setUser(updatedUser);
         setEditing(false);
+        setIsloading(false);
         setError(null);
+        setUserName({name:updatedUser.name});  
+        // console.log(updatedUser.name);
+        
 
         showToast(t("success.profileUpdated"), "success")
       } else {
@@ -510,7 +519,17 @@ const Profile: React.FC = () => {
                   onClick={handleUpdateProfilePicture}
                   className="mt-2 px-4 py-2 bg-purple-600 text-white dark:bg-purple-500 dark:hover:bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors"
                 >
-                  {t("uploadProfilePicture")}
+                  {isUploading ? (
+                    <>
+                      <p>uploading profile...</p>
+                    </>
+                  ) : (
+                    <>
+                      {t("uploadProfilePicture")}
+                    </>
+                  )}
+
+
                 </button>
                 <h2 className="text-xl font-bold text-white mt-4">
                   {user.name || t("defaultUserName")}
@@ -669,8 +688,17 @@ const Profile: React.FC = () => {
                             onClick={handleSave}
                             className="flex items-center px-6 py-3 bg-purple-600 text-white dark:bg-purple-500 dark:hover:bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors"
                           >
-                            <FiSave className="w-4 h-4 mr-2" />
-                            {t("saveChanges")}
+                            {isLoading ? (
+                              "saving changes..."
+                            ) : (
+                              <>
+                                <FiSave className="w-4 h-4 mr-2" />
+                                {t("saveChanges")}
+                              </>
+                            )}
+
+
+
                           </button>
                           <button
                             onClick={handleCancel}

@@ -7,7 +7,7 @@ import { IoShareSocialOutline } from "react-icons/io5";
 import { jwtDecode } from "jwt-decode";
 import axios from "axios";
 import { useToast } from "../utills/ToastProvider";
-import Whiteboard from "../api/models/Whiteboard";
+import { useUser } from "../context/Usercontext";
 
 interface RightNavBarProps {
   saveWhiteboard: () => void;
@@ -25,6 +25,8 @@ const RightNavBar: React.FC<RightNavBarProps> = ({ saveWhiteboard, exportAsPDF, 
   const [isDirty, setIsDirty] = useState(true); // Assume changes are not saved initially
   const router = useRouter();
 const {showToast} = useToast()
+const {user} = useUser();
+const [username, setusername] = useState(user)
 
   // Warn on unsaved changes
   useEffect(() => {
@@ -90,16 +92,7 @@ const handleInvite = async (e: any) => {
   }
 };
 
-
-
-
-  const token: any = localStorage.getItem('token');
-  let decode: any = '';
-  if (token) {
-
-    decode = jwtDecode<{ name: string }>(token)
-  }
-
+console.log(username)
 
   const handleExport = () => {
     exportAsPNG();
@@ -213,7 +206,7 @@ const handleInvite = async (e: any) => {
           <div className="absolute right-0 mt-2 w-48 bg-gray-800/90 backdrop-blur-xl text-white rounded-md shadow-lg border border-purple-500/20">
             <div className="p-4">
               <p className="text-sm font-medium">User Name</p>
-              <p className="text-xs text-gray-300">{decode.name}</p>
+              <p className="text-xs text-gray-300">{username.name}</p>
             </div>
             <div className="border-t border-purple-500/20">
               <button
