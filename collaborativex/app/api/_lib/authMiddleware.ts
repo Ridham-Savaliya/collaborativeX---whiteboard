@@ -12,7 +12,7 @@ export async function authenticate(req: NextRequest) {
 
     try {
         const decoded = jwt.verify(token, process.env.NEXTAUTH_SECRET!)
-
+        
         return decoded
     } catch (error) {
         return NextResponse.json({ message: "Unauthorized: Invalid token" }, { status: 401 })

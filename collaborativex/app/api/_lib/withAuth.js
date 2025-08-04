@@ -32,21 +32,30 @@ export default function withAuth(Component) {
         }
 
         try {
-          const decoded = jwtDecode(token);
-          const isExpired = decoded.exp * 1000 < Date.now();
 
-          if (isExpired) {
-            localStorage.removeItem("token");
-            setIsShowExpired(true);
-            setTimeout(() => router.replace("/login"), 3000);
+          // ✅ Ensure token is a string
+          if (typeof token === "string") {
+            const decoded = jwtDecode(token);
+            const isExpired = decoded.exp * 1000 < Date.now();
+
+            if (isExpired) {
+              localStorage.removeItem("token");
+              setIsShowExpired(true);
+              setTimeout(() => router.replace("/login"), 3000);
+            } else {
+              setIsLoading(false); // ✅ Mark as valid
+            }
           } else {
-            setIsLoading(false);
+            // No valid token
+            localStorage.removeItem("token");
+            router.replace("/login");
           }
         } catch (err) {
           console.error("Invalid token", err);
           localStorage.removeItem("token");
           router.replace("/login");
         }
+
       }
     }, [router, params]);
 
@@ -78,7 +87,7 @@ export default function withAuth(Component) {
               continue. 😊
             </p>
             <button
-              onClick={() => navigateWithLoader(router,'/login')}
+              onClick={() => navigateWithLoader(router, '/login')}
               className="bg-purple-500 hover:bg-purple-600 text-white font-semibold px-6 py-2 rounded-full transition-all duration-300 shadow-lg"
             >
               Go to Login
