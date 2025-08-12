@@ -1,0 +1,355 @@
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { DndContext, useDraggable, PointerSensor, useSensor } from '@dnd-kit/core';
+import { Video, Users, Phone, GripVertical, X, Smartphone, UserPlus, Crown, Loader2 } from 'lucide-react';
+
+interface UserPresence {
+  userId: string;
+  username: string;
+  email: string;
+  color: string;
+  joined: boolean;
+}
+
+interface VideoCallLobbyProps {
+  onlineUsers: UserPresence[];
+  onRequest: (userIds: string[]) => void;
+  onClose: () => void;
+  currentUserId: string;
+  isCallActive?: boolean;
+  callOwner?: string; // FIXED: Add call owner info
+}
+
+export default function VideoCallLobby({ 
+  onlineUsers, 
+  onRequest, 
+  onClose, 
+  currentUserId,
+  isCallActive = false,
+  callOwner
+}: VideoCallLobbyProps) {
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false); // FIXED: Add loading state
+  const dragRef = useRef<HTMLDivElement | null>(null);
+
+  const CONTAINER_WIDTH = 320;
+  const CONTAINER_MIN_HEIGHT = 360;
+  const CONTAINER_MAX_HEIGHT = 480;
+  const VIEWPORT_MARGIN = 16;
+
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  const maxSelectable = isMobile ? 1 : 3;
+  
+  // FIXED: Check if current user is the call owner
+  const isCurrentUserOwner = callOwner === currentUserId;
+
+  const sensors = useSensor(PointerSensor, { activationConstraint: { distance: 6 } });
+
+  useEffect(() => {
+    const updatePosition = () => {
+      if (!dragRef.current) return;
+      const containerHeight = Math.min(CONTAINER_MAX_HEIGHT, Math.max(CONTAINER_MIN_HEIGHT, window.innerHeight * 0.7));
+      const centerX = (window.innerWidth - CONTAINER_WIDTH) / 2;
+      const centerY = (window.innerHeight - containerHeight) / 2;
+      setPosition({
+        x: Math.max(VIEWPORT_MARGIN, Math.min(window.innerWidth - CONTAINER_WIDTH - VIEWPORT_MARGIN, centerX)),
+        y: Math.max(VIEWPORT_MARGIN, Math.min(window.innerHeight - containerHeight - VIEWPORT_MARGIN, centerY)),
+      });
+    };
+    
+    updatePosition();
+    const resizeObserver = new ResizeObserver(updatePosition);
+    if (dragRef.current) resizeObserver.observe(dragRef.current);
+    window.addEventListener('resize', updatePosition);
+    
+    return () => {
+      window.removeEventListener('resize', updatePosition);
+      resizeObserver.disconnect();
+    };
+  }, []);
+
+  function DraggableContainer({ children }: { children: React.ReactNode }) {
+    const { attributes, listeners, setNodeRef, transform } = useDraggable({ id: 'video-call-lobby' });
+    const containerHeight = Math.min(CONTAINER_MAX_HEIGHT, Math.max(CONTAINER_MIN_HEIGHT, window.innerHeight * 0.7));
+    
+    const style: React.CSSProperties = {
+      position: 'absolute',
+      left: position.x + (transform?.x ?? 0),
+      top: position.y + (transform?.y ?? 0),
+      width: `${CONTAINER_WIDTH}px`,
+      height: `${containerHeight}px`,
+      transition: isDragging ? 'none' : 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+      touchAction: 'none',
+      zIndex: 50,
+    };
+
+    return (
+      <div
+        ref={(node) => {
+          setNodeRef(node);
+          dragRef.current = node;
+        }}
+        style={style}
+        className={`bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl shadow-xl rounded-2xl border border-purple-200/50 dark:border-purple-700/50 overflow-hidden flex flex-col transition-all duration-300 ${
+          isDragging ? 'shadow-2xl ring-2 ring-purple-500/30 scale-[1.01]' : 'shadow-lg'
+        }`}
+      >
+        <div
+          {...listeners}
+          {...attributes}
+          className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-purple-600 to-violet-600 cursor-move select-none"
+        >
+          <div className="flex items-center gap-2">
+            <GripVertical className="w-3 h-3 text-purple-200" />
+            <div className="w-6 h-6 bg-white/20 rounded-lg flex items-center justify-center">
+              {isCallActive ? <UserPlus className="w-3 h-3 text-white" /> : <Video className="w-3 h-3 text-white" />}
+            </div>
+            <h3 className="font-semibold text-sm text-white">
+              {isCallActive 
+                ? 'Invite to Call'
+                : isMobile ? '1-to-1 Call' : 'Group Call'
+              }
+            </h3>
+            {/* FIXED: Add owner badge */}
+            {isCallActive && isCurrentUserOwner && (
+              <div className="flex items-center gap-1 bg-yellow-500/20 px-2 py-1 rounded-full">
+                <Crown className="w-3 h-3 text-yellow-300" />
+                <span className="text-xs text-yellow-300 font-medium">Host</span>
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            {isMobile && !isCallActive && (
+              <div className="text-purple-100">
+                <Smartphone className="w-3 h-3" />
+              </div>
+            )}
+            <div className="flex items-center gap-1 text-xs text-purple-100">
+              <Users className="w-3 h-3" />
+              <span>{onlineUsers.filter(u => u.userId !== currentUserId).length}</span>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-1 rounded-lg text-purple-200 hover:text-white hover:bg-white/10 transition-all duration-200"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+        </div>
+        <div className="flex-1 overflow-hidden flex flex-col">{children}</div>
+      </div>
+    );
+  }
+
+  const getInitials = (name: string): string =>
+    name.split(' ').map((word) => word[0]).join('').toUpperCase().slice(0, 2);
+
+  const handleCheckboxChange = useCallback((userId: string) => {
+    if (isProcessing) return; // FIXED: Prevent selection during processing
+    
+    setSelectedUserIds((prev) => {
+      if (prev.includes(userId)) {
+        return prev.filter((id) => id !== userId);
+      } else if (prev.length < maxSelectable) {
+        return [...prev, userId];
+      } else {
+        return prev;
+      }
+    });
+  }, [maxSelectable, isProcessing]);
+
+  const handleCallSelectedUsers = useCallback(async () => {
+    if (selectedUserIds.length === 0 || isProcessing) {
+      return;
+    }
+    
+    setIsProcessing(true); // FIXED: Set loading state
+    
+    try {
+      await onRequest(selectedUserIds);
+      setSelectedUserIds([]);
+    } catch (error) {
+      console.error('Error starting call:', error);
+    } finally {
+      // Reset loading state after a delay to prevent rapid clicking
+      setTimeout(() => {
+        setIsProcessing(false);
+      }, 2000);
+    }
+  }, [selectedUserIds, onRequest, isProcessing]);
+
+  const availableUsers = onlineUsers.filter((user) => user.userId !== currentUserId);
+
+  return (
+    <DndContext sensors={[sensors]} onDragStart={() => setIsDragging(true)} onDragEnd={(event) => {
+      setIsDragging(false);
+      const { delta } = event;
+      const containerHeight = Math.min(CONTAINER_MAX_HEIGHT, Math.max(CONTAINER_MIN_HEIGHT, window.innerHeight * 0.7));
+      const newX = position.x + delta.x;
+      const newY = position.y + delta.y;
+      setPosition({
+        x: Math.max(VIEWPORT_MARGIN, Math.min(window.innerWidth - CONTAINER_WIDTH - VIEWPORT_MARGIN, newX)),
+        y: Math.max(VIEWPORT_MARGIN, Math.min(window.innerHeight - containerHeight - VIEWPORT_MARGIN, newY)),
+      });
+    }}>
+      <DraggableContainer>
+        {/* Info banner */}
+        {(isMobile && !isCallActive) && (
+          <div className="px-4 py-3 bg-purple-50 dark:bg-purple-900/30 border-b border-purple-200 dark:border-purple-700/50">
+            <div className="flex items-center gap-2 text-purple-800 dark:text-purple-200">
+              <Smartphone className="w-4 h-4" />
+              <span className="text-xs font-medium">Mobile: 1-to-1 calls only</span>
+            </div>
+          </div>
+        )}
+
+        {isCallActive && (
+          <div className="px-4 py-3 bg-blue-50 dark:bg-blue-900/30 border-b border-blue-200 dark:border-blue-700/50">
+            <div className="flex items-center gap-2 text-blue-800 dark:text-blue-200">
+              <UserPlus className="w-4 h-4" />
+              <span className="text-xs font-medium">
+                {isCurrentUserOwner 
+                  ? 'Select users to invite to your call' 
+                  : 'Select users to invite to the active call'
+                }
+              </span>
+              {isCurrentUserOwner && (
+                <div className="ml-auto flex items-center gap-1 bg-yellow-500/20 px-2 py-0.5 rounded-full">
+                  <Crown className="w-3 h-3 text-yellow-600" />
+                  <span className="text-xs text-yellow-600 font-medium">Host</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className="flex-1 overflow-y-auto px-4 py-3">
+          {availableUsers.length > 0 ? (
+            <div className="space-y-2">
+              {availableUsers.map((user, index) => (
+                <div
+                  key={user.userId}
+                  className="group flex items-center justify-between p-3 bg-gray-50/80 dark:bg-gray-800/40 hover:bg-purple-50/80 dark:hover:bg-purple-900/20 rounded-xl transition-all duration-200 border border-gray-200/40 dark:border-gray-700/40 hover:border-purple-200/60 dark:hover:border-purple-700/40"
+                  style={{ 
+                    animationDelay: `${index * 60}ms`, 
+                    animation: 'slideInUp 0.4s ease-out forwards' 
+                  }}
+                >
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <input
+                      type="checkbox"
+                      checked={selectedUserIds.includes(user.userId)}
+                      onChange={() => handleCheckboxChange(user.userId)}
+                      disabled={(!selectedUserIds.includes(user.userId) && selectedUserIds.length >= maxSelectable) || isProcessing}
+                      className="form-checkbox h-4 w-4 text-purple-600 transition duration-150 ease-in-out rounded focus:ring-purple-500 cursor-pointer dark:bg-gray-700 dark:border-gray-600 dark:checked:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                    />
+                    <div className="relative flex-shrink-0">
+                      <div
+                        className="w-10 h-10 rounded-xl flex items-center justify-center ring-2 ring-purple-200/60 dark:ring-purple-700/60 text-white font-medium text-sm"
+                        style={{ 
+                          background: `linear-gradient(45deg, ${user.color}, ${user.color}CC)`
+                        }}
+                      >
+                        {getInitials(user.username)}
+                      </div>
+                      <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white dark:border-gray-800"></div>
+                      {/* FIXED: Show owner badge for call owner */}
+                      {isCallActive && user.userId === callOwner && (
+                        <div className="absolute -top-1 -left-1 w-5 h-5 bg-yellow-500 rounded-full border-2 border-white dark:border-gray-800 flex items-center justify-center">
+                          <Crown className="w-2.5 h-2.5 text-white" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-medium text-sm text-gray-900 dark:text-white truncate">
+                          {user.username}
+                        </h4>
+                        {isCallActive && user.userId === callOwner && (
+                          <div className="flex items-center gap-1 bg-yellow-500/20 px-1.5 py-0.5 rounded-full">
+                            <Crown className="w-2.5 h-2.5 text-yellow-600" />
+                            <span className="text-xs text-yellow-600 font-medium">Host</span>
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Online</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex-1 flex items-center justify-center py-8">
+              <div className="text-center max-w-xs space-y-3">
+                <div className="w-16 h-16 mx-auto rounded-2xl flex items-center justify-center shadow-sm bg-gradient-to-br from-purple-100 to-violet-100 dark:from-purple-900/30 dark:to-violet-900/30">
+                  <Users className="w-8 h-8 text-purple-600 dark:text-purple-400" />
+                </div>
+                <div className="space-y-2">
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white">No one's online</h4>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed">
+                    Other users will appear here when they come online and are available for video calls.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Action Button */}
+        {availableUsers.length > 0 && (
+          <div className="p-4 border-t border-purple-200/50 dark:border-purple-700/50 bg-gradient-to-r from-purple-50/50 to-violet-50/50 dark:from-purple-900/20 dark:to-violet-900/20">
+            <button
+              onClick={handleCallSelectedUsers}
+              disabled={selectedUserIds.length === 0 || isProcessing}
+              className={`flex items-center justify-center w-full gap-2 px-4 py-3 text-white font-semibold rounded-xl shadow-md transition-all duration-200 ${
+                selectedUserIds.length > 0 && !isProcessing
+                  ? 'bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 active:scale-98 shadow-lg hover:shadow-xl transform hover:scale-[1.02]' 
+                  : 'bg-gray-400 cursor-not-allowed opacity-60'
+              }`}
+            >
+              {/* FIXED: Show loading state */}
+              {isProcessing ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>
+                    {isCallActive ? 'Sending Invites...' : 'Starting Call...'}
+                  </span>
+                </>
+              ) : (
+                <>
+                  {isCallActive ? <UserPlus className="w-5 h-5" /> : <Phone className="w-5 h-5" />}
+                  <span>
+                    {isCallActive 
+                      ? `Invite Selected ${selectedUserIds.length > 0 ? `(${selectedUserIds.length})` : ''}` 
+                      : isMobile 
+                        ? `Start Call ${selectedUserIds.length > 0 ? `(${selectedUserIds.length})` : ''}` 
+                        : `Start Group Call ${selectedUserIds.length > 0 ? `(${selectedUserIds.length})` : ''}`
+                    }
+                  </span>
+                </>
+              )}
+            </button>
+            
+            {/* Selection info */}
+            <div className="mt-3 text-center">
+              <p className="text-xs text-purple-600 dark:text-purple-400 font-medium">
+                {isCallActive 
+                  ? `Select users to invite (${selectedUserIds.length} selected)`
+                  : isMobile 
+                    ? 'Select 1 user for video call' 
+                    : `Select up to ${maxSelectable} users (${selectedUserIds.length}/${maxSelectable} selected)`
+                }
+              </p>
+              {!isCallActive && selectedUserIds.length >= maxSelectable && (
+                <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
+                  {isMobile ? 'Mobile supports 1-to-1 calls only' : 'Maximum participants reached'}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+      </DraggableContainer>
+    </DndContext>
+  );
+}
