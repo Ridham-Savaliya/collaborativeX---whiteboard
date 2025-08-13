@@ -4,6 +4,8 @@ import connectDB from "../../../_lib/db";
 import User from "@/app/api/models/User";
 import jwt from 'jsonwebtoken'
 
+// dev
+
 export async function GET(req: NextRequest) {
   try {
     await connectDB();
