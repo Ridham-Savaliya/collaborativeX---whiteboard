@@ -77,7 +77,7 @@ const OAUTH_PROVIDERS: OAuthProvider[] = [
     domains: ['facebook.com', 'fb.com'],
     color: 'bg-blue-600 hover:bg-blue-700 text-white',
     authUrl: 'https://www.facebook.com/v18.0/dialog/oauth',
-    scope: 'email',
+    scope: 'email,public_profile',
     callbackPath: '/api/custom-oauth/facebook/callback'
   }
 ];

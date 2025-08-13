@@ -10,7 +10,10 @@ export async function GET(req: NextRequest) {
     const url = new URL(req.url);
     const code = url.searchParams.get("code");
     const state = JSON.parse(url.searchParams.get("state") || "{}");
-    const redirectUri = `${process.env.BASE_URL}/api/custom-oauth/facebook/callback`;
+// Dynamically construct redirect URI from request headers
+    const host = req.headers.get('host') || 'localhost:3000'; // Fallback for local
+    const protocol = req.headers.get('x-forwarded-proto') || (host.includes('localhost') ? 'http' : 'https');
+    const redirectUri = `${protocol}://${host}/api/custom-oauth/facebook/callback`;
 
     if (!code) {
       const errorPage = `
@@ -31,8 +34,10 @@ export async function GET(req: NextRequest) {
       });
     }
 
+    console.log('Authorization code:', code);
+    console.log('Redirect URI:', redirectUri);
     // Exchange code for access token
-    const tokenRes = await axios.get(`https://graph.facebook.com/v18.0/oauth/access_token?client_id=${process.env.NEXT_PUBLIC_FACEBOOK_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&client_secret=${process.env.FACEBOOK_CLIENT_SECRET}&code=${code}`);
+const tokenRes = await axios.get(`https://graph.facebook.com/v18.0/oauth/access_token?client_id=${process.env.NEXT_PUBLIC_FACEBOOK_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&client_secret=${process.env.FACEBOOK_SECRET}&code=${code}`);
 
     const { access_token } = tokenRes.data;
 
@@ -177,8 +182,8 @@ export async function GET(req: NextRequest) {
       headers: { 'Content-Type': 'text/html' }
     });
 
-  } catch (err) {
-    console.error('Facebook OAuth callback error:', err);
+  } catch (err:any) {
+console.error('Facebook OAuth callback error:', JSON.stringify(err.response?.data, null, 2) || err.message);
     const errorPage = `
       <html>
         <body>
