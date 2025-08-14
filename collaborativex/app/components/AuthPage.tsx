@@ -55,7 +55,7 @@ const OAUTH_PROVIDERS: OAuthProvider[] = [
   {
     name: 'LinkedIn',
     icon: (
-      <svg className="w-5 h-5" fill="#0077B5" viewBox="0 0 24 24">
+      <svg className="w-5 h-5" fill="#fff" viewBox="0 0 24 24">
         <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
       </svg>
     ),
@@ -69,7 +69,7 @@ const OAUTH_PROVIDERS: OAuthProvider[] = [
   {
     name: 'Facebook',
     icon: (
-      <svg className="w-5 h-5" fill="#1877F2" viewBox="0 0 24 24">
+      <svg className="w-5 h-5" fill="#fff" viewBox="0 0 24 24">
         <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
       </svg>
     ),
@@ -81,7 +81,6 @@ const OAUTH_PROVIDERS: OAuthProvider[] = [
     callbackPath: '/api/custom-oauth/facebook/callback'
   }
 ];
-
 
 const EnhancedAuthPage = () => {
   const router = useRouter();
@@ -141,7 +140,6 @@ const EnhancedAuthPage = () => {
       state: JSON.stringify(state),
     });
 
-    // Special handling for Microsoft
     if (provider.name === 'Microsoft') {
       params.append('response_mode', 'query');
     }
@@ -235,7 +233,6 @@ const EnhancedAuthPage = () => {
           setOauthVerified(true);
           setStep(2);
 
-          // Send OTP after verification
           axios.post("/api/auth/forget-password", { email: formData.email, oauthVerified: true })
             .then((res) => {
               setOtpId(res.data?.otpId);
@@ -471,107 +468,86 @@ const EnhancedAuthPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-indigo-900 flex items-center justify-center px-4 py-8">
-      <div className="w-full max-w-6xl flex bg-white/5 backdrop-blur-2xl rounded-3xl shadow-2xl border border-white/10 overflow-hidden">
-        <div className="hidden lg:flex lg:w-1/2 relative p-12 flex-col justify-center">
-          <div className="absolute inset-0 bg-gradient-to-br from-purple-600/20 to-indigo-600/20 rounded-l-3xl"></div>
-          <div className="relative z-10 text-white">
-            <div className="w-20 h-20 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-2xl flex items-center justify-center mb-8 shadow-xl">
-              <svg className="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z" clipRule="evenodd" />
+    <div className="min-h-screen bg-[#f6f8fd] dark:bg-[#0f172a] flex items-center justify-center px-4 py-8">
+      <div className="w-full max-w-6xl flex flex-col lg:flex-row bg-white dark:bg-[#0f172a]/50 rounded-2xl shadow-xl dark:shadow-none border border-gray-200 dark:border-[#818cf8]/10 overflow-hidden">
+        <div className="relative lg:w-1/2 h-64 lg:h-auto flex items-center justify-center overflow-hidden">
+          <div className="absolute inset-0 bg-[url('/collaborativex-hero.jpg')] bg-cover bg-center">
+            <div className="absolute inset-0 bg-gradient-to-br from-[#6366f1]/30 dark:from-[#818cf8]/30 to-[#0f172a]/50 dark:to-[#0f172a]/70" />
+          </div>
+          <div className="relative z-10 p-8 lg:p-12 text-center lg:text-left max-w-lg mx-auto">
+            <div className="flex items-center justify-center lg:justify-start mb-6">
+              <svg className="w-12 h-12 text-[#6366f1] dark:text-[#818cf8] mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
               </svg>
+              <h1 className="text-4xl lg:text-5xl font-extrabold text-white tracking-tight">CollaborativeX</h1>
             </div>
-            <h1 className="text-5xl font-bold mb-6 bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent">
-              {isLogin ? "Welcome Back!" : "Join Our Platform"}
-            </h1>
-            <p className="text-xl text-purple-100 mb-8 leading-relaxed">
-              {isLogin ? "Continue your journey with secure, fast authentication" : "Create your account with multiple sign-in options"}
-            </p>
-            <div className="space-y-4">
-              <div className="flex items-center space-x-3 text-purple-100">
-                <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0" />
-                <span>Secure OAuth authentication with trusted providers</span>
-              </div>
-              <div className="flex items-center space-x-3 text-purple-100">
-                <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0" />
-                <span>Smart email domain detection and verification</span>
-              </div>
-              <div className="flex items-center space-x-3 text-purple-100">
-                <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0" />
-                <span>Advanced password recovery with OAuth integration</span>
-              </div>
-              <div className="flex items-center space-x-3 text-purple-100">
-                <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0" />
-                <span>Seamless single sign-on experience</span>
-              </div>
-            </div>
+            <p className="text-xl lg:text-2xl font-light text-white mb-6 leading-tight">Unleash creativity with real-time collaborative whiteboards</p>
+            <ul className="text-base text-gray-200 space-y-3 max-w-md mx-auto lg:mx-0">
+              <li className="flex items-center">
+                <CheckCircle className="w-5 h-5 text-[#818cf8] mr-2" />
+                Infinite canvas for boundless ideas
+              </li>
+              <li className="flex items-center">
+                <CheckCircle className="w-5 h-5 text-[#818cf8] mr-2" />
+                Seamless team collaboration
+              </li>
+              <li className="flex items-center">
+                <CheckCircle className="w-5 h-5 text-[#818cf8] mr-2" />
+                Premium tools for modern workflows
+              </li>
+            </ul>
           </div>
         </div>
 
-        <div className="w-full lg:w-1/2 p-12 flex items-center justify-center">
-          <div className="w-full max-w-md space-y-8">
+        <div className="w-full lg:w-1/2 p-8 lg:p-12 flex items-center justify-center">
+          <div className="w-full max-w-md space-y-6">
             <div className="text-center">
-              <h2 className="text-3xl font-bold text-white mb-2">
-                {isLogin ? "Sign In" : "Create Account"}
+              <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">
+                {isLogin ? "Sign in to CollaborativeX" : "Create your account"}
               </h2>
-              <p className="text-purple-200">
-                {isLogin ? "Don't have an account? " : "Already have an account? "}
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {isLogin ? "No account? " : "Already registered? "}
                 <button
                   onClick={() => router.push(isLogin ? "/register" : "/login")}
-                  className="text-purple-300 hover:text-white font-semibold transition-colors underline decoration-purple-300 hover:decoration-white"
+                  className="text-[#6366f1] dark:text-[#818cf8] hover:underline font-medium"
                 >
-                  {isLogin ? "Sign Up" : "Sign In"}
+                  {isLogin ? "Sign up" : "Sign in"}
                 </button>
               </p>
             </div>
 
             <div className="space-y-4">
-              <p className="text-center text-sm text-purple-200 mb-6">
-                Continue with your preferred provider
-              </p>
-              <div className="grid grid-cols-1 gap-3">
-                {OAUTH_PROVIDERS.slice(0, 2).map((provider) => (
+              <div className="flex justify-center space-x-4">
+                {OAUTH_PROVIDERS.map((provider) => (
                   <button
                     key={provider.name}
                     onClick={() => handleOAuthLogin(provider, !isLogin)}
                     disabled={isLoading}
-                    className={`${provider.color} py-3 px-4 rounded-lg transition-all duration-200 flex items-center justify-center space-x-3 font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:scale-105 backdrop-blur-sm`}
+                    className={`${provider.color} w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 disabled:opacity-50 shadow-sm hover:shadow-md hover:scale-105`}
+                    title={`Continue with ${provider.name}`}
                   >
                     {provider.icon}
-                    <span>Continue with {provider.name}</span>
-                  </button>
-                ))}
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                {OAUTH_PROVIDERS.slice(2).map((provider) => (
-                  <button
-                    key={provider.name}
-                    onClick={() => handleOAuthLogin(provider, !isLogin)}
-                    disabled={isLoading}
-                    className={`${provider.color} py-3 px-4 rounded-lg transition-all duration-200 flex items-center justify-center space-x-2 font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:scale-105`}
-                  >
-                    {provider.icon}
-                    <span className="hidden sm:inline">{provider.name}</span>
                   </button>
                 ))}
               </div>
 
-              <div className="relative my-8">
+              <div className="relative my-6">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-white/20" />
+                  <div className="w-full border-t border-gray-200 dark:border-gray-700" />
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-4 bg-transparent text-purple-200">
-                    Or continue with email
+                  <span className="px-2 bg-[#f6f8fd] dark:bg-[#0f172a] text-gray-500 dark:text-gray-400">
+                    Or with email
                   </span>
                 </div>
               </div>
             </div>
 
-            <form onSubmit={isLogin ? handleLogin : handleRegister} className="space-y-6">
+            <form onSubmit={isLogin ? handleLogin : handleRegister} className="space-y-4">
               {!isLogin && (
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-purple-300 w-5 h-5" />
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5" />
                   <input
                     name="name"
                     type="text"
@@ -579,13 +555,13 @@ const EnhancedAuthPage = () => {
                     value={formData.name}
                     onChange={handleInputChange}
                     placeholder="Full Name"
-                    className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all backdrop-blur-sm"
+                    className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-[#0f172a]/50 border border-gray-300 dark:border-gray-700 rounded-md text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#6366f1] dark:focus:ring-[#818cf8] focus:border-transparent"
                   />
                 </div>
               )}
 
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-purple-300 w-5 h-5" />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5" />
                 <input
                   name="email"
                   type="email"
@@ -593,18 +569,18 @@ const EnhancedAuthPage = () => {
                   value={formData.email}
                   onChange={handleInputChange}
                   placeholder="Email Address"
-                  className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all backdrop-blur-sm"
+                  className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-[#0f172a]/50 border border-gray-300 dark:border-gray-700 rounded-md text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#6366f1] dark:focus:ring-[#818cf8] focus:border-transparent"
                 />
                 {formData.email && detectedProvider && (
-                  <div className="mt-2 flex items-center space-x-2 text-xs text-purple-300">
-                    <AlertCircle className="w-4 h-4" />
-                    <span>We detected you use {detectedProvider.name} - try OAuth for faster access!</span>
+                  <div className="mt-1 flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400">
+                    <AlertCircle className="w-3 h-3" />
+                    <span>Use {detectedProvider.name} for quick access</span>
                   </div>
                 )}
               </div>
 
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-purple-300 w-5 h-5" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5" />
                 <input
                   name="password"
                   type={showPassword ? 'text' : 'password'}
@@ -612,12 +588,12 @@ const EnhancedAuthPage = () => {
                   value={formData.password}
                   onChange={handleInputChange}
                   placeholder="Password"
-                  className="w-full pl-10 pr-12 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all backdrop-blur-sm"
+                  className="w-full pl-10 pr-12 py-2.5 bg-white dark:bg-[#0f172a]/50 border border-gray-300 dark:border-gray-700 rounded-md text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#6366f1] dark:focus:ring-[#818cf8] focus:border-transparent"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-purple-300 hover:text-white transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
@@ -625,7 +601,7 @@ const EnhancedAuthPage = () => {
 
               {!isLogin && (
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-purple-300 w-5 h-5" />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5" />
                   <input
                     name="confirmPassword"
                     type={showConfirmPassword ? 'text' : 'password'}
@@ -633,12 +609,12 @@ const EnhancedAuthPage = () => {
                     value={formData.confirmPassword}
                     onChange={handleInputChange}
                     placeholder="Confirm Password"
-                    className="w-full pl-10 pr-12 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all backdrop-blur-sm"
+                    className="w-full pl-10 pr-12 py-2.5 bg-white dark:bg-[#0f172a]/50 border border-gray-300 dark:border-gray-700 rounded-md text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#6366f1] dark:focus:ring-[#818cf8] focus:border-transparent"
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-purple-300 hover:text-white transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
                   >
                     {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
@@ -648,7 +624,7 @@ const EnhancedAuthPage = () => {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white py-3 rounded-lg font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:scale-105"
+                className="w-full bg-[#6366f1] dark:bg-[#818cf8] hover:bg-[#818cf8] dark:hover:bg-[#6366f1] text-white py-2.5 rounded-md font-medium transition-all duration-200 disabled:opacity-50 shadow-sm hover:shadow-md"
               >
                 {isLoading ? (isLogin ? "Signing in..." : "Creating account...") : (isLogin ? "Sign In" : "Create Account")}
               </button>
@@ -658,9 +634,9 @@ const EnhancedAuthPage = () => {
               <div className="text-center">
                 <button
                   onClick={() => setIsForgetPwd(true)}
-                  className="text-sm text-purple-300 hover:text-white transition-colors underline decoration-purple-300 hover:decoration-white"
+                  className="text-sm text-[#6366f1] dark:text-[#818cf8] hover:underline"
                 >
-                  Forgot your password?
+                  Forgot password?
                 </button>
               </div>
             )}
@@ -669,85 +645,64 @@ const EnhancedAuthPage = () => {
       </div>
 
       {isForgetPwd && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white/10 backdrop-blur-2xl border border-white/20 rounded-2xl p-8 shadow-2xl w-full max-w-md transform transition-all duration-300 relative">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-[#0f172a] rounded-2xl p-6 shadow-xl w-full max-w-md border border-gray-200 dark:border-gray-700">
             <button
               onClick={resetPasswordModal}
-              className="absolute top-4 right-4 text-2xl font-bold text-purple-300 hover:text-white transition-colors"
+              className="absolute top-4 right-4 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 text-xl"
             >
               ×
             </button>
 
-            <div className="text-center mb-8">
-              <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Lock className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-2xl font-bold text-white mb-2">
-                {step === 1 ? "Reset Your Password" : "Enter OTP & New Password"}
+            <div className="text-center mb-6">
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">
+                {step === 1 ? "Reset Password" : "Verify & Reset"}
               </h3>
-              <p className="text-purple-200 text-sm">
-                {step === 1 ? "We'll help you get back into your account securely" : "Check your email for the verification code"}
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {step === 1 ? "Enter your email to start" : "Enter OTP and new password"}
               </p>
             </div>
 
-            <form onSubmit={handleResetSubmit} className="space-y-6">
+            <form onSubmit={handleResetSubmit} className="space-y-4">
               {step === 1 && (
                 <>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-purple-300 w-5 h-5" />
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5" />
                     <input
                       type="email"
                       name="email"
                       value={formData.email}
                       onChange={handleInputChange}
-                      placeholder="Enter your registered email"
-                      className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                      placeholder="Registered email"
+                      className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-[#0f172a]/50 border border-gray-300 dark:border-gray-700 rounded-md text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#6366f1] dark:focus:ring-[#818cf8] focus:border-transparent"
                       required
                     />
                     {detectedProvider && (
-                      <div className="mt-2 flex items-center space-x-2 text-xs text-purple-300">
-                        <AlertCircle className="w-4 h-4" />
-                        <span>We detected you use {detectedProvider.name} for this email</span>
+                      <div className="mt-1 flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400">
+                        <AlertCircle className="w-3 h-3" />
+                        <span>Detected {detectedProvider.name} provider</span>
                       </div>
                     )}
                   </div>
 
                   {detectedProvider && !oauthVerified && (
-                    <div className="bg-gradient-to-r from-purple-500/20 to-indigo-500/20 border border-purple-400/30 rounded-xl p-4">
-                      <div className="flex items-start space-x-3">
-                        <div className="flex-shrink-0">
-                          <div className="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center">
-                            <CheckCircle className="w-4 h-4 text-white" />
-                          </div>
-                        </div>
-                        <div className="flex-1">
-                          <h4 className="text-white font-medium mb-1">Enhanced Security</h4>
-                          <p className="text-purple-200 text-sm mb-3">
-                            Verify your identity with {detectedProvider.name} for added security
-                          </p>
-                          <button
-                            type="button"
-                            onClick={handleOAuthVerification}
-                            disabled={isLoading}
-                            className={`${detectedProvider.color} py-2 px-4 rounded-lg transition-all duration-200 flex items-center space-x-2 font-medium disabled:opacity-50 w-full justify-center shadow-lg hover:shadow-xl transform hover:scale-105`}
-                          >
-                            {detectedProvider.icon}
-                            <span>Verify with {detectedProvider.name}</span>
-                          </button>
-                        </div>
-                      </div>
+                    <div className="bg-gray-100 dark:bg-gray-800 rounded-md p-3">
+                      <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">Verify with {detectedProvider.name} for security</p>
+                      <button
+                        type="button"
+                        onClick={handleOAuthVerification}
+                        disabled={isLoading}
+                        className={`${detectedProvider.color} w-full py-2 rounded-md text-sm font-medium disabled:opacity-50 transition-all hover:scale-105`}
+                      >
+                        Verify with {detectedProvider.name}
+                      </button>
                     </div>
                   )}
 
                   {oauthVerified && (
-                    <div className="bg-green-500/20 border border-green-400/30 rounded-xl p-4">
-                      <div className="flex items-center space-x-3">
-                        <CheckCircle className="w-6 h-6 text-green-400" />
-                        <div>
-                          <p className="text-green-300 font-medium">Email Verified!</p>
-                          <p className="text-green-200 text-sm">You can now proceed with password reset</p>
-                        </div>
-                      </div>
+                    <div className="bg-green-100 dark:bg-green-900/30 rounded-md p-3 text-sm text-green-700 dark:text-green-300 flex items-center space-x-2">
+                      <CheckCircle className="w-4 h-4" />
+                      <span>Email verified successfully</span>
                     </div>
                   )}
                 </>
@@ -755,41 +710,39 @@ const EnhancedAuthPage = () => {
 
               {step === 2 && (
                 <>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      name="otp"
-                      value={otpDetails.otp}
-                      onChange={handleOtpChange}
-                      placeholder="Enter 6-digit OTP"
-                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all text-center text-lg tracking-widest"
-                      maxLength={6}
-                      required
-                    />
-                  </div>
+                  <input
+                    type="text"
+                    name="otp"
+                    value={otpDetails.otp}
+                    onChange={handleOtpChange}
+                    placeholder="6-digit OTP"
+                    className="w-full px-4 py-2.5 bg-white dark:bg-[#0f172a]/50 border border-gray-300 dark:border-gray-700 rounded-md text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#6366f1] dark:focus:ring-[#818cf8] focus:border-transparent text-center tracking-wider"
+                    maxLength={6}
+                    required
+                  />
 
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-purple-300 w-5 h-5" />
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5" />
                     <input
                       type="password"
                       name="newPassword"
                       value={otpDetails.newPassword}
                       onChange={handleOtpChange}
-                      placeholder="Enter new password"
-                      className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                      placeholder="New password"
+                      className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-[#0f172a]/50 border border-gray-300 dark:border-gray-700 rounded-md text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#6366f1] dark:focus:ring-[#818cf8] focus:border-transparent"
                       required
                     />
                   </div>
 
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-purple-300 w-5 h-5" />
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5" />
                     <input
                       type="password"
                       name="confirmNewPassword"
                       value={otpDetails.confirmNewPassword}
                       onChange={handleOtpChange}
-                      placeholder="Confirm new password"
-                      className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                      placeholder="Confirm password"
+                      className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-[#0f172a]/50 border border-gray-300 dark:border-gray-700 rounded-md text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#6366f1] dark:focus:ring-[#818cf8] focus:border-transparent"
                       required
                     />
                   </div>
@@ -798,10 +751,10 @@ const EnhancedAuthPage = () => {
 
               <button
                 type="submit"
-                disabled={isLoading || (step === 1 && detectedProvider && !oauthVerified)}
-                className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white py-3 rounded-lg font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:scale-105"
+                disabled={isLoading || (step === 1 && !!detectedProvider && !oauthVerified)}
+                className="w-full bg-[#6366f1] dark:bg-[#818cf8] hover:bg-[#818cf8] dark:hover:bg-[#6366f1] text-white py-2.5 rounded-md font-medium transition-all duration-200 disabled:opacity-50 shadow-sm hover:shadow-md"
               >
-                {isLoading ? "Processing..." : step === 1 ? (detectedProvider && !oauthVerified ? "Verify Email First" : "Send Reset Code") : "Reset Password"}
+                {isLoading ? "Processing..." : step === 1 ? (detectedProvider && !oauthVerified ? "Verify First" : "Send Code") : "Reset Password"}
               </button>
             </form>
           </div>
