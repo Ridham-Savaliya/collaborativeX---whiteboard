@@ -1,38 +1,50 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import Whiteboard from "../../models/Whiteboard";
-import User from "../../models/User";
-import jwt from 'jsonwebtoken'
+import jwt from "jsonwebtoken";
 import connectDB from "@/app/api/_lib/db";
+import User from "../../models/User";
 
 export async function POST(req: NextRequest) {
+  await connectDB();
 
-    await connectDB();
-    type Data = {
-        email: String,
-        password: String
-    }
+  type Data = {
+    email: string;
+    password: string;
+  };
 
-    const data: Data = await req.json();
-    const { email, password } = data;
-    const isExisted = await User.findOne({ email });
-    if (!isExisted) {
-        return NextResponse.json({ message: "user not found!" }, { status: 404 })
-    }
+  const data: Data = await req.json();
+  const { email, password } = data;
 
-    const checkPassword = await bcrypt.compare(password as any, isExisted.password)
-    if (!checkPassword) {
-        return NextResponse.json({ message: "invalid credentials!" }, { status: 400 })
-    } 
+  if (!email || !password) {
+    return NextResponse.json({ message: "Email and password are required" }, { status: 400 });
+  }
 
-    const token = jwt.sign(
-      { userId: isExisted._id, email: isExisted.email, name: isExisted.name },
-        process.env.NEXTAUTH_SECRET!,
-        { expiresIn: '1h' })
+  const isExisted = await User.findOne({ email });
+  if (!isExisted) {
+    return NextResponse.json({ message: "User not found!" }, { status: 404 });
+  }
 
-        // console.log(process.env.NEXTAUTH_SECRET)
-        const name = isExisted.name
+  // Check if the user has a password (i.e., not an OAuth-only account)
+  if (!isExisted.password) {
+    return NextResponse.json(
+      { message: "This account uses OAuth. Please log in with your OAuth provider." },
+      { status: 400 }
+    );
+  }
 
-    return NextResponse.json({ token,name, message: "Login successfully!" }, { status: 200 });
+  const checkPassword = await bcrypt.compare(password, isExisted.password);
+  if (!checkPassword) {
+    return NextResponse.json({ message: "Invalid credentials!" }, { status: 400 });
+  }
 
+  const token = jwt.sign(
+    { userId: isExisted._id, email: isExisted.email, name: isExisted.name },
+    process.env.NEXTAUTH_SECRET!,
+    { expiresIn: "1h" }
+  );
+
+  return NextResponse.json(
+    { token, name: isExisted.name, message: "Login successfully!" },
+    { status: 200 }
+  );
 }

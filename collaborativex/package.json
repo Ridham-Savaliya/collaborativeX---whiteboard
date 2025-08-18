@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
+    "@google/generative-ai": "^0.24.1",
     "@hello-pangea/dnd": "^18.0.1",
     "@xyflow/react": "^12.8.2",
     "autoprefixer": "^10.4.21",
@@ -19,6 +20,7 @@
     "cloudinary": "^2.6.1",
     "crypto": "^1.0.1",
     "dotenv": "^16.5.0",
+    "fabric": "^6.7.1",
     "framer-motion": "^12.23.12",
     "gsap": "^3.12.7",
     "html2canvas": "^1.4.1",
@@ -55,6 +57,7 @@
     "react-organizational-chart": "^2.2.1",
     "react-toastify": "^11.0.5",
     "reactflow": "^11.11.4",
+    "shapeit": "^0.10.0",
     "simple-peer": "^9.11.1",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",

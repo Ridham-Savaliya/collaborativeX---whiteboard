@@ -471,7 +471,7 @@ const EnhancedAuthPage = () => {
     <div className="min-h-screen bg-[#f6f8fd] dark:bg-[#0f172a] flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-6xl flex flex-col lg:flex-row bg-white dark:bg-[#0f172a]/50 rounded-2xl shadow-xl dark:shadow-none border border-gray-200 dark:border-[#818cf8]/10 overflow-hidden">
         <div className="relative lg:w-1/2 h-64 lg:h-auto flex items-center justify-center overflow-hidden">
-          <div className="absolute inset-0 bg-[url('/collaborativex-hero.jpg')] bg-cover bg-center">
+          <div className="absolute inset-0 bg-[url('https://res.cloudinary.com/dsqpc6sp6/image/upload/v1755147103/Ethereal_Silhouette_in_Purple_ezzoys.jpg')] bg-cover bg-center">
             <div className="absolute inset-0 bg-gradient-to-br from-[#6366f1]/30 dark:from-[#818cf8]/30 to-[#0f172a]/50 dark:to-[#0f172a]/70" />
           </div>
           <div className="relative z-10 p-8 lg:p-12 text-center lg:text-left max-w-lg mx-auto">

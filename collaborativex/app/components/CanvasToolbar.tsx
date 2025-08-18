@@ -5,7 +5,7 @@ import {
   Undo,
   Redo,
   Clock,
-  Mic,
+  Bot,  // Changed from Mic to Bot
   Shapes,
   Video,
   FileText,
@@ -14,27 +14,32 @@ import {
 import { useRouter } from "next/navigation";
 import { useGlobalLoader } from "../hooks/useGlobalLoader";
 
-// Define our own cn function to avoid the external import
+// Simple utility for conditional classNames
 function cn(...inputs: (string | undefined | null | false | 0)[]) {
   return inputs.filter(Boolean).join(" ");
 }
 
 type ToolbarProps = {
   onToolSelect: (tool: string) => void;
-  exportAsPNG: () => void;
-  exportAsPDF: () => void;
+  exportAsPNG: () => Promise<void> | void;
+  exportAsPDF: () => Promise<void> | void;
+  shapeRecognitionEnabled: boolean;
+  isShapeProcessing: boolean;
+  toggleShapeRecognition: () => void;
 };
 
 const CanvasToolbar: React.FC<ToolbarProps> = ({
   onToolSelect,
   exportAsPDF,
   exportAsPNG,
-
+  shapeRecognitionEnabled,
+  isShapeProcessing,
+  toggleShapeRecognition,
 }) => {
   const [activeToolGroup, setActiveToolGroup] = useState<string | null>(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const [isExportingPNG, setisExportingPNG] = useState(false);
-  const [isExportingPDF, setisExportingPDF] = useState(false);
+  const [isExportingPNG, setIsExportingPNG] = useState(false);
+  const [isExportingPDF, setIsExportingPDF] = useState(false);
 
   const router = useRouter();
   const { navigateWithLoader } = useGlobalLoader();
@@ -57,19 +62,19 @@ const CanvasToolbar: React.FC<ToolbarProps> = ({
 
   const handlePNG = async () => {
     try {
-      setisExportingPNG(true);
-      await exportAsPNG();  // Make sure this is async
+      setIsExportingPNG(true);
+      await exportAsPNG();
     } finally {
-      setisExportingPNG(false);
+      setIsExportingPNG(false);
     }
   };
 
   const handlePDF = async () => {
     try {
-      setisExportingPDF(true);
-      await exportAsPDF();  // Make sure this is async
+      setIsExportingPDF(true);
+      await exportAsPDF();
     } finally {
-      setisExportingPDF(false);
+      setIsExportingPDF(false);
     }
   };
 
@@ -109,7 +114,6 @@ const CanvasToolbar: React.FC<ToolbarProps> = ({
                 </>
               )}
             </button>
-
           </div>
         );
       default:
@@ -128,22 +132,56 @@ const CanvasToolbar: React.FC<ToolbarProps> = ({
               boxShadow: "0 10px 25px -5px rgba(147, 51, 234, 0.3)",
             }}
           >
+            {/* AI Assistant */}
             <button
               className="p-3 rounded-full bg-gradient-to-r from-fuchsia-500 to-purple-500 text-white hover:from-fuchsia-600 hover:to-purple-600 transition-all duration-200"
-              onClick={() => onToolSelect("voice")}
-              title="Voice to Draw"
+              onClick={() => onToolSelect("geminiAI")}
+              title="AI Assistant - Get Canvas Summary, Help & More"
             >
-              <Mic size={22} />
+              <Bot size={22} />
             </button>
 
+            {/* Shape Recognition Toggle */}
             <button
-              className="p-3 rounded-full bg-gradient-to-r from-violet-500 to-blue-500 text-white hover:from-violet-600 hover:to-blue-600 transition-all duration-200"
-              onClick={() => onToolSelect("shapeRecognize")}
-              title="Shape Recognition"
+              className={cn(
+                "p-3 rounded-full transition-all duration-200",
+                shapeRecognitionEnabled
+                  ? "bg-green-500 hover:bg-green-600 text-white shadow-lg scale-105 animate-pulse"
+                  : "bg-gradient-to-r from-violet-500 to-blue-500 text-white hover:from-violet-600 hover:to-blue-600"
+              )}
+              onClick={toggleShapeRecognition}
+              title={
+                shapeRecognitionEnabled
+                  ? "Disable Shape Recognition"
+                  : "Enable Shape Recognition"
+              }
             >
-              <Shapes size={22} />
+              {isShapeProcessing ? (
+                <svg
+                  className="animate-spin h-5 w-5 text-white"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                    fill="none"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8v8H4z"
+                  ></path>
+                </svg>
+              ) : (
+                <Shapes size={22} />
+              )}
             </button>
 
+            {/* Video Call */}
             <button
               className="p-3 rounded-full bg-gradient-to-r from-purple-500 to-indigo-500 text-white hover:from-purple-600 hover:to-indigo-600 transition-all duration-200"
               onClick={() => onToolSelect("videoCall")}
@@ -152,6 +190,7 @@ const CanvasToolbar: React.FC<ToolbarProps> = ({
               <Video size={22} />
             </button>
 
+            {/* Templates */}
             <button
               className="p-3 rounded-full bg-gradient-to-r from-indigo-500 to-blue-500 text-white hover:from-indigo-600 hover:to-blue-600 transition-all duration-200"
               onClick={() => onToolSelect("templates")}
@@ -160,6 +199,7 @@ const CanvasToolbar: React.FC<ToolbarProps> = ({
               <FileText size={22} />
             </button>
 
+            {/* Export */}
             <button
               className="p-3 rounded-full bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 transition-all duration-200"
               onClick={() => toggleToolGroup("export")}
@@ -167,8 +207,8 @@ const CanvasToolbar: React.FC<ToolbarProps> = ({
             >
               <Download size={22} />
             </button>
-            {/*              */}
 
+            {/* Premium Feature */}
             <button
               className="p-3 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-white hover:from-amber-500 hover:to-orange-600 transition-all duration-200"
               onClick={handlePremiumFeature}
@@ -177,6 +217,7 @@ const CanvasToolbar: React.FC<ToolbarProps> = ({
               <Clock size={22} />
             </button>
 
+            {/* Settings */}
             <button
               className="p-3 rounded-full bg-[#962aef] hover:bg-[#a576ce] transition-all duration-200"
               onClick={() =>
@@ -192,8 +233,8 @@ const CanvasToolbar: React.FC<ToolbarProps> = ({
 
       {/* Upgrade Modal for Premium Features */}
       {showUpgradeModal && (
-        <div className="fixed  inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-[#962aef] rounded-xl p-6 max-w-md w-full mx-4">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-[#962aef] rounded-xl p-6 max-w-md w-full mx-4 text-white">
             <h3 className="text-xl font-bold mb-2">Premium Feature</h3>
             <p className="mb-4">
               This is a premium feature. Subscribe for just $5/month to access:
@@ -228,3 +269,5 @@ const CanvasToolbar: React.FC<ToolbarProps> = ({
 };
 
 export default CanvasToolbar;
+
+
