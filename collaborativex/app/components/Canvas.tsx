@@ -1,3 +1,4 @@
+'use client';
 import React, { useRef, useEffect, useState, useCallback, memo } from "react";
 import { throttle, debounce } from "lodash";
 import NavBar from "./CanvasRightNavbar";
@@ -1273,7 +1274,23 @@ const Canvas: React.FC<CanvasProps> = ({
     }
   }, []);
 
-  const token = localStorage.getItem('token')
+  const [authToken, setAuthToken] = useState<string | null>(null);
+  useEffect(() => {
+    // Initialize from localStorage on mount
+    try {
+      const t = localStorage.getItem('token');
+      if (t) setAuthToken(t);
+    } catch {}
+    // Update if token changes in this or another tab
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'token') {
+        setAuthToken(e.newValue);
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+  
   const params = useParams();
   const whiteboardId = params.id;
 
@@ -1281,6 +1298,7 @@ const Canvas: React.FC<CanvasProps> = ({
     setShapeRecognitionEnabled(prev => {
       const newState = !prev;
       return newState;
+      
     });
   }, []);
 
@@ -1438,12 +1456,12 @@ const Canvas: React.FC<CanvasProps> = ({
   // [Socket initialization and canvas setup remain exactly the same]
 
   useEffect(() => {
-    if (!whiteboardId || !token) return;
+    if (!whiteboardId || !authToken) return;
 
     setConnectionState({ status: 'connecting' });
 
     const socket = io(`${process.env.NEXT_PUBLIC_SOCKET_URL}/whiteboard`, {
-      auth: { token },
+      auth: { token: authToken },
       transports: ['websocket', 'polling'],
       timeout: 10000,
       reconnection: true,
@@ -1547,6 +1565,18 @@ const Canvas: React.FC<CanvasProps> = ({
       if (latencyCheckRef.current === timestamp) {
         const latency = Date.now() - timestamp;
         setConnectionState(prev => ({ ...prev, latency }));
+      }
+    });
+
+    // Handle initial mindmap payload from server
+    socket.on('mindmap-initial-load', (data: { nodes: any[]; edges: any[] }) => {
+      try {
+        // If you maintain mindmap state, hydrate it here. Fallback: log.
+        // setMindmapNodes?.(Array.isArray(data.nodes) ? data.nodes : []);
+        // setMindmapEdges?.(Array.isArray(data.edges) ? data.edges : []);
+        console.log('Received mindmap initial load:', data);
+      } catch (e) {
+        console.error('Failed to apply mindmap initial load', e);
       }
     });
 
@@ -1693,7 +1723,7 @@ const Canvas: React.FC<CanvasProps> = ({
       setRecentActivity([]);
       setCursors([]);
     };
-  }, [whiteboardId, token, addError, clearAllErrors, measureLatency, showToast]);
+  }, [whiteboardId, authToken, addError, clearAllErrors, measureLatency, showToast]);
 
   const emitCursorMove = useCallback(
     throttle((x: number, y: number) => {

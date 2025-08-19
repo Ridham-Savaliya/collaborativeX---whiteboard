@@ -15,9 +15,6 @@ interface UserContextType {
 // Create the context
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
-
-
-
 // Provider component
 export const UserProvider = ({ children }: { children: ReactNode }) => {
     const [user, setUserName] = useState<User>({ name: "" });

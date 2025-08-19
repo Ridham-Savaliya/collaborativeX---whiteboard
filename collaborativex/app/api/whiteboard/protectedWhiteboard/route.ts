@@ -22,8 +22,11 @@ export async function POST(req: NextRequest) {
         const isAccessible = await Whiteboard.findById(whiteboardId);
 
         const isOwner = isAccessible?.owner?.toString() === user.userId;
+        const isCollaborator = Array.isArray(isAccessible?.collaborators)
+          ? isAccessible!.collaborators.includes(user.email)
+          : false;
 
-        if (!isAccessible || (!isAccessible.isShared && !isOwner)) {
+        if (!isAccessible || (!isAccessible.isShared && !isOwner && !isCollaborator)) {
             return NextResponse.json(
                 {
                     message: "whiteboard is not accessible",

@@ -4,6 +4,8 @@ import Whiteboard from "../models/Whiteboard";
 import User from "../models/User";
 import { authenticate } from "../_lib/authMiddleware";
 import { sendMail } from "@/app/utills/sendMail";
+import KanbanBoard from "../models/Kanban";
+import MindMap from "../models/MindMap";
 
 
 export async function POST(req: NextRequest, res: NextResponse) {
@@ -217,17 +219,32 @@ export async function DELETE(req: NextRequest) {
   const body = await req.json();
   const whiteboardId: string = body.whiteboardId;
 
-  const deleteWhiteboard = await Whiteboard.deleteOne({ _id: whiteboardId, owner: authResult.userId })
+  // delete the whiteboard (only if owned by the user)
+  const deleteWhiteboard = await Whiteboard.deleteOne({
+    _id: whiteboardId,
+    owner: authResult.userId,
+  });
+
   if (deleteWhiteboard.deletedCount === 0) {
-    return NextResponse.json({ message: "No whiteboard found or not authorized!" }, { status: 404 });
+    return NextResponse.json(
+      { message: "No whiteboard found or not authorized!" },
+      { status: 404 }
+    );
   }
 
+  // 🗑️ delete related mindmaps & kanban boards
+  const deletedMindmap = await MindMap.deleteMany({ whiteboardId: whiteboardId });
+  const deletedKanban = await KanbanBoard.deleteMany({ whiteboardId: whiteboardId });
 
+  // update user stats
   await User.findByIdAndUpdate(authResult.userId, {
     $pull: { whiteboards: whiteboardId },
-    $inc: { 'stats.whiteboards': -1 }
-  })
+    $inc: { "stats.whiteboards": -1 },
+  });
 
-  return NextResponse.json({ message: "whiteboard deleted successfully!", deleteWhiteboard }, { status: 200 })
+  return NextResponse.json(
+    { message: "whiteboard and related data deleted successfully!" ,deletedKanban,deletedMindmap},
+    { status: 200 }
+  );
 }
 

@@ -218,6 +218,9 @@ const WhiteboardPage: React.FC = () => {
         if (response.status === 200) {
           console.log("✅ Whiteboard access authorized");
           // Additional whiteboard initialization can go here
+          if (isUnauthorizedAttempt) {
+            setIsUnauthorizedAttempt(false);
+          }
         }
 
       } catch (error: any) {

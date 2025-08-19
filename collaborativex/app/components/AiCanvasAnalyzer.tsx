@@ -106,8 +106,8 @@ const EnhancedGeminiAnalyzer: React.FC<EnhancedGeminiAnalyzerProps> = ({
 
   // Initialize Gemini API
   const geminiAPI = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-  const genAI = new GoogleGenerativeAI(geminiAPI || 'demo-key');
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  const genAI = geminiAPI ? new GoogleGenerativeAI(geminiAPI) : null;
+  const model = genAI ? genAI.getGenerativeModel({ model: 'gemini-1.5-flash' }) : null;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -126,12 +126,15 @@ const EnhancedGeminiAnalyzer: React.FC<EnhancedGeminiAnalyzerProps> = ({
 
   // Welcome message
   useEffect(() => {
+    const welcomeMessage = geminiAPI ?
+      `🤖 **Hi! I'm your AI Assistant** \n\nI can help you with:\n• General questions and conversations\n• Screen analysis of your whiteboard\n• Creating summaries and insights\n• And much more!\n\nJust type your question or click "Analyze Screen" to get started! 🚀` :
+      `🤖 **Hi! I'm your AI Assistant** \n\n⚠️ **Setup Required**: Please add your Gemini API key to use AI features.\n\nI can still help with:\n• Basic responses\n• Interface guidance\n• Feature explanations\n\nAdd your API key in the environment variables to unlock full AI capabilities! 🔑`;
+
     setMessages([
       {
         id: 'welcome',
         type: 'ai',
-        content: `✨ **Welcome to AI Assistant** ✨  
-I'm here to make things easier for you 🚀`,
+        content: welcomeMessage,
         timestamp: new Date(),
         analysisType: 'chat',
         metadata: {
@@ -140,7 +143,7 @@ I'm here to make things easier for you 🚀`,
         }
       }
     ]);
-  }, []);
+  }, [geminiAPI]);
 
   // Auto-analyze when elements or stickyNotes change, only for summary
   useEffect(() => {
@@ -188,7 +191,7 @@ I'm here to make things easier for you 🚀`,
       'see', 'look', 'visual', 'image', 'screenshot', 'screen', 'display',
       'show', 'canvas', 'drawing', 'diagram', 'whiteboard', 'board',
       'visible', 'color', 'shape', 'layout', 'design', 'structure', 'appearance',
-      'analyze', 'what do you see', 'describe', 'examine'
+      'analyze', 'what do you see', 'describe', 'examine', 'what\'s on', 'what is on'
     ];
 
     const lowerMessage = message.toLowerCase();
@@ -204,6 +207,11 @@ I'm here to make things easier for you 🚀`,
     const startTime = Date.now();
 
     try {
+      // Check if API is available
+      if (!model || !geminiAPI) {
+        throw new Error('Gemini API key not configured. Please set NEXT_PUBLIC_GEMINI_API_KEY in your environment variables.');
+      }
+
       let imagePart: any;
       let screenshotUsed = false;
 
@@ -253,49 +261,66 @@ I'm here to make things easier for you 🚀`,
         }
       }
 
-      // Create context-aware prompts - made more concise and focused on short answers
+      // Simplified and more effective prompts
       const prompts = {
-        summary: `You are a helpful AI assistant that provides super concise and short answers. Analyze this image and give a very brief summary in 1-2 sentences max. Focus only on key elements and main purpose.`,
+        summary: `Analyze this whiteboard/canvas image and provide a brief, clear summary of what you see. Include the main elements, content, and overall purpose in 2-3 sentences.`,
 
-        insights: `You are a helpful AI assistant that provides super concise and short answers. Extract 2-3 key insights from this image. Format as bullet points, each max 10 words.`,
+        insights: `Look at this image and provide 3-4 key insights or observations. Format as bullet points, focusing on important patterns, themes, or notable elements you observe.`,
 
-        suggestions: `You are a helpful AI assistant that provides super concise and short answers. Provide 2-3 specific suggestions from this image. Format as bullet points, each max 10 words.`,
+        suggestions: `Based on what you see in this image, provide 3-4 practical suggestions for improvement or next steps. Format as bullet points with actionable advice.`,
 
-        'action-items': `You are a helpful AI assistant that provides super concise and short answers. Identify 2-3 action items from this image. Format: • [Priority] [Task] (max 10 words). Priorities: High/Medium/Low.`,
+        'action-items': `Identify specific action items or tasks from this image. Format as bullet points with priority levels (High/Medium/Low) and brief descriptions.`,
 
-        'meeting-notes': `You are a helpful AI assistant that provides super concise and short answers. Create brief meeting notes from this image in 3-5 sentences max: Objectives, Key Points, Next Steps.`,
+        'meeting-notes': `Create structured meeting notes from this image. Include: Objectives, Key Points Discussed, Decisions Made, and Next Steps.`,
 
-        chat: `You are a collaborative SaaS chatbot. Support both team collaboration and one-to-one conversations. Answer user doubts, provide help, and satisfy curiosity with clear, concise, and professional replies.`
+        chat: `You are a helpful AI assistant for a collaborative whiteboard application. You can answer questions about anything - from general topics to specific help with the whiteboard features. Be conversational, helpful, and concise. If users ask about what they can see on their screen, let them know you'd need them to use the "Analyze Screen" feature or ask a specific question about the visual content.
+
+Always aim to be:
+- Friendly and approachable
+- Clear and concise  
+- Helpful and informative
+- Professional but not overly formal
+
+If someone asks a general question, answer it directly. If they want to know about their whiteboard content, suggest using the analyze feature.`
       };
 
-      // Use the specific prompt or fall back to the default for the analysis type
-      const basePrompt = prompt.length > 20 ? `${prompts[analysisType].split('.')[0]}. ${prompt}` : prompts[analysisType];
+      // Create the appropriate prompt
+      let finalPrompt: string;
 
-      // No additional JSON context - rely purely on image or text prompt
+      if (analysisType === 'chat') {
+        // For chat, if user asks about visual content but we don't have screenshot, guide them
+        if (requiresVisualAnalysis(prompt) && !screenshotUsed) {
+          finalPrompt = `${prompts.chat}\n\nUser question: "${prompt}"\n\nNote: The user seems to be asking about visual content. Since no image was provided, suggest they use the "Analyze Screen" button to capture their whiteboard first, or clarify what specific help they need.`;
+        } else {
+          finalPrompt = `${prompts.chat}\n\nUser question: "${prompt}"`;
+        }
+      } else {
+        // For analysis modes, use the specific prompt
+        finalPrompt = prompt.length > 20 ? `${prompts[analysisType]} Focus on: ${prompt}` : prompts[analysisType];
+      }
 
       let result;
       try {
-        result = await model.generateContent(imagePart ? [basePrompt, imagePart] : [basePrompt]);
-      } catch (apiError) {
+        result = await model.generateContent(imagePart ? [finalPrompt, imagePart] : [finalPrompt]);
+      } catch (apiError: any) {
         console.warn('Gemini API call failed:', apiError);
 
-        // Provide contextual fallback responses - kept concise
-        const fallbackResponses = {
-          summary: `Brief summary: Workspace with ${elements.length} elements. Configure API for visual details.`,
-          insights: `• Active content: ${elements.length} elements\n• Structured layout\n• Good progress`,
-          suggestions: `• Set up API key\n• Upload screenshot\n• Continue building`,
-          'action-items': `• High: API setup\n• Medium: Add content\n• Low: Test upload`,
-          'meeting-notes': `Objectives: Content creation\nKey Points: ${elements.length} elements\nNext Steps: Enable API`,
-          chat: `Hi! Can't access visuals now due to API issue. Ask me anything else briefly.`
-        };
-
-        result = { response: { text: () => fallbackResponses[analysisType] || fallbackResponses.chat } };
+        // Better error handling with specific messages
+        if (apiError?.message?.includes('API_KEY')) {
+          throw new Error('Invalid API key. Please check your Gemini API key configuration.');
+        } else if (apiError?.message?.includes('QUOTA')) {
+          throw new Error('API quota exceeded. Please check your Gemini API usage limits.');
+        } else if (apiError?.message?.includes('SAFETY')) {
+          throw new Error('Content was flagged by safety filters. Please try rephrasing your request.');
+        } else {
+          throw new Error(`API Error: ${apiError?.message || 'Unknown API error occurred'}`);
+        }
       }
 
       const aiResponse = result.response.text();
       const processingTime = Date.now() - startTime;
       const wordCount = aiResponse.split(' ').length;
-      const confidenceScore = Math.min(95, screenshotUsed ? 80 + (wordCount / 10) : 60 + (wordCount / 15));
+      const confidenceScore = Math.min(95, screenshotUsed ? 85 + Math.min(10, wordCount / 10) : 70 + Math.min(15, wordCount / 15));
 
       const analysisResult: AnalysisResult = {
         summary: analysisType === 'summary' ? aiResponse : '',
@@ -325,7 +350,7 @@ I'm here to make things easier for you 🚀`,
       console.error('AI Analysis error:', error);
       throw error;
     }
-  }, [captureScreenshot, elements, stickyNotes, requiresVisualAnalysis]);
+  }, [captureScreenshot, elements, stickyNotes, requiresVisualAnalysis, model, geminiAPI]);
 
   // Handle the Analyze button click - always captures screen
   const handleAutoAnalyze = useCallback(async () => {
@@ -372,7 +397,7 @@ I'm here to make things easier for you 🚀`,
       const errorMessage: Message = {
         id: Date.now().toString(),
         type: 'ai',
-        content: `❌ Analysis Failed: ${error instanceof Error ? error.message : 'Unknown error'}. Try uploading a screenshot.`,
+        content: `❌ Analysis Failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
         timestamp: new Date(),
         metadata: {
           confidence_score: 0
@@ -395,7 +420,7 @@ I'm here to make things easier for you 🚀`,
         const analysisMessage: Message = {
           id: Date.now().toString(),
           type: 'ai',
-          content: `📸 Screenshot Analysis: ${analysis.summary}`,
+          content: `📸 **Uploaded Image Analysis:**\n\n${analysis.summary}`,
           timestamp: new Date(),
           isAnalysis: true,
           analysisType: 'summary',
@@ -408,6 +433,10 @@ I'm here to make things easier for you 🚀`,
         };
 
         setMessages(prev => [...prev, analysisMessage]);
+
+        if (isVoiceEnabled) {
+          speakMessage(analysisMessage.content);
+        }
       } catch (error) {
         const errorMessage: Message = {
           id: Date.now().toString(),
@@ -428,7 +457,7 @@ I'm here to make things easier for you 🚀`,
 
   // Handle normal chat messages - smart about when to use screenshots
   const handleSendMessage = async () => {
-    if (!inputMessage.trim()) return;
+    if (!inputMessage || isAnalyzing) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -485,7 +514,7 @@ I'm here to make things easier for you 🚀`,
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: 'ai',
-        content: `❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}. Still here to help briefly.`,
+        content: `❌ Sorry, I encountered an error: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again or rephrase your question.`,
         timestamp: new Date(),
         analysisType: 'chat'
       };
@@ -496,6 +525,29 @@ I'm here to make things easier for you 🚀`,
     }
   };
 
+
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+    // Allow all other keys to work normally (including space)
+  };
+
+  // Fixed input handlers - completely simplified
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInputMessage(e.target.value);
+  };
+
+  // const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  //   if (e.key === 'Enter' && !e.shiftKey && !isAnalyzing) {
+  //     e.preventDefault();
+  //     handleSendMessage();
+  //   }
+  //   // Allow all other keys including space to work normally
+  // };
+
   const speakMessage = (text: string) => {
     if (!speechSynthesis.current) return;
 
@@ -505,7 +557,7 @@ I'm here to make things easier for you 🚀`,
       return;
     }
 
-    const cleanText = text.replace(/[*#_`]/g, '').replace(/\n/g, '. ');
+    const cleanText = text.replace(/[*#_`]/g, '').replace(/\n/g, '. ').replace(/❌|🤖|📸|✨|🚀|⚠️|🔑/g, '');
     const utterance = new SpeechSynthesisUtterance(cleanText);
     utterance.rate = 0.9;
     utterance.pitch = 1.0;
@@ -808,37 +860,15 @@ I'm here to make things easier for you 🚀`,
         <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
           <div className="flex items-end gap-2">
             <div className="flex-1 relative">
-              <input
-                type="text"
-                value={inputMessage}
-                onChange={(e) => {
-                  console.log('Input value:', e.target.value); // Debug input value
-                  setInputMessage(e.target.value);
-                }}
-                onKeyDown={(e) => {
-                  // Allow default behavior for all input and textarea elements
-                  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
-                    return;
-                  }
+          
 
-                  // Your existing logic for other keys, like 'Enter'
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSendMessage();
-                  }
-                }}
-                placeholder="Ask me anything or request screen analysis..."
-                className="w-full p-3 pr-10 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                disabled={isAnalyzing}
-                style={{ whiteSpace: 'normal' }} // Ensure spaces are rendered
-              />
               <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
                 <Brain size={16} className="text-gray-400 dark:text-gray-500" />
               </div>
             </div>
             <button
               onClick={handleSendMessage}
-              disabled={!inputMessage.trim() || isAnalyzing}
+              disabled={!inputMessage || isAnalyzing}
               className="p-3 bg-gradient-to-r from-blue-500 to-purple-600 dark:from-blue-600 dark:to-purple-700 text-white rounded-xl transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isAnalyzing ? (
@@ -1102,19 +1132,20 @@ I'm here to make things easier for you 🚀`,
             <input
               type="text"
               value={inputMessage}
-              onChange={(e) => setInputMessage(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
               placeholder="Ask me anything or request screen analysis..."
               className="w-full p-3 pr-10 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
               disabled={isAnalyzing}
             />
+
             <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
               <Brain size={16} className="text-gray-400 dark:text-gray-500" />
             </div>
           </div>
           <button
             onClick={handleSendMessage}
-            disabled={!inputMessage.trim() || isAnalyzing}
+            disabled={!inputMessage || isAnalyzing}
             className="p-3 bg-gradient-to-r from-blue-500 to-purple-600 dark:from-blue-600 dark:to-purple-700 text-white rounded-xl transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isAnalyzing ? (

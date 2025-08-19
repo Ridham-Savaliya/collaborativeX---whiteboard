@@ -319,9 +319,21 @@ const EnhancedAuthPage = () => {
     const token = localStorage.getItem('token');
     if (token) {
       const postLogin = searchParams.get('postLogin');
+      const collaborator = searchParams.get('collaborator');
       const postRegister = searchParams.get('postRegister');
       if (isLogin && postLogin) {
-        navigateWithLoader(router, postLogin);
+        try {
+          const url = new URL(postLogin, window.location.origin);
+          if (collaborator) {
+            url.searchParams.set('collaborator', collaborator);
+          }
+          navigateWithLoader(router, url.pathname + (url.search || ''));
+        } catch {
+          const hasQuery = postLogin.includes('?');
+          const separator = hasQuery ? '&' : '?';
+          const redirect = collaborator ? `${postLogin}${separator}collaborator=${encodeURIComponent(collaborator)}` : postLogin;
+          navigateWithLoader(router, redirect);
+        }
       } else if (!isLogin && postRegister) {
         navigateWithLoader(router, postRegister);
       } else {
@@ -393,8 +405,20 @@ const EnhancedAuthPage = () => {
       showToast(`Welcome back, ${res.data?.name || formData.email.split('@')[0]}!`, "success");
 
       const postLogin = searchParams.get('postLogin');
+      const collaborator = searchParams.get('collaborator');
       if (postLogin) {
-        navigateWithLoader(router, postLogin);
+        try {
+          const url = new URL(postLogin, window.location.origin);
+          if (collaborator) {
+            url.searchParams.set('collaborator', collaborator);
+          }
+          navigateWithLoader(router, url.pathname + (url.search || ''));
+        } catch {
+          const hasQuery = postLogin.includes('?');
+          const separator = hasQuery ? '&' : '?';
+          const redirect = collaborator ? `${postLogin}${separator}collaborator=${encodeURIComponent(collaborator)}` : postLogin;
+          navigateWithLoader(router, redirect);
+        }
       } else {
         navigateWithLoader(router, "/onboarding");
       }
