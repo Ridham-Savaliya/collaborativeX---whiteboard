@@ -57,6 +57,7 @@ const WhiteboardPage: React.FC = () => {
   const [stickyNotes, setStickyNotes] = useState<StickyNote[]>([]);
   const [textFontSize, setTextFontSize] = useState<number>(24);
   const [isCollapsed, setIsCollapsed] = useState(true);
+  const [showMobileWarning, setShowMobileWarning] = useState(false);
   const [canvasKey, setCanvasKey] = useState<number>(0);
   const [textStyles, setTextStyles] = useState({
     bold: false,
@@ -192,27 +193,49 @@ const WhiteboardPage: React.FC = () => {
     }
   }, [hasMounted, isLoading, isInviteValidated, isUnauthorizedAttempt, inviteToken]);
 
- const handleTourEnd = async () => {
-  setRunTour(false);
+  const handleTourEnd = async () => {
+    setRunTour(false);
 
-  try {
-    const res = await axios.post('/api/user/approveOnboarding', {}, {
-      headers: {
-        Authorization: `Bearer ${token}`
+    try {
+      const res = await axios.post(
+        "/api/user/approveOnboarding",
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (res.status === 200) {
+        showToast(
+          "🎉 Onboarding complete! You’re all set to use your whiteboard.",
+          "success"
+        );
+        localStorage.setItem("hasSeenWhiteboardTour", "true");
+
+        // ✅ NEW: after 5s show mobile warning if user is on mobile
+        if (window.innerWidth < 768) {
+          setTimeout(() => {
+            setShowMobileWarning(true);
+          }, 5000);
+        }
+      } else {
+        showToast(
+          "Something went wrong while saving your onboarding status.",
+          "error"
+        );
       }
-    });
-
-    if (res.status === 200) {
-      showToast('🎉 Onboarding complete! You’re all set to use your whiteboard.', 'success');
-      localStorage.setItem('hasSeenWhiteboardTour', 'true');
-    } else {
-      showToast('Something went wrong while saving your onboarding status.', 'error');
+    } catch (err) {
+      console.error(err);
+      showToast(
+        "⚠️ Failed to update onboarding status. Please try again.",
+        "error"
+      );
     }
-  } catch (err) {
-    console.error(err);
-    showToast('⚠️ Failed to update onboarding status. Please try again.', 'error');
-  }
-};
+  };
+
+
 
 
 
@@ -399,6 +422,44 @@ const WhiteboardPage: React.FC = () => {
         </div>
       )}
 
+      {/* ⏱️ Mobile Device Notice */}
+      {showMobileWarning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-purple-900 via-black to-purple-950">
+          <div className="max-w-sm w-full mx-4 p-6 rounded-2xl bg-white/10 backdrop-blur-md border border-purple-400/30 shadow-2xl text-center animate-fadeIn">
+            <div className="mb-4 flex items-center justify-center">
+              <svg
+                className="w-12 h-12 text-purple-300"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </div>
+            <h2 className="text-lg font-bold text-purple-200 mb-2">
+              Best Viewed on Larger Screens
+            </h2>
+            <p className="text-sm text-purple-100/80 leading-relaxed mb-4">
+              This experience is optimized for tablets and desktops.
+              You can continue on mobile, but using a larger screen will provide a
+              more comfortable and enhanced workspace.
+            </p>
+            <button
+              onClick={() => setShowMobileWarning(false)}
+              className="px-5 py-2 rounded-full bg-purple-600 hover:bg-purple-700 text-white font-medium shadow-lg transition-all"
+            >
+              Continue
+            </button>
+          </div>
+        </div>
+      )}
+
+
 
 
       {isSesssionExpired && (
@@ -468,7 +529,7 @@ const WhiteboardPage: React.FC = () => {
         <>
           <WhiteboardTour run={runTour} onTourEnd={handleTourEnd} />
           <Sidebar
-           
+
             setColor={setStrokeColor}
             setLineWidth={setLineWidth}
             setTool={handleToolChange}
@@ -496,7 +557,7 @@ const WhiteboardPage: React.FC = () => {
           />
           <main className="flex-1 overflow-hidden relative">
             <Canvas
-           
+
               key={canvasKey}
               strokeColor={strokeColor}
               lineWidth={lineWidth}

@@ -3332,7 +3332,7 @@ const Canvas: React.FC<CanvasProps> = ({
       )}
 
       {/* Enhanced Zoom controls */}
-      <div id="zoom-controls" className="absolute bottom-5 right-5 flex items-center gap-2 bg-white dark:bg-gray-800 rounded-full shadow-lg p-2 z-40">
+      <div id="zoom-controls" className="absolute bottom-20 sm:bottom-5 right-5 flex items-center gap-2 bg-white dark:bg-gray-800 rounded-full shadow-lg p-2 z-40">
         <button
           className="w-10 h-10 flex items-center justify-center bg-purple-600 dark:bg-purple-700 rounded-full hover:bg-purple-500 dark:hover:bg-purple-600 transition-all duration-200 transform hover:scale-105 touch-manipulation"
           onClick={handleZoomOut}
