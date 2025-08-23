@@ -313,7 +313,7 @@ const GeminiCanvasAnalyzer: React.FC<GeminiCanvasAnalyzerProps> = ({
   }
 
   return (
-    <div className="fixed bottom-20 right-5 w-96 h-[500px] bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden z-50 transition-all duration-300 animate-fadeIn">
+    <div className="fixed bottom-20 right-5 w-96 h-[500px] pb-3 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden z-50 transition-all duration-300 animate-fadeIn">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-blue-500 to-indigo-600 text-white">
         <div className="flex items-center gap-2">

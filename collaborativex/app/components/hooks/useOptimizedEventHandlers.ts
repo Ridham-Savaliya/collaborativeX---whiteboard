@@ -1,8 +1,7 @@
 /**
- * Custom hook for optimized event handling with debouncing and throttling
- * Prevents excessive re-renders and provides smooth user interactions
+ * Custom hook for optimized event handling with debouncing and throttling.
+ * It now includes requestAnimationFrame for ultra-smooth interactions.
  */
-
 import { useCallback, useRef } from 'react';
 import { throttle, debounce } from 'lodash';
 
@@ -32,14 +31,14 @@ export const useOptimizedEventHandlers = (): OptimizedEventHandlers => {
 
   const requestAnimationFrameCallback = useCallback((callback: () => void) => {
     if (animationFrameId.current) {
-      cancelAnimationFrame(animationFrameId.current);
+      window.cancelAnimationFrame(animationFrameId.current);
     }
-    animationFrameId.current = requestAnimationFrame(callback);
+    animationFrameId.current = window.requestAnimationFrame(callback);
   }, []);
 
   const cancelAnimationFrameCallback = useCallback(() => {
     if (animationFrameId.current) {
-      cancelAnimationFrame(animationFrameId.current);
+      window.cancelAnimationFrame(animationFrameId.current);
       animationFrameId.current = null;
     }
   }, []);

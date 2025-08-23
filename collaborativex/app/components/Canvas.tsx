@@ -31,13 +31,14 @@ import {
   ChevronUp,
   User,
   X,
-  Sparkles
+  Sparkles,
+  Palette
 } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useToast } from "../utills/ToastProvider";
 import Videocall from "./videocall/index";
 import Draggable from "react-draggable";
-import axios from "axios";  
+import axios from "axios";
 import Kanban from "./templates/Kanban";
 import Mindmaps from './templates/Mindmaps.tsx'
 import { ReactFlowProvider } from "reactflow";
@@ -47,11 +48,10 @@ import EnhancedGeminiAnalyzer from "./AiCanvasAnalyzer";
 // Import enhanced components
 import { EnhancedShapeRecognizer, RecognizedShape, AnimationFrame } from '../components/ShapeRecognision/ShapeRecognision';
 
-// Keep all existing interfaces and components from the original code...
-// [All existing interfaces, components, and functions remain exactly the same]
-
+// Keep all existing interfaces
 interface CanvasProps {
   strokeColor: string;
+
   lineWidth: number;
   tool:
   | "pen"
@@ -80,7 +80,7 @@ interface CanvasProps {
   whiteboardId?: string;
   token?: string;
   currentUser?: string;
-  path:string
+  path: string
 }
 
 interface UserPresence {
@@ -127,7 +127,7 @@ interface StickyNoteProps {
   activeNoteId: string | null;
   editingNoteId: string | null;
   handleStickyNoteMouseDown: (
-    e: React.MouseEvent<HTMLDivElement>,
+    e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>,
     noteId: string
   ) => void;
   handleStickyNoteDoubleClick: (
@@ -141,7 +141,7 @@ interface StickyNoteProps {
   handleFinishEditing: () => void;
   handleDeleteStickyNote: (noteId: string) => void;
   handleResizeStart: (
-    e: React.MouseEvent<HTMLDivElement>,
+    e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>,
     noteId: string,
     direction: string
   ) => void;
@@ -163,7 +163,7 @@ interface TextComponentProps {
   activeTextId: string | null;
   editingTextId: string | null;
   handleTextMouseDown: (
-    e: React.MouseEvent<HTMLDivElement>,
+    e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>,
     textId: string
   ) => void;
   handleTextDoubleClick: (
@@ -191,18 +191,18 @@ interface ShapeComponentProps {
   panOffset: { x: number; y: number };
   activeShapeId: string | null;
   handleShapeMouseDown: (
-    e: React.MouseEvent<HTMLDivElement>,
+    e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>,
     shapeId: string
   ) => void;
   handleDeleteShape: (shapeId: string) => void;
   handleShapeResizeStart: (
-    e: React.MouseEvent<HTMLDivElement>,
+    e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>,
     shapeId: string,
     direction: string
   ) => void;
 }
 
-// Utility functions
+// Enhanced utility functions
 const generateUniqueId = (): string =>
   `id-${Date.now().toString(36)}-${Math.random()
     .toString(36)
@@ -220,6 +220,33 @@ const ensureUniqueIds = <T extends { id: string }>(items: T[]): T[] => {
     seenIds.add(item.id);
     return item;
   });
+};
+
+// Enhanced coordinate utilities
+const getDevicePixelRatio = (): number => {
+  return window.devicePixelRatio || 1;
+};
+
+const getViewportDimensions = () => {
+  const width = window.innerWidth;
+  return {
+    width: width,
+    height: window.innerHeight,
+    isMobile: width <= 768,
+    isTablet: width > 768 && width <= 1024,
+  };
+};
+
+// Enhanced event coordinate extraction
+const getEventCoordinates = (
+  e: React.MouseEvent | React.TouchEvent | MouseEvent | TouchEvent
+): { clientX: number; clientY: number } => {
+  if ('touches' in e) {
+    return e.touches.length > 0
+      ? { clientX: e.touches[0].clientX, clientY: e.touches[0].clientY }
+      : { clientX: 0, clientY: 0 };
+  }
+  return { clientX: e.clientX, clientY: e.clientY };
 };
 
 // Color palette for sticky notes
@@ -242,9 +269,7 @@ const colorPalette = [
   { bg: "#000000", text: "#FFFFFF" },
 ];
 
-// Keep all existing component implementations (ConnectionStatus, UserPresence, etc.)
-// [All existing helper components remain exactly the same...]
-
+// Keep all existing component implementations for ConnectionStatus, UserPresence, etc.
 const ConnectionStatus: React.FC<{
   connectionState: ConnectionState;
   onRetry?: () => void;
@@ -328,8 +353,6 @@ const UserPresence: React.FC<{
 }> = ({ users, currentUser }) => {
   const activeUsers = users.filter(user => user.joined);
 
-  console.log("active users of the canvas", activeUsers)
-
   return (
     <div className="flex items-center gap-3 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 px-4 py-3">
       <div className="flex items-center gap-2">
@@ -379,7 +402,6 @@ const UserPresence: React.FC<{
   );
 };
 
-// Activity Feed Component (keeping existing implementation)
 const ActivityFeed: React.FC<{
   activities: ActivityUpdate[];
 }> = ({ activities }) => {
@@ -480,9 +502,6 @@ const ActivityFeed: React.FC<{
     </div>
   );
 };
-
-// Keep all existing error, cursor, and collaboration panel components...
-// [ErrorNotifications, CursorOverlay, CollaborationPanel components remain the same]
 
 const ErrorNotifications: React.FC<{
   errors: SocketError[];
@@ -663,7 +682,7 @@ const CollaborationPanel: React.FC<{
           onRetry={onRetryConnection}
         />
 
-        <div className={`fixed top-4 right-4 z-40 transition-all duration-300 ${isCollapsed ? 'w-12' : 'w-80'}`}>
+        <div id="collaboration-panel"  className={`fixed top-4 right-4 z-40 transition-all duration-300 ${isCollapsed ? 'w-12' : 'w-80'}`}>
           <div className="backdrop-blur-lg rounded-lg shadow-lg  overflow-hidden">
 
             <div className="flex items-center justify-between p-1 border-b border-gray-00 dark:border-gray-700">
@@ -713,9 +732,7 @@ const CollaborationPanel: React.FC<{
     );
   };
 
-// Keep all existing component implementations (StickyNoteComponent, TextComponent, ShapeComponent)
-// [All existing component implementations remain exactly the same...]
-
+// Redesigned StickyNote Component
 const StickyNoteComponent = memo(
   ({
     note,
@@ -729,7 +746,6 @@ const StickyNoteComponent = memo(
     handleFinishEditing,
     handleDeleteStickyNote,
     handleResizeStart,
-    setStickyNotes,
     showColorPicker,
     textStyles,
     textFontSize,
@@ -742,12 +758,30 @@ const StickyNoteComponent = memo(
     const adjustedX = note.x * zoomLevel + panOffset.x;
     const adjustedY = note.y * zoomLevel + panOffset.y;
     const bgColor = note.bgColor || "#FEF7CD";
+    const isMobile = getViewportDimensions().isMobile;
+
+    const ResizeHandle = ({ direction, cursor }: { direction: string; cursor: string }) => (
+      <div
+        className={`absolute w-8 h-8 -m-4 flex items-center justify-center`}
+        style={{
+          top: direction.includes('n') ? 0 : 'auto',
+          bottom: direction.includes('s') ? 0 : 'auto',
+          left: direction.includes('w') ? 0 : 'auto',
+          right: direction.includes('e') ? 0 : 'auto',
+          cursor: `${cursor}-resize`,
+        }}
+        onMouseDown={(e) => handleResizeStart(e, note.id, direction)}
+        onTouchStart={(e) => handleResizeStart(e, note.id, direction)}
+      >
+        <div className="w-3 h-3 bg-white rounded-full border-2 border-purple-600 group-hover:scale-125 transition-transform" />
+      </div>
+    );
 
     return (
       <div
         data-note-id={note.id}
-        className={`absolute rounded-lg overflow-hidden transition-all duration-300 ease-in-out ${activeNoteId === note.id
-          ? "z-30 shadow-2xl ring-2 ring-purple-400 transform scale-105"
+        className={`absolute rounded-lg overflow-hidden transition-all duration-200 ease-in-out select-none group ${activeNoteId === note.id
+          ? "z-30 shadow-2xl ring-2 ring-purple-500"
           : "z-20 shadow-lg hover:shadow-xl"
           }`}
         style={{
@@ -756,100 +790,73 @@ const StickyNoteComponent = memo(
           background: bgColor,
           left: `${adjustedX}px`,
           top: `${adjustedY}px`,
-          border: "1px solid rgba(0,0,0,0.1)",
-          transform: activeNoteId === note.id ? 'scale(1.02)' : 'scale(1)',
+          touchAction: 'none',
         }}
         onMouseDown={(e) => handleStickyNoteMouseDown(e, note.id)}
+        onTouchStart={(e) => handleStickyNoteMouseDown(e, note.id)}
         onDoubleClick={(e) => handleStickyNoteDoubleClick(e, note.id)}
       >
-        <div className="h-full w-full flex flex-col">
-          <div className="flex justify-between items-center p-2 bg-gradient-to-r from-black/5 to-transparent">
-            <button
-              className="relative group bg-gradient-to-br from-purple-500 to-purple-700 text-white rounded-full p-1.5 hover:from-purple-600 hover:to-purple-800 transition-all duration-200 transform hover:scale-110 focus:outline-none"
-              onClick={(e) => {
-                e.stopPropagation();
-                const rect = e.currentTarget.getBoundingClientRect();
-                showColorPicker(note.id, rect.right + 8, rect.top);
+        <div className="absolute top-1 right-1 flex gap-1">
+          <button
+            className="p-1.5 rounded-full hover:bg-black/10 transition-colors"
+            onClick={(e) => {
+              e.stopPropagation();
+              const rect = e.currentTarget.getBoundingClientRect();
+              showColorPicker(note.id, rect.right + 8, rect.top);
+            }}
+          >
+            <Palette className="w-4 h-4" />
+          </button>
+          <button
+            className="p-1.5 rounded-full hover:bg-black/10 transition-colors"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDeleteStickyNote(note.id);
+            }}
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="w-full h-full p-2 pt-8">
+          {editingNoteId === note.id ? (
+            <textarea
+              className="w-full h-full bg-transparent border-none resize-none focus:outline-none focus:ring-2 focus:ring-purple-300 rounded-md p-2 transition-all duration-200 whitespace-normal break-words"
+              style={{
+                color: note.textColor,
+                fontSize: `${textFontSize * zoomLevel}px`,
+                fontWeight: textStyles.bold ? "bold" : "normal",
+                fontStyle: textStyles.italic ? "italic" : "normal",
+                textDecoration: textStyles.underline ? "underline" : "none",
+                fontFamily: textStyles.fontFamily,
+              }}
+              value={note.text}
+              onChange={(e) => handleStickyNoteTextChange(e, note.id)}
+              autoFocus
+              onBlur={handleFinishEditing}
+              placeholder="Type here..."
+            />
+          ) : (
+            <div
+              className="w-full h-full overflow-y-auto overflow-x-hidden cursor-move whitespace-normal break-words select-text p-2"
+              style={{
+                color: note.textColor,
+                fontSize: `${textFontSize * zoomLevel}px`,
+                fontWeight: textStyles.bold ? "bold" : "normal",
+                fontStyle: textStyles.italic ? "italic" : "normal",
+                textDecoration: textStyles.underline ? "underline" : "none",
+                fontFamily: textStyles.fontFamily,
               }}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill={bgColor}
-                stroke="white"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <circle cx="12" cy="12" r="10" />
-              </svg>
-            </button>
-            <button
-              className="relative group bg-gradient-to-br from-red-500 to-red-700 text-white rounded-full p-1.5 hover:from-red-600 hover:to-red-800 transition-all duration-200 transform hover:scale-110 focus:outline-none"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleDeleteStickyNote(note.id);
-              }}
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-          <div className="flex-1 p-3">
-            {editingNoteId === note.id ? (
-              <textarea
-                className="w-full h-full bg-transparent border-none resize-none focus:outline-none focus:ring-2 focus:ring-purple-300 rounded-md p-2 transition-all duration-200 whitespace-normal break-words"
-                style={{
-                  color: note.textColor,
-                  fontSize: `${textFontSize * zoomLevel}px`,
-                  fontWeight: textStyles.bold ? "bold" : "normal",
-                  fontStyle: textStyles.italic ? "italic" : "normal",
-                  textDecoration: textStyles.underline ? "underline" : "none",
-                  fontFamily: textStyles.fontFamily,
-                }}
-                value={note.text}
-                onChange={(e) => handleStickyNoteTextChange(e, note.id)}
-                autoFocus
-                onBlur={handleFinishEditing}
-                placeholder="Enter text here"
-                rows={5}
-              />
-            ) : (
-              <div
-                className="w-full h-full overflow-y-auto overflow-x-hidden cursor-move whitespace-normal break-words select-text"
-                style={{
-                  color: note.textColor,
-                  fontSize: `${textFontSize * zoomLevel}px`,
-                  fontWeight: textStyles.bold ? "bold" : "normal",
-                  fontStyle: textStyles.italic ? "italic" : "normal",
-                  textDecoration: textStyles.underline ? "underline" : "none",
-                  fontFamily: textStyles.fontFamily,
-                }}
-              >
-                {note.text || "Double-click to edit"}
-              </div>
-            )}
-          </div>
+              {note.text || "Double-click to edit"}
+            </div>
+          )}
         </div>
         {activeNoteId === note.id && !editingNoteId && (
           <>
-            <div
-              className="absolute bottom-0 right-0 w-4 h-4 bg-gradient-to-br from-purple-600 to-purple-800 rounded-full transform translate-x-1/2 translate-y-1/2 cursor-se-resize z-40 hover:bg-purple-700 hover:scale-125 transition-all duration-200 animate-pulse"
-              onMouseDown={(e) => handleResizeStart(e, note.id, "se")}
-            />
-            <div
-              className="absolute bottom-0 left-0 w-4 h-4 bg-gradient-to-br from-purple-600 to-purple-800 rounded-full transform -translate-x-1/2 translate-y-1/2 cursor-sw-resize z-40 hover:bg-purple-700 hover:scale-125 transition-all duration-200 animate-pulse"
-              onMouseDown={(e) => handleResizeStart(e, note.id, "sw")}
-            />
-            <div
-              className="absolute top-0 right-0 w-4 h-4 bg-gradient-to-br from-purple-600 to-purple-800 rounded-full transform translate-x-1/2 -translate-y-1/2 cursor-ne-resize z-40 hover:bg-purple-700 hover:scale-125 transition-all duration-200 animate-pulse"
-              onMouseDown={(e) => handleResizeStart(e, note.id, "ne")}
-            />
-            <div
-              className="absolute top-0 left-0 w-4 h-4 bg-gradient-to-br from-purple-600 to-purple-800 rounded-full transform -translate-x-1/2 -translate-y-1/2 cursor-nw-resize z-40 hover:bg-purple-700 hover:scale-125 transition-all duration-200 animate-pulse"
-              onMouseDown={(e) => handleResizeStart(e, note.id, "nw")}
-            />
+            <ResizeHandle direction="nw" cursor="nw" />
+            <ResizeHandle direction="ne" cursor="ne" />
+            <ResizeHandle direction="sw" cursor="sw" />
+            <ResizeHandle direction="se" cursor="se" />
           </>
         )}
       </div>
@@ -859,6 +866,7 @@ const StickyNoteComponent = memo(
 
 StickyNoteComponent.displayName = "StickyNoteComponent";
 
+// Enhanced Text Component with improved touch handling
 const TextComponent = memo(
   ({
     textElement,
@@ -893,23 +901,24 @@ const TextComponent = memo(
     return (
       <div
         data-text-id={textElement.id}
-        className={`absolute shadow-md rounded-md overflow-visible transition-all duration-200 ${activeTextId === textElement.id
-          ? "z-30 shadow-xl ring-2 ring-purple-500 transform scale-105"
+        className={`absolute shadow-md rounded-md overflow-visible transition-all duration-200 select-none ${activeTextId === textElement.id
+          ? "z-30 shadow-xl ring-2 ring-purple-500 p-1"
           : "z-20"
           }`}
         style={{
           left: `${adjustedX}px`,
           top: `${adjustedY}px`,
           cursor: editingTextId === textElement.id ? "text" : "move",
-          transform: activeTextId === textElement.id ? 'scale(1.02)' : 'scale(1)',
+          touchAction: 'none',
         }}
         onMouseDown={(e) => handleTextMouseDown(e, textElement.id)}
         onDoubleClick={(e) => handleTextDoubleClick(e, textElement.id)}
+        onTouchStart={(e) => handleTextMouseDown(e, textElement.id)}
       >
         {editingTextId === textElement.id ? (
           <textarea
             ref={textareaRef}
-            className="bg-transparent border-none resize-none focus:outline-none p-1 rounded-md overflow-y-auto overflow-x-hidden whitespace-pre-wrap"
+            className="bg-transparent border-none resize-none focus:outline-none p-1 rounded-md overflow-y-auto overflow-x-hidden whitespace-pre-wrap touch-manipulation"
             style={{
               color: textElement.color,
               fontSize: `${textFontSize * zoomLevel}px`,
@@ -942,7 +951,7 @@ const TextComponent = memo(
         )}
         {activeTextId === textElement.id && !editingTextId && (
           <button
-            className="absolute top-0 right-0 w-6 h-6 bg-red-500 text-white rounded-full -translate-x-1/2 -translate-y-1/2 cursor-pointer z-40 hover:bg-red-600 transition-all duration-200 transform hover:scale-105"
+            className="absolute -top-3 -right-3 w-6 h-6 bg-red-500 text-white rounded-full cursor-pointer z-40 hover:bg-red-600 transition-all duration-200 transform hover:scale-110 touch-manipulation flex items-center justify-center"
             onClick={(e) => {
               e.stopPropagation();
               setElements((prev) =>
@@ -960,6 +969,7 @@ const TextComponent = memo(
 
 TextComponent.displayName = "TextComponent";
 
+// Enhanced Shape Component with improved touch handling and better resize controls
 const ShapeComponent = memo(
   ({
     shape,
@@ -977,11 +987,29 @@ const ShapeComponent = memo(
 
     const adjustedX = shape.x * zoomLevel + panOffset.x;
     const adjustedY = shape.y * zoomLevel + panOffset.y;
-    const adjustedWidth = shape.width * zoomLevel;
-    const adjustedHeight = shape.height * zoomLevel;
+    const adjustedWidth = Math.abs(shape.width * zoomLevel);
+    const adjustedHeight = Math.abs(shape.height * zoomLevel);
+
+    // Sub-component for resize handles to avoid repetition
+    const ResizeHandle = ({ direction, cursor }: { direction: string; cursor: string }) => (
+      <div
+        className={`absolute w-6 h-6 -m-3 flex items-center justify-center`}
+        style={{
+          top: direction.includes('n') ? 0 : 'auto',
+          bottom: direction.includes('s') ? 0 : 'auto',
+          left: direction.includes('w') ? 0 : 'auto',
+          right: direction.includes('e') ? 0 : 'auto',
+          cursor: `${cursor}-resize`,
+        }}
+        onMouseDown={(e) => handleShapeResizeStart(e, shape.id, direction)}
+        onTouchStart={(e) => handleShapeResizeStart(e, shape.id, direction)}
+      >
+        <div className="w-3 h-3 bg-white rounded-full border-2 border-purple-600 group-hover:scale-125 transition-transform" />
+      </div>
+    );
 
     const renderShape = () => {
-      const strokeWidth = (shape.lineWidth || 2) / zoomLevel;
+      const strokeWidth = Math.max(1, (shape.lineWidth || 2) * zoomLevel);
 
       switch (shape.type) {
         case "rectangle":
@@ -1045,6 +1073,53 @@ const ShapeComponent = memo(
             />
           );
 
+        case "arrow": {
+          const angle = Math.atan2(shape.height, shape.width);
+          const headlen = 15;
+          const tox = adjustedWidth - strokeWidth / 2;
+          const toy = adjustedHeight - strokeWidth / 2;
+          return (
+            <>
+              <line
+                x1={strokeWidth / 2} y1={strokeWidth / 2}
+                x2={tox} y2={toy}
+                stroke={shape.color} strokeWidth={strokeWidth} />
+              <line
+                x1={tox} y1={toy}
+                x2={tox - headlen * Math.cos(angle - Math.PI / 6)} y2={toy - headlen * Math.sin(angle - Math.PI / 6)}
+                stroke={shape.color} strokeWidth={strokeWidth} />
+              <line
+                x1={tox} y1={toy}
+                x2={tox - headlen * Math.cos(angle + Math.PI / 6)} y2={toy - headlen * Math.sin(angle + Math.PI / 6)}
+                stroke={shape.color} strokeWidth={strokeWidth} />
+            </>
+          );
+        }
+
+        case "star": {
+          const spikes = 5;
+          const outerRadius = Math.min(adjustedWidth, adjustedHeight) / 2;
+          const innerRadius = outerRadius / 2.5;
+          let rot = Math.PI / 2 * 3;
+          let x_center = adjustedWidth / 2;
+          let y_center = adjustedHeight / 2;
+          let step = Math.PI / spikes;
+          let points = "";
+          for (let i = 0; i < spikes; i++) {
+            let x_outer = x_center + Math.cos(rot) * outerRadius;
+            let y_outer = y_center + Math.sin(rot) * outerRadius;
+            points += `${x_outer},${y_outer} `;
+            rot += step;
+            let x_inner = x_center + Math.cos(rot) * innerRadius;
+            let y_inner = y_center + Math.sin(rot) * innerRadius;
+            points += `${x_inner},${y_inner} `;
+            rot += step;
+          }
+          return (
+            <polygon points={points} fill="transparent" stroke={shape.color} strokeWidth={strokeWidth} />
+          );
+        }
+
         case "ellipse":
           return (
             <ellipse
@@ -1063,22 +1138,23 @@ const ShapeComponent = memo(
       }
     };
 
-
     return (
       <div
         data-shape-id={shape.id}
-        className={`absolute transition-all duration-200 ${activeShapeId === shape.id
-          ? "z-30 ring-2 purple-500"
+        className={`absolute transition-all duration-200 select-none group ${activeShapeId === shape.id
+          ? "z-30 ring-2 ring-purple-500"
           : "z-20"
           }`}
         style={{
           left: `${adjustedX}px`,
           top: `${adjustedY}px`,
-          width: `${Math.abs(adjustedWidth)}px`,
-          height: `${Math.abs(adjustedHeight)}px`,
+          width: `${adjustedWidth}px`,
+          height: `${adjustedHeight}px`,
           cursor: "move",
+          touchAction: 'none',
         }}
         onMouseDown={(e) => handleShapeMouseDown(e, shape.id)}
+        onTouchStart={(e) => handleShapeMouseDown(e, shape.id)}
       >
         <svg
           width="100%"
@@ -1091,7 +1167,7 @@ const ShapeComponent = memo(
 
         {activeShapeId === shape.id && (
           <button
-            className="absolute top-0 right-0 w-6 h-6 bg-red-500 text-white rounded-full -translate-x-1/2 -translate-y-1/2 cursor-pointer z-40 hover:bg-red-600 transition-all duration-200 transform hover:scale-105"
+            className="absolute -top-3 -right-3 w-6 h-6 bg-red-500 text-white rounded-full cursor-pointer z-40 hover:bg-red-600 transition-all duration-200 transform hover:scale-110 touch-manipulation flex items-center justify-center"
             onClick={(e) => {
               e.stopPropagation();
               handleDeleteShape(shape.id);
@@ -1103,22 +1179,10 @@ const ShapeComponent = memo(
 
         {activeShapeId === shape.id && (
           <>
-            <div
-              className="absolute bottom-0 right-0 w-4 h-4 bg-gradient-to-br from-purple-600 to-purple-800 rounded-full transform translate-x-1/2 translate-y-1/2 cursor-se-resize z-40 hover:bg-purple-700 hover:scale-125 transition-all duration-200"
-              onMouseDown={(e) => handleShapeResizeStart(e, shape.id, "se")}
-            />
-            <div
-              className="absolute bottom-0 left-0 w-4 h-4 bg-gradient-to-br from-purple-600 to-purple-800 rounded-full transform -translate-x-1/2 translate-y-1/2 cursor-sw-resize z-40 hover:bg-purple-700 hover:scale-125 transition-all duration-200"
-              onMouseDown={(e) => handleShapeResizeStart(e, shape.id, "sw")}
-            />
-            <div
-              className="absolute top-0 right-0 w-4 h-4 bg-gradient-to-br from-purple-600 to-purple-800 rounded-full transform translate-x-1/2 -translate-y-1/2 cursor-ne-resize z-40 hover:bg-purple-700 hover:scale-125 transition-all duration-200"
-              onMouseDown={(e) => handleShapeResizeStart(e, shape.id, "ne")}
-            />
-            <div
-              className="absolute top-0 left-0 w-4 h-4 bg-gradient-to-br from-purple-600 to-purple-800 rounded-full transform -translate-x-1/2 -translate-y-1/2 cursor-nw-resize z-40 hover:bg-purple-700 hover:scale-125 transition-all duration-200"
-              onMouseDown={(e) => handleShapeResizeStart(e, shape.id, "nw")}
-            />
+            <ResizeHandle direction="nw" cursor="nw" />
+            <ResizeHandle direction="ne" cursor="ne" />
+            <ResizeHandle direction="sw" cursor="sw" />
+            <ResizeHandle direction="se" cursor="se" />
           </>
         )}
       </div>
@@ -1128,11 +1192,12 @@ const ShapeComponent = memo(
 
 ShapeComponent.displayName = "ShapeComponent";
 
-// Main Canvas Component with enhanced Gemini AI integration
+// Main Canvas Component with enhanced coordinate handling and touch support
 const Canvas: React.FC<CanvasProps> = ({
   strokeColor,
   lineWidth,
   tool,
+
   shapeType,
   stickyNotes,
   setStickyNotes,
@@ -1143,7 +1208,7 @@ const Canvas: React.FC<CanvasProps> = ({
   textStyles,
   currentUser = "demo@example.com",
 }) => {
-  // Keep all existing state variables...
+  // Keep all existing state variables
   const gridCanvasRef = useRef<HTMLCanvasElement>(null);
   const contentCanvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -1167,15 +1232,16 @@ const Canvas: React.FC<CanvasProps> = ({
     elementId: string;
   } | null>(null);
 
-  // Enhanced AI state with premium features
+  // Enhanced AI state
   const [showAIAssistant, setShowAIAssistant] = useState(false);
   const [showGeminiAssistant, setShowGeminiAssistant] = useState(false);
 
-  // Keep all other existing state variables...
+  // Keep all other existing state variables
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   const [activeTextId, setActiveTextId] = useState<string | null>(null);
   const [activeShapeId, setActiveShapeId] = useState<string | null>(null);
+  const [isPlacingText, setIsPlacingText] = useState(false); // FIX FOR MOBILE TEXT
 
   const [isDraggingNote, setIsDraggingNote] = useState(false);
   const [isDraggingText, setIsDraggingText] = useState(false);
@@ -1193,6 +1259,12 @@ const Canvas: React.FC<CanvasProps> = ({
   const [panStart, setPanStart] = useState<Point | null>(null);
   const [currentTemplate, setcurrentTemplate] = useState('')
   const [showingTemplate, setshowingTemplate] = useState(false)
+  const [pinchDistance, setPinchDistance] = useState<number | null>(null);
+
+  // States for responsive element sizes
+  const [dynamicLineWidth, setDynamicLineWidth] = useState(lineWidth);
+  const [dynamicTextFontSize, setDynamicTextFontSize] = useState(textFontSize);
+  const [dynamicStickyNoteSize, setDynamicStickyNoteSize] = useState({ width: 200, height: 200 });
 
   const [colorPicker, setColorPicker] = useState<{
     noteId: string;
@@ -1208,7 +1280,7 @@ const Canvas: React.FC<CanvasProps> = ({
   const [errors, setErrors] = useState<SocketError[]>([]);
   const latencyCheckRef = useRef<number | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const { showToast } = useToast()
+  const { showToast } = useToast();
 
   const stickyNoteColors = [
     "#FEF7CD",
@@ -1225,9 +1297,31 @@ const Canvas: React.FC<CanvasProps> = ({
   const newTextIdRef = useRef<string | null>(null);
   const [activeTool, setActiveTool] = useState<string | null>(null);
 
-  // Keep all existing functions (socket handling, drawing, etc.)...
-  // [All existing functions remain exactly the same until the toggleTool function]
+  // Enhanced coordinate calculation functions
+  const getCanvasCoordinates = useCallback((clientX: number, clientY: number) => {
+    if (!contentCanvasRef.current) return { x: 0, y: 0 };
 
+    const rect = contentCanvasRef.current.getBoundingClientRect();
+
+    const x = (clientX - rect.left - panOffset.x) / zoomLevel;
+    const y = (clientY - rect.top - panOffset.y) / zoomLevel;
+
+    return { x, y };
+  }, [panOffset.x, panOffset.y, zoomLevel]);
+
+  // Enhanced bounds checking for different screen sizes
+  const clampToCanvas = useCallback((x: number, y: number, width: number = 0, height: number = 0) => {
+    const viewport = getViewportDimensions();
+    const canvasWidth = (canvasDimensions.width || viewport.width) / zoomLevel;
+    const canvasHeight = (canvasDimensions.height || viewport.height) / zoomLevel;
+
+    return {
+      x: Math.max(0, Math.min(x, canvasWidth - width)),
+      y: Math.max(0, Math.min(y, canvasHeight - height)),
+    };
+  }, [canvasDimensions, zoomLevel]);
+
+  // Keep all existing utility functions and socket handling
   const debouncedSaveToHistory = useCallback(
     debounce((elements: WhiteboardElement[], stickyNotes: StickyNote[]) => {
       saveToHistory({ elements, stickyNotes });
@@ -1251,6 +1345,24 @@ const Canvas: React.FC<CanvasProps> = ({
   const clearAllErrors = useCallback(() => {
     setErrors([]);
   }, []);
+
+  // EFFECT FOR RESPONSIVE SIZING
+  useEffect(() => {
+    const viewport = getViewportDimensions();
+    if (viewport.isMobile) {
+      setDynamicLineWidth(Math.max(2, lineWidth * 0.7));
+      setDynamicTextFontSize(Math.max(12, textFontSize * 0.9));
+      setDynamicStickyNoteSize({ width: 150, height: 150 });
+    } else if (viewport.isTablet) {
+      setDynamicLineWidth(Math.max(2, lineWidth * 0.9));
+      setDynamicTextFontSize(Math.max(14, textFontSize * 0.95));
+      setDynamicStickyNoteSize({ width: 180, height: 180 });
+    } else {
+      setDynamicLineWidth(lineWidth);
+      setDynamicTextFontSize(textFontSize);
+      setDynamicStickyNoteSize({ width: 200, height: 200 });
+    }
+  }, [lineWidth, textFontSize, canvasDimensions.width]); // Re-run on width change
 
   const measureLatency = useCallback(() => {
     if (socketRef.current?.connected) {
@@ -1276,12 +1388,10 @@ const Canvas: React.FC<CanvasProps> = ({
 
   const [authToken, setAuthToken] = useState<string | null>(null);
   useEffect(() => {
-    // Initialize from localStorage on mount
     try {
       const t = localStorage.getItem('token');
       if (t) setAuthToken(t);
-    } catch {}
-    // Update if token changes in this or another tab
+    } catch { }
     const handleStorage = (e: StorageEvent) => {
       if (e.key === 'token') {
         setAuthToken(e.newValue);
@@ -1290,7 +1400,7 @@ const Canvas: React.FC<CanvasProps> = ({
     window.addEventListener('storage', handleStorage);
     return () => window.removeEventListener('storage', handleStorage);
   }, []);
-  
+
   const params = useParams();
   const whiteboardId = params.id;
 
@@ -1298,13 +1408,12 @@ const Canvas: React.FC<CanvasProps> = ({
     setShapeRecognitionEnabled(prev => {
       const newState = !prev;
       return newState;
-      
     });
   }, []);
 
   const debouncedRecognizeShape = (() => {
     let timeoutId: NodeJS.Timeout;
-    
+
     return (
       points: { x: number; y: number }[],
       callback: (shape: RecognizedShape | null) => void,
@@ -1323,15 +1432,15 @@ const Canvas: React.FC<CanvasProps> = ({
     points: { x: number; y: number }[]
   ) => {
     if (!shapeRecognitionEnabled || points.length < 4) return;
-    
+
     setIsShapeProcessing(true);
-    
+
     debouncedRecognizeShape(points, (recognizedShape) => {
       setIsShapeProcessing(false);
-      
+
       if (recognizedShape && recognizedShape.confidence > 0.6) {
         const frames = EnhancedShapeRecognizer.generateAnimationFrames(points, recognizedShape);
-        
+
         setAnimatingShape({
           frames,
           currentFrame: 0,
@@ -1358,15 +1467,15 @@ const Canvas: React.FC<CanvasProps> = ({
               }
               return el;
             });
-            
+
             elementsRef.current = newElements;
             debouncedSaveToHistory(newElements, stickyNotes);
-            
+
             const convertedShape = newElements.find(el => el.id === elementId);
             if (convertedShape) {
               emit('shapeRecognized', convertedShape);
             }
-            
+
             return newElements;
           });
 
@@ -1380,22 +1489,20 @@ const Canvas: React.FC<CanvasProps> = ({
     });
   }, [shapeRecognitionEnabled, debouncedSaveToHistory, stickyNotes, emit]);
 
-  // Keep all existing effect hooks and other functions...
-  // [All existing useEffect hooks and functions remain the same]
-
+  // Keep all existing socket and animation effects
   useEffect(() => {
     if (!animatingShape || !animationContext) return;
 
     const animate = () => {
       const { frames, currentFrame } = animatingShape;
-      
+
       if (currentFrame >= frames.length) {
         setAnimatingShape(null);
         return;
       }
 
       const frame = frames[currentFrame];
-      
+
       const canvas = animationCanvasRef.current;
       if (canvas) {
         const dpr = window.devicePixelRatio || 1;
@@ -1407,16 +1514,16 @@ const Canvas: React.FC<CanvasProps> = ({
 
         if (frame.interpolatedPoints.length > 1) {
           animationContext.beginPath();
-          
+
           const gradient = animationContext.createLinearGradient(
             frame.interpolatedPoints[0].x, frame.interpolatedPoints[0].y,
-            frame.interpolatedPoints[frame.interpolatedPoints.length - 1].x, 
+            frame.interpolatedPoints[frame.interpolatedPoints.length - 1].x,
             frame.interpolatedPoints[frame.interpolatedPoints.length - 1].y
           );
           gradient.addColorStop(0, '#8B5CF6');
           gradient.addColorStop(0.5, '#A855F7');
           gradient.addColorStop(1, '#7C3AED');
-          
+
           animationContext.strokeStyle = gradient;
           animationContext.lineWidth = 3 / zoomLevel;
           animationContext.lineCap = 'round';
@@ -1425,18 +1532,18 @@ const Canvas: React.FC<CanvasProps> = ({
           animationContext.shadowColor = '#8B5CF6';
 
           animationContext.moveTo(frame.interpolatedPoints[0].x, frame.interpolatedPoints[0].y);
-          
+
           for (let i = 1; i < frame.interpolatedPoints.length - 2; i++) {
             const xc = (frame.interpolatedPoints[i].x + frame.interpolatedPoints[i + 1].x) / 2;
             const yc = (frame.interpolatedPoints[i].y + frame.interpolatedPoints[i + 1].y) / 2;
             animationContext.quadraticCurveTo(frame.interpolatedPoints[i].x, frame.interpolatedPoints[i].y, xc, yc);
           }
-          
+
           if (frame.interpolatedPoints.length > 2) {
             const lastTwo = frame.interpolatedPoints.slice(-2);
             animationContext.quadraticCurveTo(lastTwo[0].x, lastTwo[0].y, lastTwo[1].x, lastTwo[1].y);
           }
-          
+
           animationContext.stroke();
         }
 
@@ -1452,9 +1559,44 @@ const Canvas: React.FC<CanvasProps> = ({
     return () => cancelAnimationFrame(animationFrame);
   }, [animatingShape, animationContext, zoomLevel, panOffset]);
 
-  // Keep all existing socket and canvas initialization code...
-  // [Socket initialization and canvas setup remain exactly the same]
 
+  // const [runTour, setRunTour] = useState(false);
+
+  // // CORRECTED useEffect for the tour
+  // useEffect(() => {
+  //   const hasSeenTour = localStorage.getItem("hasSeenWhiteboardTour");
+
+  //   if (!hasSeenTour) {
+  //     const tourTargets = ["#canvas-toolbar", "#collaboration-panel", "#zoom-controls"];
+
+  //     // Function to check if all required DOM elements exist
+  //     const checkElementsReady = () => {
+  //       return tourTargets.every((selector) => document.querySelector(selector));
+  //     };
+
+  //     // Poll the DOM every 100ms until elements exist
+  //     const interval = setInterval(() => {
+  //       if (checkElementsReady()) {
+  //         clearInterval(interval);
+  //         setRunTour(true); // Start the tour
+  //       }
+  //     }, 100);
+
+  //     console.log("🔍 Checking tour elements… User has seen tour?", hasSeenTour);
+
+  //     // Cleanup on unmount
+  //     return () => clearInterval(interval);
+  //   }
+  // }, [setRunTour]);
+
+  // const handleTourEnd = () => {
+  //   localStorage.setItem("hasSeenWhiteboardTour", "true"); // Remember tutorial is done
+  //   setRunTour(false);
+  //   console.log("✅ Whiteboard Tour Completed & Saved!");
+  // };
+
+
+  // Keep existing socket initialization
   useEffect(() => {
     if (!whiteboardId || !authToken) return;
 
@@ -1512,7 +1654,7 @@ const Canvas: React.FC<CanvasProps> = ({
       showToast("Disconnected from collaborative session", "error")
     });
 
-    // Keep all other socket event handlers...
+    // Keep all other socket event handlers
     socket.on('connect_error', (error: any) => {
       const msg = error.message?.toLowerCase();
 
@@ -1568,12 +1710,8 @@ const Canvas: React.FC<CanvasProps> = ({
       }
     });
 
-    // Handle initial mindmap payload from server
     socket.on('mindmap-initial-load', (data: { nodes: any[]; edges: any[] }) => {
       try {
-        // If you maintain mindmap state, hydrate it here. Fallback: log.
-        // setMindmapNodes?.(Array.isArray(data.nodes) ? data.nodes : []);
-        // setMindmapEdges?.(Array.isArray(data.edges) ? data.edges : []);
         console.log('Received mindmap initial load:', data);
       } catch (e) {
         console.error('Failed to apply mindmap initial load', e);
@@ -1725,10 +1863,11 @@ const Canvas: React.FC<CanvasProps> = ({
     };
   }, [whiteboardId, authToken, addError, clearAllErrors, measureLatency, showToast]);
 
+  // Enhanced cursor movement with throttling
   const emitCursorMove = useCallback(
     throttle((x: number, y: number) => {
       emit('cursorMove', { x, y });
-    }, 100),
+    }, 50),
     [emit]
   );
 
@@ -1740,6 +1879,348 @@ const Canvas: React.FC<CanvasProps> = ({
     return ensureUniqueIds(elements || []);
   }, [elements]);
 
+
+  // Enhanced mouse up handler
+  const handleMouseUp = useCallback(() => {
+    setIsPanning(false);
+    setPanStart(null);
+    setPinchDistance(null);
+
+    if (isDraggingNote || isResizingNote) {
+      if (tempNoteState.current && activeNoteId) {
+        const updatedNote = { ...tempNoteState.current };
+        setStickyNotes(prev => {
+          const newNotes = prev
+            .map(note => (note.id === activeNoteId ? updatedNote : note))
+            .filter(note => isValidId(note.id));
+          debouncedSaveToHistory(elementsRef.current, newNotes);
+          return newNotes;
+        });
+
+        emit('stickyNoteUpdate', updatedNote);
+      }
+      setIsDraggingNote(false);
+      setIsResizingNote(false);
+      setResizeDirection(null);
+      tempNoteState.current = null;
+      return;
+    }
+
+    if (isDraggingText && activeTextId && tempTextState.current) {
+      const updatedText = { ...tempTextState.current };
+      elementsRef.current = elementsRef.current.map(el =>
+        el.id === activeTextId && el.type === "text" ? updatedText : el
+      );
+      setElements(elementsRef.current);
+      debouncedSaveToHistory(elementsRef.current, stickyNotes);
+
+      emit('textUpdate', updatedText);
+
+      setIsDraggingText(false);
+      tempTextState.current = null;
+      return;
+    }
+
+    if (isDraggingShape || isResizingShape) {
+      if (tempShapeState.current && activeShapeId) {
+        const updatedShape = { ...tempShapeState.current };
+        elementsRef.current = elementsRef.current.map(el =>
+          el.id === activeShapeId && el.type !== "text" && el.type !== "path" && "width" in el
+            ? updatedShape
+            : el
+        );
+        setElements(elementsRef.current);
+        debouncedSaveToHistory(elementsRef.current, stickyNotes);
+
+        emit('shapeUpdate', updatedShape);
+      }
+      setIsDraggingShape(false);
+      setIsResizingShape(false);
+      setResizeDirection(null);
+      tempShapeState.current = null;
+      return;
+    }
+
+    if (!isDrawing || !currentElement) return;
+
+    setIsDrawing(false);
+    setStartPoint(null);
+
+    if ("points" in currentElement && currentElement.points.length > 1) {
+      elementsRef.current = [...elementsRef.current, currentElement];
+      setElements(elementsRef.current);
+      debouncedSaveToHistory(elementsRef.current, stickyNotes);
+
+      emit('drawEnd', currentElement);
+
+      if (currentElement.tool === 'pen' &&
+        shapeRecognitionEnabled &&
+        currentElement.points.length >= 4) {
+        handleShapeRecognition(currentElement.id, currentElement.points);
+      }
+    } else if ("width" in currentElement) {
+      const shape = currentElement as ShapeElement;
+      if (Math.abs(shape.width) > 3 || Math.abs(shape.height) > 3) {
+        const fixedShape = {
+          ...shape,
+          x: shape.width < 0 ? shape.x + shape.width : shape.x,
+          y: shape.height < 0 ? shape.y + shape.height : shape.y,
+          width: Math.abs(shape.width),
+          height: Math.abs(shape.height),
+        };
+        elementsRef.current = [...elementsRef.current, fixedShape];
+        setElements(elementsRef.current);
+        debouncedSaveToHistory(elementsRef.current, stickyNotes);
+
+        emit('drawEnd', fixedShape);
+      }
+    }
+
+    setCurrentElement(null);
+  }, [
+    isDraggingNote,
+    isResizingNote,
+    isDraggingText,
+    isDraggingShape,
+    isResizingShape,
+    activeNoteId,
+    activeTextId,
+    activeShapeId,
+    isDrawing,
+    currentElement,
+    shapeRecognitionEnabled,
+    debouncedSaveToHistory,
+    emit,
+    handleShapeRecognition,
+    stickyNotes,
+  ]);
+
+  const handleMouseMove = useCallback(
+    throttle((e: { clientX: number; clientY: number; }) => {
+      if (!contentCanvasRef.current) return;
+
+      const coords = getEventCoordinates(e);
+      const { x: canvasX, y: canvasY } = getCanvasCoordinates(coords.clientX, coords.clientY);
+
+      emitCursorMove(canvasX, canvasY);
+
+      if (isPanning && panStart) {
+        const dx = coords.clientX - panStart.x;
+        const dy = coords.clientY - panStart.y;
+        setPanOffset(prev => ({ x: prev.x + dx, y: prev.y + dy }));
+        setPanStart({ x: coords.clientX, y: coords.clientY });
+        return;
+      }
+
+      if (isDraggingNote && activeNoteId && tempNoteState.current) {
+        const newX = canvasX - dragOffset.x;
+        const newY = canvasY - dragOffset.y;
+        const clampedPos = clampToCanvas(newX, newY, tempNoteState.current.width, tempNoteState.current.height);
+
+        tempNoteState.current = {
+          ...tempNoteState.current,
+          x: clampedPos.x,
+          y: clampedPos.y,
+        };
+
+        setStickyNotes(prev =>
+          prev.map(note =>
+            note.id === activeNoteId ? { ...tempNoteState.current! } : note
+          ).filter(note => isValidId(note.id))
+        );
+        return;
+      }
+
+      if (isResizingNote && activeNoteId && tempNoteState.current && resizeDirection) {
+        const note = tempNoteState.current;
+        const minSize = 50;
+        let newWidth = note.width;
+        let newHeight = note.height;
+        let newX = note.x;
+        let newY = note.y;
+
+        const deltaX = (coords.clientX - (note.x * zoomLevel + panOffset.x + (resizeDirection.includes('e') ? note.width * zoomLevel : 0))) / zoomLevel;
+        const deltaY = (coords.clientY - (note.y * zoomLevel + panOffset.y + (resizeDirection.includes('s') ? note.height * zoomLevel : 0))) / zoomLevel;
+
+        switch (resizeDirection) {
+          case 'se':
+            newWidth = Math.max(minSize, note.width + deltaX);
+            newHeight = Math.max(minSize, note.height + deltaY);
+            break;
+          case 'sw':
+            newWidth = Math.max(minSize, note.width - deltaX);
+            newHeight = Math.max(minSize, note.height + deltaY);
+            newX = note.x + note.width - newWidth;
+            break;
+          case 'ne':
+            newWidth = Math.max(minSize, note.width + deltaX);
+            newHeight = Math.max(minSize, note.height - deltaY);
+            newY = note.y + note.height - newHeight;
+            break;
+          case 'nw':
+            newWidth = Math.max(minSize, note.width - deltaX);
+            newHeight = Math.max(minSize, note.height - deltaY);
+            newX = note.x + note.width - newWidth;
+            newY = note.y + note.height - newHeight;
+            break;
+        }
+
+        const clampedPos = clampToCanvas(newX, newY, newWidth, newHeight);
+
+        tempNoteState.current = {
+          ...tempNoteState.current,
+          x: clampedPos.x,
+          y: clampedPos.y,
+          width: newWidth,
+          height: newHeight,
+        };
+
+        setStickyNotes(prev =>
+          prev.map(n => n.id === activeNoteId ? { ...tempNoteState.current! } : n)
+        );
+        return;
+      }
+
+      if (isDraggingText && activeTextId && tempTextState.current) {
+        const newX = canvasX - dragOffset.x;
+        const newY = canvasY - dragOffset.y;
+        const clampedPos = clampToCanvas(newX, newY);
+
+        tempTextState.current = {
+          ...tempTextState.current,
+          x: clampedPos.x,
+          y: clampedPos.y,
+        };
+
+        elementsRef.current = elementsRef.current.map(el =>
+          el.id === activeTextId && el.type === "text"
+            ? tempTextState.current!
+            : el
+        );
+        setElements(elementsRef.current);
+        return;
+      }
+
+      if (isDraggingShape && activeShapeId && tempShapeState.current) {
+        const newX = canvasX - dragOffset.x;
+        const newY = canvasY - dragOffset.y;
+        const clampedPos = clampToCanvas(newX, newY, Math.abs(tempShapeState.current.width), Math.abs(tempShapeState.current.height));
+
+        tempShapeState.current = {
+          ...tempShapeState.current,
+          x: clampedPos.x,
+          y: clampedPos.y,
+        };
+
+        elementsRef.current = elementsRef.current.map(el =>
+          el.id === activeShapeId && el.type !== "text" && el.type !== "path" && "width" in el
+            ? tempShapeState.current!
+            : el
+        );
+        setElements(elementsRef.current);
+        return;
+      }
+
+      if (isResizingShape && activeShapeId && tempShapeState.current && resizeDirection) {
+        const shape = tempShapeState.current;
+        const minSize = 10;
+        let newWidth = shape.width;
+        let newHeight = shape.height;
+        let newX = shape.x;
+        let newY = shape.y;
+
+        const deltaX = (coords.clientX - (shape.x * zoomLevel + panOffset.x + (resizeDirection.includes('e') ? shape.width * zoomLevel : 0))) / zoomLevel;
+        const deltaY = (coords.clientY - (shape.y * zoomLevel + panOffset.y + (resizeDirection.includes('s') ? shape.height * zoomLevel : 0))) / zoomLevel;
+
+        switch (resizeDirection) {
+          case 'se':
+            newWidth = shape.width + deltaX;
+            newHeight = shape.height + deltaY;
+            break;
+          case 'sw':
+            newWidth = shape.width - deltaX;
+            newHeight = shape.height + deltaY;
+            newX = shape.x + shape.width - newWidth;
+            break;
+          case 'ne':
+            newWidth = shape.width + deltaX;
+            newHeight = shape.height - deltaY;
+            newY = shape.y + shape.height - newHeight;
+            break;
+          case 'nw':
+            newWidth = shape.width - deltaX;
+            newHeight = shape.height - deltaY;
+            newX = shape.x + shape.width - newWidth;
+            newY = shape.y + shape.height - newHeight;
+            break;
+        }
+
+        if (Math.abs(newWidth) < minSize || Math.abs(newHeight) < minSize) {
+          return;
+        }
+
+        tempShapeState.current = {
+          ...tempShapeState.current,
+          x: newX,
+          y: newY,
+          width: newWidth,
+          height: newHeight,
+        };
+
+        elementsRef.current = elementsRef.current.map(el =>
+          el.id === activeShapeId && el.type !== "text" && el.type !== "path" && "width" in el
+            ? tempShapeState.current!
+            : el
+        );
+        setElements(elementsRef.current);
+        return;
+      }
+
+      if (!isDrawing || !currentElement) return;
+
+      if ("points" in currentElement) {
+        const updatedElement = {
+          ...currentElement,
+          points: [...currentElement.points, { x: canvasX, y: canvasY }],
+        };
+        setCurrentElement(updatedElement);
+
+        emit('drawUpdate', updatedElement);
+      } else if (startPoint && "width" in currentElement) {
+        const updatedElement = {
+          ...currentElement,
+          width: canvasX - startPoint.x,
+          height: canvasY - startPoint.y,
+        };
+        setCurrentElement(updatedElement);
+      }
+    }, 16),
+    [
+      isPanning,
+      panStart,
+      isDraggingNote,
+      isDraggingText,
+      isDraggingShape,
+      isResizingNote,
+      isResizingShape,
+      activeNoteId,
+      activeTextId,
+      activeShapeId,
+      dragOffset,
+      resizeDirection,
+      isDrawing,
+      currentElement,
+      startPoint,
+      clampToCanvas,
+      getCanvasCoordinates,
+      emitCursorMove,
+      emit,
+      zoomLevel,
+      panOffset,
+    ]
+  );
+
+  // Keep existing drawing and canvas functions
   const drawElement = useCallback(
     (element: WhiteboardElement) => {
       if (
@@ -1773,13 +2254,13 @@ const Canvas: React.FC<CanvasProps> = ({
 
         if (path.points.length > 2) {
           contentContext.moveTo(path.points[0].x, path.points[0].y);
-          
+
           for (let i = 1; i < path.points.length - 2; i++) {
             const xc = (path.points[i].x + path.points[i + 1].x) / 2;
             const yc = (path.points[i].y + path.points[i + 1].y) / 2;
             contentContext.quadraticCurveTo(path.points[i].x, path.points[i].y, xc, yc);
           }
-          
+
           const lastTwo = path.points.slice(-2);
           if (lastTwo.length === 2) {
             contentContext.quadraticCurveTo(lastTwo[0].x, lastTwo[0].y, lastTwo[1].x, lastTwo[1].y);
@@ -1790,25 +2271,24 @@ const Canvas: React.FC<CanvasProps> = ({
             contentContext.lineTo(path.points[i].x, path.points[i].y);
           }
         }
-        
+
         contentContext.stroke();
         contentContext.globalCompositeOperation = "source-over";
         contentContext.globalAlpha = 1.0;
       }
-
       else if (element.type !== "path") {
         const shape = element as ShapeElement;
         contentContext.beginPath();
         contentContext.strokeStyle = shape.color;
-        contentContext.lineWidth = shape.lineWidth / zoomLevel;
+        contentContext.lineWidth = (shape.lineWidth || 2) / zoomLevel;
         contentContext.fillStyle = "transparent";
         contentContext.lineCap = 'round';
         contentContext.lineJoin = 'round';
 
-        const x = shape.x;
-        const y = shape.y;
-        const width = shape.width;
-        const height = shape.height;
+        const x = shape.width < 0 ? shape.x + shape.width : shape.x;
+        const y = shape.height < 0 ? shape.y + shape.height : shape.y;
+        const width = Math.abs(shape.width);
+        const height = Math.abs(shape.height);
 
         const cx = x + width / 2;
         const cy = y + height / 2;
@@ -1819,14 +2299,14 @@ const Canvas: React.FC<CanvasProps> = ({
             break;
 
           case "circle":
-            const radiusX = Math.abs(width / 2);
-            const radiusY = Math.abs(height / 2);
+            const radiusX = width / 2;
+            const radiusY = height / 2;
             contentContext.ellipse(cx, cy, radiusX, radiusY, 0, 0, Math.PI * 2);
             break;
 
           case "line":
-            contentContext.moveTo(x, y);
-            contentContext.lineTo(x + width, y + height);
+            contentContext.moveTo(shape.x, shape.y);
+            contentContext.lineTo(shape.x + shape.width, shape.y + shape.height);
             break;
 
           case "triangle":
@@ -1844,47 +2324,46 @@ const Canvas: React.FC<CanvasProps> = ({
             contentContext.closePath();
             break;
 
-          case "ellipse":
-            const ellipseRadiusX = Math.abs(width / 2);
-            const ellipseRadiusY = Math.abs(height / 2);
-            contentContext.ellipse(cx, cy, ellipseRadiusX, ellipseRadiusY, 0, 0, Math.PI * 2);
-            break;
-
           case "arrow":
-            const arrowLength = Math.abs(width);
-            const arrowHeight = Math.abs(height) * 0.3;
-            contentContext.moveTo(x, cy);
-            contentContext.lineTo(x + arrowLength * 0.7, cy);
-            contentContext.lineTo(x + arrowLength * 0.7, cy - arrowHeight);
-            contentContext.lineTo(x + arrowLength, cy);
-            contentContext.lineTo(x + arrowLength * 0.7, cy + arrowHeight);
-            contentContext.lineTo(x + arrowLength * 0.7, cy);
+            const headlen = 10 * ((shape.lineWidth || 2) / 2);
+            const angle = Math.atan2(shape.height, shape.width);
+            contentContext.moveTo(shape.x, shape.y);
+            contentContext.lineTo(shape.x + shape.width, shape.y + shape.height);
+            contentContext.moveTo(shape.x + shape.width, shape.y + shape.height);
+            contentContext.lineTo(shape.x + shape.width - headlen * Math.cos(angle - Math.PI / 6), shape.y + shape.height - headlen * Math.sin(angle - Math.PI / 6));
+            contentContext.moveTo(shape.x + shape.width, shape.y + shape.height);
+            contentContext.lineTo(shape.x + shape.width - headlen * Math.cos(angle + Math.PI / 6), shape.y + shape.height - headlen * Math.sin(angle + Math.PI / 6));
             break;
 
           case "star":
-            const starRadius = Math.min(Math.abs(width), Math.abs(height)) / 2 * 0.9;
-            const innerRadius = starRadius * 0.4;
             const spikes = 5;
-            const step = Math.PI / spikes;
-            
+            const outerRadius = Math.min(width, height) / 2;
+            const innerRadius = outerRadius / 2.5;
             let rot = Math.PI / 2 * 3;
-            let startX = cx + Math.cos(rot) * starRadius;
-            let startY = cy + Math.sin(rot) * starRadius;
-            contentContext.moveTo(startX, startY);
-            
+            let x_center = x + width / 2;
+            let y_center = y + height / 2;
+            let step = Math.PI / spikes;
+
+            contentContext.beginPath();
+            contentContext.moveTo(x_center, y_center - outerRadius)
             for (let i = 0; i < spikes; i++) {
-              const outerX = cx + Math.cos(rot) * starRadius;
-              const outerY = cy + Math.sin(rot) * starRadius;
-              contentContext.lineTo(outerX, outerY);
+              let x_outer = x_center + Math.cos(rot) * outerRadius;
+              let y_outer = y_center + Math.sin(rot) * outerRadius;
+              contentContext.lineTo(x_outer, y_outer);
               rot += step;
-              
-              const innerX = cx + Math.cos(rot) * innerRadius;
-              const innerY = cy + Math.sin(rot) * innerRadius;
-              contentContext.lineTo(innerX, innerY);
+
+              let x_inner = x_center + Math.cos(rot) * innerRadius;
+              let y_inner = y_center + Math.sin(rot) * innerRadius;
+              contentContext.lineTo(x_inner, y_inner);
               rot += step;
             }
-            contentContext.lineTo(startX, startY);
             contentContext.closePath();
+            break;
+
+          case "ellipse":
+            const ellipseRadiusX = width / 2;
+            const ellipseRadiusY = height / 2;
+            contentContext.ellipse(cx, cy, ellipseRadiusX, ellipseRadiusY, 0, 0, Math.PI * 2);
             break;
         }
 
@@ -2040,7 +2519,7 @@ const Canvas: React.FC<CanvasProps> = ({
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === "Space" && !editingTextId && !editingNoteId) {
+      if (e.code === "Space" && !editingTextId && !editingNoteId && !isPlacingText) {
         e.preventDefault();
         setIsPanning(true);
       }
@@ -2060,7 +2539,7 @@ const Canvas: React.FC<CanvasProps> = ({
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
-  }, [editingTextId, editingNoteId]);
+  }, [editingTextId, editingNoteId, isPlacingText]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -2156,24 +2635,6 @@ const Canvas: React.FC<CanvasProps> = ({
     redrawContentCanvas();
   }, [elements, redrawContentCanvas]);
 
-  const getCanvasCoordinates = (clientX: number, clientY: number) => {
-    if (!contentCanvasRef.current) return { x: 0, y: 0 };
-    const rect = contentCanvasRef.current.getBoundingClientRect();
-    return {
-      x: (clientX - rect.left - panOffset.x * zoomLevel) / zoomLevel,
-      y: (clientY - rect.top - panOffset.y * zoomLevel) / zoomLevel,
-    };
-  };
-
-  const getScreenCoordinates = (clientX: number, clientY: number) => {
-    if (!contentCanvasRef.current) return { x: 0, y: 0 };
-    const rect = contentCanvasRef.current.getBoundingClientRect();
-    return {
-      x: clientX - rect.left,
-      y: clientY - rect.top,
-    };
-  };
-
   const showColorPicker = (noteId: string, x: number, y: number) => {
     setColorPicker({ noteId, x, y });
   };
@@ -2201,94 +2662,10 @@ const Canvas: React.FC<CanvasProps> = ({
     setColorPicker(null);
   };
 
-  const isOverStickyNote = (
-    e: React.MouseEvent<HTMLCanvasElement>
-  ): string | null => {
-    const { x: screenX, y: screenY } = getScreenCoordinates(
-      e.clientX,
-      e.clientY
-    );
 
-    for (const note of uniqueStickyNotes) {
-      if (!isValidId(note.id)) continue;
-      const noteX = note.x * zoomLevel + panOffset.x;
-      const noteY = note.y * zoomLevel + panOffset.y;
-      const noteWidth = note.width * zoomLevel;
-      const noteHeight = note.height * zoomLevel;
+  const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (colorPicker || isPlacingText) return;
 
-      if (
-        screenX >= noteX &&
-        screenX <= noteX + noteWidth &&
-        screenY >= noteY &&
-        screenY <= noteY + noteHeight
-      ) {
-        return note.id;
-      }
-    }
-    return null;
-  };
-
-  const isOverTextElement = (
-    e: React.MouseEvent<HTMLCanvasElement>
-  ): string | null => {
-    const { x: screenX, y: screenY } = getScreenCoordinates(
-      e.clientX,
-      e.clientY
-    );
-
-    for (const element of elementsRef.current) {
-      if (element.type === "text") {
-        const textElement = element as TextElement;
-        const adjustedX = textElement.x * zoomLevel + panOffset.x;
-        const adjustedY = textElement.y * zoomLevel + panOffset.y;
-        const textWidth =
-          (textElement.text.length || 10) * (textFontSize * zoomLevel * 0.6);
-        const textHeight = textFontSize * zoomLevel * 1.2;
-
-        if (
-          screenX >= adjustedX &&
-          screenX <= adjustedX + textWidth &&
-          screenY >= adjustedY - textHeight &&
-          screenY <= adjustedY
-        ) {
-          return textElement.id;
-        }
-      }
-    }
-    return null;
-  };
-
-  const isOverShapeElement = (
-    e: React.MouseEvent<HTMLCanvasElement>
-  ): string | null => {
-    const { x: screenX, y: screenY } = getScreenCoordinates(
-      e.clientX,
-      e.clientY
-    );
-
-    for (const element of elementsRef.current) {
-      if (element.type !== "text" && element.type !== "path" && "width" in element) {
-        const shapeElement = element as ShapeElement;
-        const adjustedX = shapeElement.x * zoomLevel + panOffset.x;
-        const adjustedY = shapeElement.y * zoomLevel + panOffset.y;
-        const adjustedWidth = Math.abs(shapeElement.width * zoomLevel);
-        const adjustedHeight = Math.abs(shapeElement.height * zoomLevel);
-
-        if (
-          screenX >= adjustedX &&
-          screenX <= adjustedX + adjustedWidth &&
-          screenY >= adjustedY &&
-          screenY <= adjustedY + adjustedHeight
-        ) {
-          return shapeElement.id;
-        }
-      }
-    }
-    return null;
-  };
-
-  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!contentContext || colorPicker) return;
     if (
       isDraggingNote ||
       isResizingNote ||
@@ -2300,63 +2677,20 @@ const Canvas: React.FC<CanvasProps> = ({
     )
       return;
 
-    const { x: canvasX, y: canvasY } = getCanvasCoordinates(
-      e.clientX,
-      e.clientY
-    );
+    setActiveNoteId(null);
+    setActiveTextId(null);
+    setActiveShapeId(null);
+    if (editingNoteId !== null) setEditingNoteId(null);
+    if (editingTextId !== null) setEditingTextId(null);
+
+    const coords = getEventCoordinates(e);
+    const { x: canvasX, y: canvasY } = getCanvasCoordinates(coords.clientX, coords.clientY);
 
     emitCursorMove(canvasX, canvasY);
 
     if (isPanning) {
-      setPanStart({ x: e.clientX, y: e.clientY });
+      setPanStart({ x: coords.clientX, y: coords.clientY });
       return;
-    }
-
-    const clickedNoteId = isOverStickyNote(e);
-    if (clickedNoteId) {
-      if (activeNoteId !== clickedNoteId) setActiveNoteId(clickedNoteId);
-      return;
-    } else {
-      setActiveNoteId(null);
-      if (editingNoteId !== null) setEditingNoteId(null);
-    }
-
-    const clickedTextId = isOverTextElement(e);
-    if (clickedTextId) {
-      setActiveTextId(clickedTextId);
-      const textElement = elementsRef.current.find(
-        (el) => el.id === clickedTextId && el.type === "text"
-      ) as TextElement;
-      if (textElement) {
-        tempTextState.current = { ...textElement };
-        setDragOffset({
-          x: canvasX - textElement.x,
-          y: canvasY - textElement.y,
-        });
-        setIsDraggingText(true);
-      }
-      return;
-    } else {
-      setActiveTextId(null);
-    }
-
-    const clickedShapeId = isOverShapeElement(e);
-    if (clickedShapeId) {
-      setActiveShapeId(clickedShapeId);
-      const shapeElement = elementsRef.current.find(
-        (el) => el.id === clickedShapeId && el.type !== "text" && el.type !== "path" && "width" in el
-      ) as ShapeElement;
-      if (shapeElement) {
-        tempShapeState.current = { ...shapeElement };
-        setDragOffset({
-          x: canvasX - shapeElement.x,
-          y: canvasY - shapeElement.y,
-        });
-        setIsDraggingShape(true);
-      }
-      return;
-    } else {
-      setActiveShapeId(null);
     }
 
     if (tool === "stickyNote") {
@@ -2364,22 +2698,15 @@ const Canvas: React.FC<CanvasProps> = ({
       const id = generateUniqueId();
       const randomColor =
         stickyNoteColors[Math.floor(Math.random() * stickyNoteColors.length)];
-      const noteWidth = 200;
-      const noteHeight = 200;
 
-      let adjustedX = canvasX;
-      let adjustedY = canvasY;
-      const canvasWidth = canvasDimensions.width / zoomLevel;
-      const canvasHeight = canvasDimensions.height / zoomLevel;
-
-      adjustedX = Math.max(0, Math.min(adjustedX, canvasWidth - noteWidth));
-      adjustedY = Math.max(0, Math.min(adjustedY, canvasHeight - noteHeight));
+      const { width: noteWidth, height: noteHeight } = dynamicStickyNoteSize;
+      const clampedPos = clampToCanvas(canvasX - noteWidth / 2, canvasY - noteHeight / 2, noteWidth, noteHeight);
 
       const newNote: StickyNote = {
         id,
         type: "stickyNote",
-        x: adjustedX,
-        y: adjustedY,
+        x: clampedPos.x,
+        y: clampedPos.y,
         width: noteWidth,
         height: noteHeight,
         text: "",
@@ -2406,17 +2733,20 @@ const Canvas: React.FC<CanvasProps> = ({
     if (tool === "text") {
       e.stopPropagation();
       e.preventDefault();
+      setIsPlacingText(true); // FIX FOR MOBILE TEXT
       const newTextId = generateUniqueId();
       newTextIdRef.current = newTextId;
+
+      const clampedPos = clampToCanvas(canvasX, canvasY);
 
       const newElement: TextElement = {
         id: newTextId,
         type: "text",
-        x: canvasX,
-        y: canvasY,
+        x: clampedPos.x,
+        y: clampedPos.y,
         text: "",
         color: strokeColor,
-        fontSize: textFontSize,
+        fontSize: dynamicTextFontSize,
       };
 
       elementsRef.current = [...elementsRef.current, newElement];
@@ -2447,7 +2777,7 @@ const Canvas: React.FC<CanvasProps> = ({
         type: "path",
         points: [{ x: canvasX, y: canvasY }],
         color: tool === "eraser" ? "#FFFFFF" : strokeColor,
-        width: tool === "highlighter" ? lineWidth * 2 : lineWidth,
+        width: tool === "highlighter" ? dynamicLineWidth * 2 : dynamicLineWidth,
         tool,
       };
       setCurrentElement(newElement);
@@ -2464,386 +2794,144 @@ const Canvas: React.FC<CanvasProps> = ({
         width: 0,
         height: 0,
         color: strokeColor,
-        lineWidth,
+        lineWidth: dynamicLineWidth,
         isFixed: shapeType.includes("line") || shapeType.includes("arrow"),
       };
       setCurrentElement(newElement);
     }
-  };
+  }, [
+    colorPicker,
+    isPlacingText,
+    isDraggingNote,
+    isResizingNote,
+    isDraggingText,
+    editingTextId,
+    editingNoteId,
+    isDraggingShape,
+    isResizingShape,
+    isPanning,
+    tool,
+    shapeType,
+    strokeColor,
+    dynamicLineWidth,
+    dynamicTextFontSize,
+    dynamicStickyNoteSize,
+    stickyNoteColors,
+    getCanvasCoordinates,
+    emitCursorMove,
+    clampToCanvas,
+    debouncedSaveToHistory,
+    emit,
+  ]);
 
-  const handleMouseMove = useCallback(
-    throttle((e: React.MouseEvent<HTMLCanvasElement>) => {
-      if (!contentContext || !contentCanvasRef.current) return;
+  useEffect(() => {
+    const moveListener = (e: MouseEvent | TouchEvent) => {
+      const coords = getEventCoordinates(e);
+      handleMouseMove(coords);
+    };
 
-      const { x: canvasX, y: canvasY } = getCanvasCoordinates(
-        e.clientX,
-        e.clientY
-      );
+    const upListener = () => {
+      handleMouseUp();
+    };
 
-      emitCursorMove(canvasX, canvasY);
-
-      if (isPanning && panStart) {
-        const dx = (e.clientX - panStart.x) / zoomLevel;
-        const dy = (e.clientY - panStart.y) / zoomLevel;
-        setPanOffset((prev) => ({ x: prev.x + dx, y: prev.y + dy }));
-        setPanStart({ x: e.clientX, y: e.clientY });
-        drawGrid();
-        redrawContentCanvas();
-        return;
-      }
-
-      if (isDraggingNote && activeNoteId && tempNoteState.current) {
-        const canvasWidth = canvasDimensions.width / zoomLevel;
-        const canvasHeight = canvasDimensions.height / zoomLevel;
-        const newX = canvasX - dragOffset.x;
-        const newY = canvasY - dragOffset.y;
-        const clampedX = Math.max(
-          0,
-          Math.min(newX, canvasWidth - tempNoteState.current.width)
-        );
-        const clampedY = Math.max(
-          0,
-          Math.min(newY, canvasHeight - tempNoteState.current.height)
-        );
-
-        tempNoteState.current = {
-          ...tempNoteState.current,
-          x: clampedX,
-          y: clampedY,
-        };
-
-        setStickyNotes((prev) =>
-          prev
-            .map((note) =>
-              note.id === activeNoteId ? { ...tempNoteState.current! } : note
-            )
-            .filter((note) => isValidId(note.id))
-        );
-        return;
-      }
-
-      if (isResizingNote && activeNoteId && tempNoteState.current && resizeDirection) {
-        const note = tempNoteState.current;
-        const minSize = 50;
-        let newWidth = note.width;
-        let newHeight = note.height;
-        let newX = note.x;
-        let newY = note.y;
-
-        const deltaX = canvasX - (note.x + (resizeDirection.includes('e') ? note.width : 0));
-        const deltaY = canvasY - (note.y + (resizeDirection.includes('s') ? note.height : 0));
-
-        switch (resizeDirection) {
-          case 'se':
-            newWidth = Math.max(minSize, note.width + deltaX);
-            newHeight = Math.max(minSize, note.height + deltaY);
-            break;
-          case 'sw':
-            newWidth = Math.max(minSize, note.width - deltaX);
-            newHeight = Math.max(minSize, note.height + deltaY);
-            newX = note.x + note.width - newWidth;
-            break;
-          case 'ne':
-            newWidth = Math.max(minSize, note.width + deltaX);
-            newHeight = Math.max(minSize, note.height - deltaY);
-            newY = note.y + note.height - newHeight;
-            break;
-          case 'nw':
-            newWidth = Math.max(minSize, note.width - deltaX);
-            newHeight = Math.max(minSize, note.height - deltaY);
-            newX = note.x + note.width - newWidth;
-            newY = note.y + note.height - newHeight;
-            break;
-        }
-
-        tempNoteState.current = {
-          ...tempNoteState.current,
-          x: newX,
-          y: newY,
-          width: newWidth,
-          height: newHeight,
-        };
-
-        setStickyNotes((prev) =>
-          prev.map((n) =>
-            n.id === activeNoteId ? { ...tempNoteState.current! } : n
-          )
-        );
-        return;
-      }
-
-      if (isDraggingText && activeTextId && tempTextState.current) {
-        const canvasWidth = canvasDimensions.width / zoomLevel;
-        const canvasHeight = canvasDimensions.height / zoomLevel;
-        const newX = canvasX - dragOffset.x;
-        const newY = canvasY - dragOffset.y;
-        const clampedX = Math.max(0, Math.min(newX, canvasWidth));
-        const clampedY = Math.max(0, Math.min(newY, canvasHeight));
-
-        tempTextState.current = {
-          ...tempTextState.current,
-          x: clampedX,
-          y: clampedY,
-        };
-
-        elementsRef.current = elementsRef.current.map((el) =>
-          el.id === activeTextId && el.type === "text"
-            ? tempTextState.current!
-            : el
-        );
-        setElements(elementsRef.current);
-        return;
-      }
-
-      if (isDraggingShape && activeShapeId && tempShapeState.current) {
-        const canvasWidth = canvasDimensions.width / zoomLevel;
-        const canvasHeight = canvasDimensions.height / zoomLevel;
-        const newX = canvasX - dragOffset.x;
-        const newY = canvasY - dragOffset.y;
-        const clampedX = Math.max(0, Math.min(newX, canvasWidth - tempShapeState.current.width));
-        const clampedY = Math.max(0, Math.min(newY, canvasHeight - tempShapeState.current.height));
-
-        tempShapeState.current = {
-          ...tempShapeState.current,
-          x: clampedX,
-          y: clampedY,
-        };
-
-        elementsRef.current = elementsRef.current.map((el) =>
-          el.id === activeShapeId && el.type !== "text" && el.type !== "path" && "width" in el
-            ? tempShapeState.current!
-            : el
-        );
-        setElements(elementsRef.current);
-        return;
-      }
-
-      if (isResizingShape && activeShapeId && tempShapeState.current && resizeDirection) {
-        const shape = tempShapeState.current;
-        const minSize = 10;
-        let newWidth = shape.width;
-        let newHeight = shape.height;
-        let newX = shape.x;
-        let newY = shape.y;
-
-        const deltaX = canvasX - (shape.x + (resizeDirection.includes('e') ? shape.width : 0));
-        const deltaY = canvasY - (shape.y + (resizeDirection.includes('s') ? shape.height : 0));
-
-        switch (resizeDirection) {
-          case 'se':
-            newWidth = Math.max(minSize, shape.width + deltaX);
-            newHeight = Math.max(minSize, shape.height + deltaY);
-            break;
-          case 'sw':
-            newWidth = Math.max(minSize, shape.width - deltaX);
-            newHeight = Math.max(minSize, shape.height + deltaY);
-            newX = shape.x + shape.width - newWidth;
-            break;
-          case 'ne':
-            newWidth = Math.max(minSize, shape.width + deltaX);
-            newHeight = Math.max(minSize, shape.height - deltaY);
-            newY = shape.y + shape.height - newHeight;
-            break;
-          case 'nw':
-            newWidth = Math.max(minSize, shape.width - deltaX);
-            newHeight = Math.max(minSize, shape.height - deltaY);
-            newX = shape.x + shape.width - newWidth;
-            newY = shape.y + shape.height - newHeight;
-            break;
-        }
-
-        tempShapeState.current = {
-          ...tempShapeState.current,
-          x: newX,
-          y: newY,
-          width: newWidth,
-          height: newHeight,
-        };
-
-        elementsRef.current = elementsRef.current.map((el) =>
-          el.id === activeShapeId && el.type !== "text" && el.type !== "path" && "width" in el
-            ? tempShapeState.current!
-            : el
-        );
-        setElements(elementsRef.current);
-        return;
-      }
-
-      if (!isDrawing || !currentElement) return;
-
-      if ("points" in currentElement) {
-        const updatedElement = {
-          ...currentElement,
-          points: [...currentElement.points, { x: canvasX, y: canvasY }],
-        };
-        setCurrentElement(updatedElement);
-
-        emit('drawUpdate', updatedElement);
-      } else if (startPoint && "width" in currentElement) {
-        const updatedElement = {
-          ...currentElement,
-          width: canvasX - startPoint.x,
-          height: canvasY - startPoint.y,
-        };
-        setCurrentElement(updatedElement);
-      }
-
-      redrawContentCanvas();
-    }, 4),
-    [
-      contentContext,
-      isPanning,
-      panStart,
-      isDraggingNote,
-      isDraggingText,
-      isDraggingShape,
-      isResizingNote,
-      isResizingShape,
-      activeNoteId,
-      activeTextId,
-      activeShapeId,
-      dragOffset,
-      resizeDirection,
-      isDrawing,
-      currentElement,
-      startPoint,
-      zoomLevel,
-      panOffset,
-      redrawContentCanvas,
-      canvasDimensions,
-      drawGrid,
-      emitCursorMove,
-      emit,
-    ]
-  );
-
-  const handleMouseUp = () => {
-    if (isPanning) {
-      setPanStart(null);
-      return;
+    if (isDrawing || isPanning || isDraggingNote || isResizingNote || isDraggingText || isDraggingShape || isResizingShape) {
+      document.addEventListener('mousemove', moveListener);
+      document.addEventListener('mouseup', upListener);
+      document.addEventListener('touchmove', moveListener);
+      document.addEventListener('touchend', upListener);
+      document.addEventListener('touchcancel', upListener);
     }
 
-    if (isDraggingNote || isResizingNote) {
-      if (tempNoteState.current && activeNoteId) {
-        const updatedNote = { ...tempNoteState.current };
-        setStickyNotes((prev) => {
-          const newNotes = prev
-            .map((note) => (note.id === activeNoteId ? updatedNote : note))
-            .filter((note) => isValidId(note.id));
-          debouncedSaveToHistory(elementsRef.current, newNotes);
-          return newNotes;
-        });
+    return () => {
+      document.removeEventListener('mousemove', moveListener);
+      document.removeEventListener('mouseup', upListener);
+      document.removeEventListener('touchmove', moveListener);
+      document.removeEventListener('touchend', upListener);
+      document.removeEventListener('touchcancel', upListener);
+    };
+  }, [isDrawing, isPanning, isDraggingNote, isResizingNote, isDraggingText, isDraggingShape, isResizingShape, handleMouseMove, handleMouseUp]);
 
-        emit('stickyNoteUpdate', updatedNote);
-      }
-      setIsDraggingNote(false);
-      setIsResizingNote(false);
-      setResizeDirection(null);
-      tempNoteState.current = null;
-      return;
+
+  const handleTouchStart = useCallback((e: React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    const touches = e.touches;
+
+    if (touches.length === 1) {
+      const touch = touches[0];
+      const mockMouseEvent = {
+        clientX: touch.clientX,
+        clientY: touch.clientY,
+        preventDefault: () => e.preventDefault(),
+        stopPropagation: () => e.stopPropagation(),
+      };
+      handleMouseDown(mockMouseEvent as any);
+    } else if (touches.length === 2) {
+      setIsPanning(true);
+      const p1 = { x: touches[0].clientX, y: touches[0].clientY };
+      const p2 = { x: touches[1].clientX, y: touches[1].clientY };
+      setPanStart({ x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 });
+      setPinchDistance(Math.hypot(p1.x - p2.x, p1.y - p2.y));
     }
+  }, [handleMouseDown]);
 
-    if (isDraggingText && activeTextId && tempTextState.current) {
-      const updatedText = { ...tempTextState.current };
-      elementsRef.current = elementsRef.current.map((el) =>
-        el.id === activeTextId && el.type === "text" ? updatedText : el
-      );
-      setElements(elementsRef.current);
-      debouncedSaveToHistory(elementsRef.current, stickyNotes);
+  const handleTouchMove = useCallback((e: React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    const touches = e.touches;
 
-      emit('textUpdate', updatedText);
+    if (touches.length === 1) {
+      const touch = touches[0];
+      handleMouseMove({ clientX: touch.clientX, clientY: touch.clientY });
+    } else if (touches.length === 2 && panStart) {
+      const p1 = { x: touches[0].clientX, y: touches[0].clientY };
+      const p2 = { x: touches[1].clientX, y: touches[1].clientY };
+      const newPinchDistance = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+      const midPoint = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
 
-      setIsDraggingText(false);
-      tempTextState.current = null;
-      return;
-    }
+      if (pinchDistance && newPinchDistance > 0) {
+        const scale = newPinchDistance / pinchDistance;
+        const newZoom = Math.max(0.25, Math.min(zoomLevel * scale, 4.0));
 
-    if (isDraggingShape || isResizingShape) {
-      if (tempShapeState.current && activeShapeId) {
-        const updatedShape = { ...tempShapeState.current };
-        elementsRef.current = elementsRef.current.map((el) =>
-          el.id === activeShapeId && el.type !== "text" && el.type !== "path" && "width" in el
-            ? updatedShape
-            : el
-        );
-        setElements(elementsRef.current);
-        debouncedSaveToHistory(elementsRef.current, stickyNotes);
+        const rect = contentCanvasRef.current!.getBoundingClientRect();
+        const mouseX = midPoint.x - rect.left;
+        const mouseY = midPoint.y - rect.top;
 
-        emit('shapeUpdate', updatedShape);
+        const newPanX = mouseX - (mouseX - panOffset.x) * (newZoom / zoomLevel);
+        const newPanY = mouseY - (mouseY - panOffset.y) * (newZoom / zoomLevel);
+
+        setZoomLevel(newZoom);
+        setPanOffset({ x: newPanX, y: newPanY });
       }
-      setIsDraggingShape(false);
-      setIsResizingShape(false);
-      setResizeDirection(null);
-      tempShapeState.current = null;
-      return;
+      setPinchDistance(newPinchDistance);
+      setPanStart(midPoint);
     }
+  }, [handleMouseMove, panStart, pinchDistance, zoomLevel, panOffset]);
 
-    if (!isDrawing || !currentElement) return;
 
-    setIsDrawing(false);
-    setStartPoint(null);
-
-    if ("points" in currentElement && currentElement.points.length > 1) {
-      elementsRef.current = [...elementsRef.current, currentElement];
-      setElements(elementsRef.current);
-      debouncedSaveToHistory(elementsRef.current, stickyNotes);
-
-      emit('drawEnd', currentElement);
-
-      if (currentElement.tool === 'pen' && 
-          shapeRecognitionEnabled && 
-          currentElement.points.length >= 4) {
-        handleShapeRecognition(currentElement.id, currentElement.points);
-      }
-    } else if ("width" in currentElement) {
-      const shape = currentElement as ShapeElement;
-      if (Math.abs(shape.width) > 3 || Math.abs(shape.height) > 3) {
-        const fixedShape = {
-          ...shape,
-          x: shape.width < 0 ? shape.x + shape.width : shape.x,
-          y: shape.height < 0 ? shape.y + shape.height : shape.y,
-          width: Math.abs(shape.width),
-          height: Math.abs(shape.height),
-        };
-        elementsRef.current = [...elementsRef.current, fixedShape];
-        setElements(elementsRef.current);
-        debouncedSaveToHistory(elementsRef.current, stickyNotes);
-
-        emit('drawEnd', fixedShape);
-      }
-    }
-
-    setCurrentElement(null);
-    redrawContentCanvas();
-  };
-
-  // Keep all existing event handlers (sticky notes, text, shapes, etc.)...
-  // [All event handlers remain exactly the same]
-
-  const handleStickyNoteMouseDown = (
-    e: React.MouseEvent<HTMLDivElement>,
+  const handleStickyNoteMouseDown = useCallback((
+    e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>,
     noteId: string
   ) => {
     e.stopPropagation();
     if (!isValidId(noteId)) return;
 
     setActiveNoteId(noteId);
-    const note = uniqueStickyNotes.find((n) => n.id === noteId);
+    setActiveShapeId(null);
+    setActiveTextId(null);
+
+    const note = uniqueStickyNotes.find(n => n.id === noteId);
     if (!note) return;
 
-    const { x: canvasX, y: canvasY } = getCanvasCoordinates(
-      e.clientX,
-      e.clientY
-    );
+    const coords = getEventCoordinates(e);
+    const { x: canvasX, y: canvasY } = getCanvasCoordinates(coords.clientX, coords.clientY);
     setDragOffset({ x: canvasX - note.x, y: canvasY - note.y });
     tempNoteState.current = { ...note };
     setIsDraggingNote(true);
 
     if (editingNoteId === noteId) setEditingNoteId(null);
-  };
+  }, [uniqueStickyNotes, editingNoteId, getCanvasCoordinates]);
 
-  const handleResizeStart = (
-    e: React.MouseEvent<HTMLDivElement>,
+  const handleResizeStart = useCallback((
+    e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>,
     noteId: string,
     direction: string
   ) => {
@@ -2854,14 +2942,14 @@ const Canvas: React.FC<CanvasProps> = ({
     setActiveNoteId(noteId);
     setIsResizingNote(true);
     setResizeDirection(direction);
-    const note = uniqueStickyNotes.find((n) => n.id === noteId);
+    const note = uniqueStickyNotes.find(n => n.id === noteId);
     if (!note) return;
 
     tempNoteState.current = { ...note };
     if (editingNoteId === noteId) setEditingNoteId(null);
-  };
+  }, [uniqueStickyNotes, editingNoteId]);
 
-  const handleStickyNoteDoubleClick = (
+  const handleStickyNoteDoubleClick = useCallback((
     e: React.MouseEvent<HTMLDivElement>,
     noteId: string
   ) => {
@@ -2878,20 +2966,20 @@ const Canvas: React.FC<CanvasProps> = ({
         textarea.select();
       }
     }, 0);
-  };
+  }, []);
 
-  const handleStickyNoteTextChange = (
+  const handleStickyNoteTextChange = useCallback((
     e: React.ChangeEvent<HTMLTextAreaElement>,
     noteId: string
   ) => {
     if (!isValidId(noteId)) return;
 
-    setStickyNotes((prev) => {
+    setStickyNotes(prev => {
       const newNotes = prev
-        .map((note) =>
+        .map(note =>
           note.id === noteId ? { ...note, text: e.target.value } : note
         )
-        .filter((note) => isValidId(note.id));
+        .filter(note => isValidId(note.id));
       debouncedSaveToHistory(elementsRef.current, newNotes);
 
       const updatedNote = newNotes.find(note => note.id === noteId);
@@ -2901,52 +2989,53 @@ const Canvas: React.FC<CanvasProps> = ({
 
       return newNotes;
     });
-  };
+  }, [debouncedSaveToHistory, emit]);
 
-  const handleFinishEditing = () => {
+  const handleFinishEditing = useCallback(() => {
     setEditingNoteId(null);
     debouncedSaveToHistory(elementsRef.current, stickyNotes);
-  };
+  }, [debouncedSaveToHistory, stickyNotes]);
 
-  const handleTextMouseDown = (
-    e: React.MouseEvent<HTMLDivElement>,
+  const handleTextMouseDown = useCallback((
+    e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>,
     textId: string
   ) => {
     e.stopPropagation();
     if (!isValidId(textId) || editingTextId === textId) return;
 
     setActiveTextId(textId);
+    setActiveNoteId(null);
+    setActiveShapeId(null);
+
     const textElement = elementsRef.current.find(
-      (el) => el.id === textId && el.type === "text"
+      el => el.id === textId && el.type === "text"
     ) as TextElement;
     if (!textElement) return;
 
-    const { x: canvasX, y: canvasY } = getCanvasCoordinates(
-      e.clientX,
-      e.clientY
-    );
+    const coords = getEventCoordinates(e);
+    const { x: canvasX, y: canvasY } = getCanvasCoordinates(coords.clientX, coords.clientY);
     setDragOffset({ x: canvasX - textElement.x, y: canvasY - textElement.y });
     tempTextState.current = { ...textElement };
     setIsDraggingText(true);
-  };
+  }, [editingTextId, getCanvasCoordinates]);
 
-  const handleTextDoubleClick = (
+  const handleTextDoubleClick = useCallback((
     e: React.MouseEvent<HTMLDivElement>,
     textId: string
   ) => {
     e.stopPropagation();
     if (!isValidId(textId)) return;
     setEditingTextId(textId);
-  };
+  }, []);
 
-  const handleTextChange = (
+  const handleTextChange = useCallback((
     e: React.ChangeEvent<HTMLTextAreaElement>,
     textId: string
   ) => {
     if (!isValidId(textId)) return;
 
-    setElements((prev) => {
-      const newElements = prev.map((el) =>
+    setElements(prev => {
+      const newElements = prev.map(el =>
         el.id === textId && el.type === "text"
           ? { ...el, text: e.target.value }
           : el
@@ -2961,58 +3050,60 @@ const Canvas: React.FC<CanvasProps> = ({
 
       return newElements;
     });
-  };
+  }, [debouncedSaveToHistory, stickyNotes, emit]);
 
-  const handleFinishTextEditing = () => {
+  const handleFinishTextEditing = useCallback(() => {
+    const lastEditingId = editingTextId;
     setEditingTextId(null);
-    setElements((prev) => {
-      const newElements = prev.filter(
-        (el) =>
-          !(el.type === "text" && el.id === editingTextId && !el.text.trim())
-      );
-      elementsRef.current = newElements;
-      debouncedSaveToHistory(newElements, stickyNotes);
-      return newElements;
-    });
-  };
+    setIsPlacingText(false); // FIX FOR MOBILE TEXT
 
-  const handleShapeMouseDown = (
-    e: React.MouseEvent<HTMLDivElement>,
+    setElements(prev => {
+      return prev.filter(
+        el => !(el.type === "text" && el.id === lastEditingId && !el.text.trim())
+      );
+    });
+    debouncedSaveToHistory(elementsRef.current, stickyNotes);
+  }, [editingTextId, debouncedSaveToHistory, stickyNotes]);
+
+
+  const handleShapeMouseDown = useCallback((
+    e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>,
     shapeId: string
   ) => {
     e.stopPropagation();
     if (!isValidId(shapeId)) return;
 
     setActiveShapeId(shapeId);
+    setActiveNoteId(null);
+    setActiveTextId(null);
+
     const shapeElement = elementsRef.current.find(
-      (el) => el.id === shapeId && el.type !== "text" && el.type !== "path" && "width" in el
+      el => el.id === shapeId && el.type !== "text" && el.type !== "path" && "width" in el
     ) as ShapeElement;
     if (!shapeElement) return;
 
-    const { x: canvasX, y: canvasY } = getCanvasCoordinates(
-      e.clientX,
-      e.clientY
-    );
+    const coords = getEventCoordinates(e);
+    const { x: canvasX, y: canvasY } = getCanvasCoordinates(coords.clientX, coords.clientY);
     setDragOffset({ x: canvasX - shapeElement.x, y: canvasY - shapeElement.y });
     tempShapeState.current = { ...shapeElement };
     setIsDraggingShape(true);
-  };
+  }, [getCanvasCoordinates]);
 
-  const handleDeleteShape = (shapeId: string) => {
+  const handleDeleteShape = useCallback((shapeId: string) => {
     if (!isValidId(shapeId)) return;
 
-    setElements((prev) => {
-      const newElements = prev.filter((el) => el.id !== shapeId);
+    setElements(prev => {
+      const newElements = prev.filter(el => el.id !== shapeId);
       elementsRef.current = newElements;
       debouncedSaveToHistory(newElements, stickyNotes);
       return newElements;
     });
 
     if (activeShapeId === shapeId) setActiveShapeId(null);
-  };
+  }, [activeShapeId, debouncedSaveToHistory, stickyNotes]);
 
-  const handleShapeResizeStart = (
-    e: React.MouseEvent<HTMLDivElement>,
+  const handleShapeResizeStart = useCallback((
+    e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>,
     shapeId: string,
     direction: string
   ) => {
@@ -3024,22 +3115,21 @@ const Canvas: React.FC<CanvasProps> = ({
     setIsResizingShape(true);
     setResizeDirection(direction);
     const shape = elementsRef.current.find(
-      (el) => el.id === shapeId && el.type !== "text" && el.type !== "path" && "width" in el
+      el => el.id === shapeId && el.type !== "text" && el.type !== "path" && "width" in el
     ) as ShapeElement;
     if (!shape) return;
 
     tempShapeState.current = { ...shape };
-  };
+  }, []);
 
-  const handleZoomIn = () => setZoomLevel((prev) => Math.min(prev + 0.25, 4.0));
-  const handleZoomOut = () =>
-    setZoomLevel((prev) => Math.max(prev - 0.25, 0.25));
+  const handleZoomIn = useCallback(() => setZoomLevel(prev => Math.min(prev + 0.25, 4.0)), []);
+  const handleZoomOut = useCallback(() => setZoomLevel(prev => Math.max(prev - 0.25, 0.25)), []);
 
-  const handleDeleteStickyNote = (noteId: string) => {
+  const handleDeleteStickyNote = useCallback((noteId: string) => {
     if (!isValidId(noteId)) return;
 
-    setStickyNotes((prev) => {
-      const newNotes = prev.filter((note) => note.id !== noteId);
+    setStickyNotes(prev => {
+      const newNotes = prev.filter(note => note.id !== noteId);
       debouncedSaveToHistory(elementsRef.current, newNotes);
       return newNotes;
     });
@@ -3048,18 +3138,18 @@ const Canvas: React.FC<CanvasProps> = ({
 
     if (activeNoteId === noteId) setActiveNoteId(null);
     if (editingNoteId === noteId) setEditingNoteId(null);
-  };
+  }, [activeNoteId, editingNoteId, debouncedSaveToHistory, emit]);
 
-  const exportAsPNG = () => {
+  const exportAsPNG = useCallback(() => {
     if (contentCanvasRef.current) {
       const link = document.createElement("a");
       link.download = `whiteboard_${new Date().toISOString().slice(0, 10)}.png`;
       link.href = contentCanvasRef.current.toDataURL("image/png");
       link.click();
     }
-  };
+  }, []);
 
-  const exportAsPDF = async () => {
+  const exportAsPDF = useCallback(async () => {
     if (contentCanvasRef.current) {
       const canvas = await html2canvas(contentCanvasRef.current, {
         scale: 2,
@@ -3073,46 +3163,42 @@ const Canvas: React.FC<CanvasProps> = ({
       pdf.addImage(imgData, "PNG", 0, 0);
       pdf.save(`whiteboard_${new Date().toISOString().slice(0, 10)}.pdf`);
     }
-  };
+  }, []);
 
-  // Enhanced toggleTool function with premium AI integration
-  const toggleTool = (tool: string) => {
+  const toggleTool = useCallback((tool: string) => {
     setActiveTool(prev => (prev === tool ? null : tool));
-    
-    // Enhanced AI Assistant toggle with premium features
+
     if (tool === 'ai') {
       setShowAIAssistant(prev => !prev);
     }
 
-    // New Enhanced Gemini AI Assistant
     if (tool === 'geminiAI') {
       setShowGeminiAssistant(prev => !prev);
       return;
     }
-  };
+  }, []);
 
-  const handleShowTemplate = (currentTemplate: string) => {
+  const handleShowTemplate = useCallback((currentTemplate: string) => {
     if (currentTemplate) {
-      setcurrentTemplate(currentTemplate)
-      setshowingTemplate(true)
+      setcurrentTemplate(currentTemplate);
+      setshowingTemplate(true);
     }
-  }
+  }, []);
 
-  const handleCloseTemplate = () => {
-    setshowingTemplate(false)
+  const handleCloseTemplate = useCallback(() => {
+    setshowingTemplate(false);
     setcurrentTemplate('');
-  }
+  }, []);
 
   return (
     <div
       ref={containerRef}
-      className="relative h-full w-full bg-gray-50 dark:bg-gray-500 overflow-hidden select-none"
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
-      onClick={() => setColorPicker(null)}
+      className="relative h-full w-full bg-gray-50 dark:bg-gray-400 overflow-hidden select-none"
+      onClick={() => colorPicker && setColorPicker(null)}
+      style={{ touchAction: 'none' }}
     >
       {/* Collaboration Panel */}
-      <div className="className=absolute top-0 right-0">
+      <div className="absolute top-0 right-0">
         <CollaborationPanel
           connectionState={connectionState}
           connectedUsers={connectedUsers}
@@ -3128,25 +3214,25 @@ const Canvas: React.FC<CanvasProps> = ({
       {/* Canvas layers */}
       <canvas
         ref={gridCanvasRef}
-        width={canvasDimensions.width}
-        height={canvasDimensions.height}
-        className="absolute top-0 left-0 touch-none"
+        className="absolute top-0 left-0"
+        style={{ touchAction: 'none' }}
       />
 
       <canvas
         ref={contentCanvasRef}
-        width={canvasDimensions.width}
-        height={canvasDimensions.height}
-        className="absolute top-0 left-0 touch-none"
+        className="absolute top-0 left-0"
         onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleMouseUp}
+        onTouchCancel={handleMouseUp}
+        style={{ touchAction: 'none' }}
       />
 
       <canvas
         ref={animationCanvasRef}
-        width={canvasDimensions.width}
-        height={canvasDimensions.height}
-        className="absolute top-0 left-0 touch-none pointer-events-none z-30"
+        className="absolute top-0 left-0 pointer-events-none z-30"
+        style={{ touchAction: 'none' }}
       />
 
       {/* Cursor Overlay */}
@@ -3156,7 +3242,7 @@ const Canvas: React.FC<CanvasProps> = ({
         panOffset={panOffset}
       />
 
-      {/* Sticky notes */}
+      {/* Enhanced Sticky notes */}
       {uniqueStickyNotes.map((note) => (
         <StickyNoteComponent
           key={`sticky-note-${note.id}`}
@@ -3174,11 +3260,11 @@ const Canvas: React.FC<CanvasProps> = ({
           setStickyNotes={setStickyNotes}
           showColorPicker={showColorPicker}
           textStyles={textStyles}
-          textFontSize={textFontSize}
+          textFontSize={dynamicTextFontSize}
         />
       ))}
 
-      {/* Text elements */}
+      {/* Enhanced Text elements */}
       {uniqueElements.map((element) =>
         element.type === "text" ? (
           <TextComponent
@@ -3194,12 +3280,12 @@ const Canvas: React.FC<CanvasProps> = ({
             handleFinishTextEditing={handleFinishTextEditing}
             setElements={setElements}
             textStyles={textStyles}
-            textFontSize={textFontSize}
+            textFontSize={dynamicTextFontSize}
           />
         ) : null
       )}
 
-      {/* Shape elements */}
+      {/* Enhanced Shape elements */}
       {uniqueElements.map((element) =>
         element.type !== "text" && element.type !== "path" && "width" in element ? (
           <ShapeComponent
@@ -3224,7 +3310,7 @@ const Canvas: React.FC<CanvasProps> = ({
           {colorPalette.map((color, index) => (
             <button
               key={`color-${index}`}
-              className="w-8 h-8 rounded-full border-2 border-gray-300 dark:border-gray-600 hover:border-purple-500 dark:hover:border-purple-400 focus:outline-none transition-all duration-200 hover:scale-110"
+              className="w-8 h-8 rounded-full border-2 border-gray-300 dark:border-gray-600 hover:border-purple-500 dark:hover:border-purple-400 focus:outline-none transition-all duration-200 hover:scale-110 touch-manipulation"
               style={{ backgroundColor: color.bg }}
               onClick={() =>
                 handleColorSelect(colorPicker.noteId, color.bg, color.text)
@@ -3235,7 +3321,7 @@ const Canvas: React.FC<CanvasProps> = ({
         </div>
       )}
 
-      {/* Enhanced Gemini AI Canvas Analyzer - replacing the old one */}
+      {/* Enhanced Gemini AI Canvas Analyzer */}
       {showGeminiAssistant && (
         <EnhancedGeminiAnalyzer
           canvasRef={contentCanvasRef}
@@ -3245,10 +3331,10 @@ const Canvas: React.FC<CanvasProps> = ({
         />
       )}
 
-      {/* Zoom controls */}
-      <div className="absolute bottom-5 right-5 flex items-center gap-2 bg-white dark:bg-gray-800 rounded-full shadow-lg p-2 z-40">
+      {/* Enhanced Zoom controls */}
+      <div id="zoom-controls" className="absolute bottom-5 right-5 flex items-center gap-2 bg-white dark:bg-gray-800 rounded-full shadow-lg p-2 z-40">
         <button
-          className="w-10 h-10 flex items-center justify-center bg-purple-600 dark:bg-purple-700 rounded-full hover:bg-purple-500 dark:hover:bg-purple-600 transition-all duration-200 transform hover:scale-105"
+          className="w-10 h-10 flex items-center justify-center bg-purple-600 dark:bg-purple-700 rounded-full hover:bg-purple-500 dark:hover:bg-purple-600 transition-all duration-200 transform hover:scale-105 touch-manipulation"
           onClick={handleZoomOut}
           title="Zoom Out"
         >
@@ -3272,7 +3358,7 @@ const Canvas: React.FC<CanvasProps> = ({
           {Math.round(zoomLevel * 100)}%
         </span>
         <button
-          className="w-10 h-10 flex items-center justify-center bg-purple-600 dark:bg-purple-700 rounded-full hover:bg-purple-500 dark:hover:bg-purple-600 transition-all duration-200 transform hover:scale-105"
+          className="w-10 h-10 flex items-center justify-center bg-purple-600 dark:bg-purple-700 rounded-full hover:bg-purple-500 dark:hover:bg-purple-600 transition-all duration-200 transform hover:scale-105 touch-manipulation"
           onClick={handleZoomIn}
           title="Zoom In"
         >
@@ -3296,21 +3382,24 @@ const Canvas: React.FC<CanvasProps> = ({
       </div>
 
       {/* Enhanced Toolbar with AI features */}
-      <CanvasToolbar
-        exportAsPNG={exportAsPNG}
-        exportAsPDF={exportAsPDF}
-        onToolSelect={toggleTool}
-        shapeRecognitionEnabled={shapeRecognitionEnabled}
-        isShapeProcessing={isShapeProcessing}
-        toggleShapeRecognition={toggleShapeRecognition}
-      />
+      <div  className="fixed bottom-0 left-1/2 transform -translate-x-1/2 z-50">
+        <CanvasToolbar
+          exportAsPNG={exportAsPNG}
+          exportAsPDF={exportAsPDF}
+          onToolSelect={toggleTool}
+          shapeRecognitionEnabled={shapeRecognitionEnabled}
+          isShapeProcessing={isShapeProcessing}
+          toggleShapeRecognition={toggleShapeRecognition}
+        />
+      </div>
+
       <NavBar
         saveWhiteboard={saveWhiteboard}
         exportAsPNG={exportAsPNG}
         exportAsPDF={exportAsPDF}
       />
 
-      {/* Keep all existing template and video call components */}
+      {/* Video call component */}
       <div className="absolute inset-0 z-40 pointer-events-none">
         <div className="pointer-events-auto">
           <Videocall
@@ -3327,6 +3416,8 @@ const Canvas: React.FC<CanvasProps> = ({
         </div>
       </div>
 
+
+      {/* Template selection */}
       {activeTool === "templates" && !showingTemplate && (
         <div className="absolute top-1/4 left-1/2 transform -translate-x-1/2 z-50">
           <div className="handle w-[90vw] max-w-sm bg-white rounded-2xl shadow-2xl border border-gray-200 p-6 cursor-move relative">
@@ -3334,7 +3425,7 @@ const Canvas: React.FC<CanvasProps> = ({
 
             <button
               onClick={() => toggleTool('templates')}
-              className="absolute top-2 right-2 bg-red-500 text-white p-1 px-2 rounded-full hover:bg-red-400"
+              className="absolute top-2 right-2 bg-red-500 text-white p-1 px-2 rounded-full hover:bg-red-400 touch-manipulation"
               title="Close Template Menu"
             >
               ✕
@@ -3344,7 +3435,7 @@ const Canvas: React.FC<CanvasProps> = ({
               <li
                 id="kanban"
                 onClick={() => handleShowTemplate('kanban')}
-                className="bg-gray-100 hover:bg-purple-100 transition-colors duration-200 px-4 py-3 rounded-lg cursor-pointer text-gray-800 text-sm font-medium shadow group"
+                className="bg-gray-100 hover:bg-purple-100 transition-colors duration-200 px-4 py-3 rounded-lg cursor-pointer text-gray-800 text-sm font-medium shadow group touch-manipulation"
               >
                 <div className="font-semibold flex items-center gap-2">🗂️ Kanban Board</div>
                 <p className="text-xs mt-1 text-gray-600 group-hover:text-purple-700">
@@ -3355,7 +3446,7 @@ const Canvas: React.FC<CanvasProps> = ({
               <li
                 id="mindmap"
                 onClick={() => handleShowTemplate('mindmap')}
-                className="bg-gray-100 hover:bg-purple-100 transition-colors duration-200 px-4 py-3 rounded-lg cursor-pointer text-gray-800 text-sm font-medium shadow group"
+                className="bg-gray-100 hover:bg-purple-100 transition-colors duration-200 px-4 py-3 rounded-lg cursor-pointer text-gray-800 text-sm font-medium shadow group touch-manipulation"
               >
                 <div className="font-semibold flex items-center gap-2">🧠 Mind Map</div>
                 <p className="text-xs mt-1 text-gray-600 group-hover:text-purple-700">
@@ -3366,7 +3457,7 @@ const Canvas: React.FC<CanvasProps> = ({
               <li
                 id="project-outline"
                 onClick={() => handleShowTemplate('project-outline')}
-                className="bg-gray-100 hover:bg-purple-100 transition-colors duration-200 px-4 py-3 rounded-lg cursor-pointer text-gray-800 text-sm font-medium shadow group"
+                className="bg-gray-100 hover:bg-purple-100 transition-colors duration-200 px-4 py-3 rounded-lg cursor-pointer text-gray-800 text-sm font-medium shadow group touch-manipulation"
               >
                 <div className="font-semibold flex items-center gap-2">📝 Project Outline</div>
                 <p className="text-xs mt-1 text-gray-600 group-hover:text-purple-700">
@@ -3377,7 +3468,7 @@ const Canvas: React.FC<CanvasProps> = ({
               <li
                 id="flowchart"
                 onClick={() => handleShowTemplate('flowchart')}
-                className="bg-gray-100 hover:bg-purple-100 transition-colors duration-200 px-4 py-3 rounded-lg cursor-pointer text-gray-800 text-sm font-medium shadow group"
+                className="bg-gray-100 hover:bg-purple-100 transition-colors duration-200 px-4 py-3 rounded-lg cursor-pointer text-gray-800 text-sm font-medium shadow group touch-manipulation"
               >
                 <div className="font-semibold flex items-center gap-2">📊 Flowchart</div>
                 <p className="text-xs mt-1 text-gray-600 group-hover:text-purple-700">
@@ -3389,17 +3480,17 @@ const Canvas: React.FC<CanvasProps> = ({
         </div>
       )}
 
+      {/* Template display */}
       {showingTemplate && (
-        <div className="absolute  top-[15%] left-1/2 transform -translate-x-1/2 z-50 w-[90vw] sm:w-[80vw] h-[70vh] bg-purple-100 rounded-xl shadow-2xl border border-gray-300 p-4 overflow-y-auto scrollbar-custom">
+        <div className="absolute top-[15%] left-1/2 transform -translate-x-1/2 z-50 w-[90vw] sm:w-[80vw] h-[70vh] bg-purple-100 rounded-xl shadow-2xl border border-gray-300 p-4 overflow-y-auto scrollbar-custom">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold text-gray-800 capitalize">{currentTemplate.replace('-', ' ')}</h2>
             <button
               onClick={handleCloseTemplate}
-              className="px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white font-semibold rounded-full shadow-md hover:shadow-lg transition-all duration-300 ease-in-out"
+              className="px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 text-white font-semibold rounded-full shadow-md hover:shadow-lg transition-all duration-300 ease-in-out touch-manipulation"
             >
               ✕ Close
             </button>
-
           </div>
 
           <div className="h-full scrollbar-custom">
@@ -3408,14 +3499,12 @@ const Canvas: React.FC<CanvasProps> = ({
               <ReactFlowProvider>
                 <Mindmaps socketRef={socketRef.current} whiteboardId={whiteboardId} />
               </ReactFlowProvider>
-
             }
             {currentTemplate === 'project-outline' && <CommingSoon type="project-outline" />}
             {currentTemplate === 'flowchart' && <CommingSoon type="flowchart" />}
           </div>
         </div>
       )}
-
     </div>
   );
 };

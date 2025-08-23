@@ -5,6 +5,9 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import axios from "axios";
 import { Eye, EyeOff, Mail, Lock, User, CheckCircle, AlertCircle } from 'lucide-react';
 import { useToast } from "../utills/ToastProvider";
+import { useUser } from "../context/Usercontext";
+import Email from "next-auth/providers/email";
+import { jwtDecode } from "jwt-decode";
 
 interface OAuthProvider {
   name: string;
@@ -102,6 +105,8 @@ const EnhancedAuthPage = () => {
     confirmPassword: "",
     name: "",
   });
+
+  const { setUserName } = useUser();
 
   const { showToast } = useToast();
   const [otpDetails, setOtpDetails] = useState({
@@ -400,9 +405,29 @@ const EnhancedAuthPage = () => {
         password: formData.password
       });
 
-      localStorage.setItem("token", res.data.token);
+      const token = res.data.token;
+
+
+
+      // Save token
+      localStorage.setItem("token", token);
+
+      if (res.data?.RideOffered) {
+        localStorage.setItem('hasSeenWhiteboardTour', 'true');
+      }
+      else {
+        localStorage.setItem('hasSeenWhiteboardTour', 'false');
+      }
+
+      // Decode token to get name
+      const decoded: any = jwtDecode(token);
+      if (decoded?.name) {
+        setUserName({ name: decoded.name });
+      }
+
       localStorage.setItem("userId", res.data.user?.id || '');
       showToast(`Welcome back, ${res.data?.name || formData.email.split('@')[0]}!`, "success");
+
 
       const postLogin = searchParams.get('postLogin');
       const collaborator = searchParams.get('collaborator');

@@ -7,6 +7,7 @@ export interface IUser extends Document {
   profilePicture?: string;
   bio?: string;
   location?: string;
+  RideOffered: boolean;
   website?: string;
   preferences: {
     theme: 'light' | 'dark' | 'system';
@@ -47,13 +48,15 @@ const UserSchema: Schema = new Schema(
     name: { type: String, required: true },
     profilePicture: { type: String, default: "upload your profilePicture here!" },
     bio: { type: String, default: "Enter your bio." },
- 
-   oauthVerified: { type: Boolean, default: false },
+
+    oauthVerified: { type: Boolean, default: false },
     location: { type: String, default: "Enter your location." },
     website: {
       type: String,
       default: "Enter your site here"
     },
+    RideOffered: { type: Boolean, default: false },
+
     oauthProviders: [{
       provider: {
         type: String,

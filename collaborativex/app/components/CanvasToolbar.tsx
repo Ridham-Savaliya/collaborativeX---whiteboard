@@ -123,7 +123,7 @@ const CanvasToolbar: React.FC<ToolbarProps> = ({
 
   return (
     <>
-      <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-40 flex items-center justify-center">
+      <div id="canvas-toolbar" className="absolute sm:bottom-6 bottom-1 left-1/2 transform -translate-x-1/2 z-40 flex items-center justify-center">
         <div className="relative">
           {activeToolGroup && renderToolGroup(activeToolGroup)}
           <div
@@ -138,7 +138,7 @@ const CanvasToolbar: React.FC<ToolbarProps> = ({
               onClick={() => onToolSelect("geminiAI")}
               title="AI Assistant - Get Canvas Summary, Help & More"
             >
-              <Bot size={22} />
+              <Bot size={20} />
             </button>
 
             {/* Shape Recognition Toggle */}
@@ -177,7 +177,7 @@ const CanvasToolbar: React.FC<ToolbarProps> = ({
                   ></path>
                 </svg>
               ) : (
-                <Shapes size={22} />
+                <Shapes size={20} />
               )}
             </button>
 
@@ -187,7 +187,7 @@ const CanvasToolbar: React.FC<ToolbarProps> = ({
               onClick={() => onToolSelect("videoCall")}
               title="Video Call"
             >
-              <Video size={22} />
+              <Video size={20} />
             </button>
 
             {/* Templates */}
@@ -196,7 +196,7 @@ const CanvasToolbar: React.FC<ToolbarProps> = ({
               onClick={() => onToolSelect("templates")}
               title="Templates"
             >
-              <FileText size={22} />
+              <FileText size={20} />
             </button>
 
             {/* Export */}
@@ -205,7 +205,7 @@ const CanvasToolbar: React.FC<ToolbarProps> = ({
               onClick={() => toggleToolGroup("export")}
               title="Export Options"
             >
-              <Download size={22} />
+              <Download size={20} />
             </button>
 
             {/* Premium Feature */}
@@ -214,7 +214,7 @@ const CanvasToolbar: React.FC<ToolbarProps> = ({
               onClick={handlePremiumFeature}
               title="Time Travel (Premium)"
             >
-              <Clock size={22} />
+              <Clock size={20} />
             </button>
 
             {/* Settings */}
@@ -225,7 +225,7 @@ const CanvasToolbar: React.FC<ToolbarProps> = ({
               }
               title="Settings"
             >
-              <Settings size={22} />
+              <Settings size={20} />
             </button>
           </div>
         </div>

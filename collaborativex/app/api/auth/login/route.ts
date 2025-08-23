@@ -24,6 +24,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: "User not found!" }, { status: 404 });
   }
 
+
   // Check if the user has a password (i.e., not an OAuth-only account)
   if (!isExisted.password) {
     return NextResponse.json(
@@ -44,7 +45,7 @@ export async function POST(req: NextRequest) {
   );
 
   return NextResponse.json(
-    { token, name: isExisted.name, message: "Login successfully!" },
-    { status: 200 }
+    { token, name: isExisted.name, RideOffered: isExisted?.RideOffered ?? false, message: "Login successfully!" },
+    { status: 200 },
   );
 }

@@ -10,6 +10,7 @@ import {
   Bold, Italic, Underline
 } from "lucide-react";
 import { StickyNote as StickyNoteType } from "./Types";
+import Image from "next/image";
 
 interface SidebarProps {
   setColor: (color: string) => void;
@@ -145,7 +146,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   }, [isCollapsed, setIsCollapsed]);
 
   return (
-    <div className="fixed top-0 left-0 h-full z-30 overflow-hidden">
+    <div id="right-navbar"   className="fixed top-0 left-0 h-full z-40 overflow-hidden">
       <div
         className={`
           h-full bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200
@@ -155,12 +156,14 @@ const Sidebar: React.FC<SidebarProps> = ({
         `}
       >
         {isCollapsed ? (
-          <div className="h-full px-2 py-5 flex flex-col items-center justify-start">
+          <div id="right-navbar"   className="h-full px-2 py-5 flex flex-col items-center justify-start">
             <div className="mb-4">
-              <img
-                src="https://res.cloudinary.com/dzrzfsu9u/image/upload/v1754029573/promotions/idqhwlol6i3cgzgyyitw.png"
+              <Image
+                src="/logo2.png"
                 alt="Logo"
-                className="w-10 h-10 rounded-full object-contain transition-all duration-300 transform hover:scale-110 shadow-lg hover:shadow-purple-500/30 dark:hover:shadow-purple-700/30"
+                width={40}   // required in Next.js Image
+                height={40}  // required in Next.js Image
+                className="rounded-full object-contain transition-all duration-300 transform hover:scale-110 shadow-lg hover:shadow-purple-500/30 dark:hover:shadow-purple-700/30"
               />
             </div>
             <button
@@ -191,11 +194,10 @@ const Sidebar: React.FC<SidebarProps> = ({
                         setShowShapesDrawer(false);
                       }
                     }}
-                    className={`p-2 rounded-full transition-all duration-300 transform hover:scale-110 ${
-                      currentTool === tool.key
+                    className={`p-2 rounded-full transition-all duration-300 transform hover:scale-110 ${currentTool === tool.key
                         ? "bg-gradient-to-br from-purple-600 to-purple-700 dark:from-purple-700 dark:to-purple-800 text-white shadow-lg shadow-purple-500/30 dark:shadow-purple-700/30"
                         : "bg-gray-300 dark:bg-gray-700 hover:bg-gray-400 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200"
-                    }`}
+                      }`}
                     style={{ minHeight: "40px", minWidth: "40px", display: "flex", alignItems: "center", justifyContent: "center" }}
                     title={tool.tooltip}
                     aria-label={tool.label}
@@ -214,11 +216,10 @@ const Sidebar: React.FC<SidebarProps> = ({
               <button
                 onClick={undo}
                 disabled={!canUndo}
-                className={`p-2 rounded-full transition-all duration-300 ${
-                  canUndo
+                className={`p-2 rounded-full transition-all duration-300 ${canUndo
                     ? "bg-gray-300 dark:bg-gray-700 hover:bg-gray-400 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 hover:scale-110"
                     : "bg-gray-400 dark:bg-gray-800 text-gray-500 dark:text-gray-400 cursor-not-allowed opacity-50"
-                }`}
+                  }`}
                 title={t("undo")}
                 aria-label={t("undo")}
                 style={{ minHeight: "40px", minWidth: "40px", display: "flex", alignItems: "center", justifyContent: "center" }}
@@ -228,11 +229,10 @@ const Sidebar: React.FC<SidebarProps> = ({
               <button
                 onClick={redo}
                 disabled={!canRedo}
-                className={`p-2 rounded-full transition-all duration-300 ${
-                  canRedo
+                className={`p-2 rounded-full transition-all duration-300 ${canRedo
                     ? "bg-gray-300 dark:bg-gray-700 hover:bg-gray-400 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 hover:scale-110"
                     : "bg-gray-400 dark:bg-gray-800 text-gray-500 dark:text-gray-400 cursor-not-allowed opacity-50"
-                }`}
+                  }`}
                 title={t("redo")}
                 aria-label={t("redo")}
                 style={{ minHeight: "40px", minWidth: "40px", display: "flex", alignItems: "center", justifyContent: "center" }}
@@ -285,7 +285,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 />
               </div>
               {showToolsSection && (
-                <div className="space-y-2 transition-all duration-300">
+                <div  className="space-y-2 transition-all duration-300">
                   <div className="grid grid-cols-2 gap-2">
                     {tools.map((tool) => (
                       <div key={tool.key} className="group relative">
@@ -381,11 +381,10 @@ const Sidebar: React.FC<SidebarProps> = ({
                         <button
                           key={preset.color}
                           onClick={() => handleColorPresetSelect(preset.color)}
-                          className={`w-8 h-8 rounded-full transition-all duration-300 hover:scale-110 ${
-                            selectedColorPreset === preset.color
+                          className={`w-8 h-8 rounded-full transition-all duration-300 hover:scale-110 ${selectedColorPreset === preset.color
                               ? "ring-2 ring-gray-200 dark:ring-gray-700 ring-offset-1 ring-offset-gray-100 dark:ring-offset-gray-900 shadow-lg"
                               : ""
-                          }`}
+                            }`}
                           title={preset.name}
                           style={{ backgroundColor: preset.color }}
                         />
@@ -508,11 +507,10 @@ const Sidebar: React.FC<SidebarProps> = ({
                   <div className="flex space-x-2">
                     <button
                       onClick={() => setTextStyles({ ...textStyles, bold: !textStyles.bold })}
-                      className={`p-2 rounded-lg flex items-center justify-center transition-all duration-300 ${
-                        textStyles.bold
+                      className={`p-2 rounded-lg flex items-center justify-center transition-all duration-300 ${textStyles.bold
                           ? "bg-gradient-to-r from-purple-600 to-purple-700 dark:from-purple-700 dark:to-purple-800 text-white"
                           : "bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200"
-                      }`}
+                        }`}
                       title={t("bold")}
                       aria-label={t("bold")}
                     >
@@ -520,11 +518,10 @@ const Sidebar: React.FC<SidebarProps> = ({
                     </button>
                     <button
                       onClick={() => setTextStyles({ ...textStyles, italic: !textStyles.italic })}
-                      className={`p-2 rounded-lg flex items-center justify-center transition-all duration-300 ${
-                        textStyles.italic
+                      className={`p-2 rounded-lg flex items-center justify-center transition-all duration-300 ${textStyles.italic
                           ? "bg-gradient-to-r from-purple-600 to-purple-700 dark:from-purple-700 dark:to-purple-800 text-white"
                           : "bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200"
-                      }`}
+                        }`}
                       title={t("italic")}
                       aria-label={t("italic")}
                     >
@@ -532,11 +529,10 @@ const Sidebar: React.FC<SidebarProps> = ({
                     </button>
                     <button
                       onClick={() => setTextStyles({ ...textStyles, underline: !textStyles.underline })}
-                      className={`p-2 rounded-lg flex items-center justify-center transition-all duration-300 ${
-                        textStyles.underline
+                      className={`p-2 rounded-lg flex items-center justify-center transition-all duration-300 ${textStyles.underline
                           ? "bg-gradient-to-r from-purple-600 to-purple-700 dark:from-purple-700 dark:to-purple-800 text-white"
                           : "bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200"
-                      }`}
+                        }`}
                       title={t("underline")}
                       aria-label={t("underline")}
                     >

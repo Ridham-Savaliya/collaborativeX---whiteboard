@@ -103,33 +103,33 @@ const Onboarding = () => {
     }
   };
 
-  useEffect(() => {
-    const sendWelcomeMail = async () => {
-      const token = localStorage.getItem('token');
-      try {
-        const res = await axios.post(
-          "/api/user/welcomeMail",
-          {},
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-        if (res.status === 200) {
-          console.log(res.data.message);
-        }
-      } catch (err) {
-        console.error("Failed to send welcome mail:", err);
-      }
-    };
+  // useEffect(() => {
+  //   const sendWelcomeMail = async () => {
+  //     const token = localStorage.getItem('token');
+  //     try {
+  //       const res = await axios.post(
+  //         "/api/user/welcomeMail",
+  //         {},
+  //         {
+  //           headers: {
+  //             Authorization: `Bearer ${token}`,
+  //           },
+  //         }
+  //       );
+  //       if (res.status === 200) {
+  //         console.log(res.data.message);
+  //       }
+  //     } catch (err) {
+  //       console.error("Failed to send welcome mail:", err);
+  //     }
+  //   };
 
-    const timer = setTimeout(() => {
-      sendWelcomeMail();
-    }, 4000);
+  //   const timer = setTimeout(() => {
+  //     sendWelcomeMail();
+  //   }, 4000);
 
-    return () => clearTimeout(timer);
-  }, []);
+  //   return () => clearTimeout(timer);
+  // }, []);
 
   useEffect(() => {
     const createQRcodeAndLink = async () => {

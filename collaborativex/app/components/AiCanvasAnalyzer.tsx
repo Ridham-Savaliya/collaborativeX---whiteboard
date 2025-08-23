@@ -644,7 +644,7 @@ If someone asks a general question, answer it directly. If they want to know abo
   // Mobile layout
   if (isMobile) {
     return (
-      <div className="fixed inset-0 bg-white dark:bg-gray-900 z-50 flex flex-col" data-ai-chat>
+      <div className="fixed inset-0  bg-white dark:bg-gray-900 z-50 flex flex-col" data-ai-chat>
         {/* Mobile Header */}
         <div className="bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-700 dark:to-purple-700 p-4 text-white">
           <div className="flex items-center justify-between">
@@ -859,17 +859,25 @@ If someone asks a general question, answer it directly. If they want to know abo
         {/* Input */}
         <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
           <div className="flex items-end gap-2">
-            <div className="flex-1 relative">
+            <div className="flex-1  relative">
           
-
-              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                <Brain size={16} className="text-gray-400 dark:text-gray-500" />
+   <input
+        type="text"
+        value={inputMessage}
+        onChange={handleInputChange}
+        onKeyDown={handleKeyDown}
+        placeholder="Ask me anything..."
+        className="w-full p-3  pr-10 mb-10 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+        disabled={isAnalyzing}
+      />
+              <div className="absolute mb-20 right-3 top-1/2 transform -translate-y-1/2">
+                <Brain size={16} className="text-gray-400 mb-10 dark:text-gray-500" />
               </div>
             </div>
             <button
               onClick={handleSendMessage}
               disabled={!inputMessage || isAnalyzing}
-              className="p-3 bg-gradient-to-r from-blue-500 to-purple-600 dark:from-blue-600 dark:to-purple-700 text-white rounded-xl transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-3 bg-gradient-to-r mb-10 from-blue-500 to-purple-600 dark:from-blue-600 dark:to-purple-700 text-white rounded-xl transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isAnalyzing ? (
                 <RefreshCw size={20} className="animate-spin" />

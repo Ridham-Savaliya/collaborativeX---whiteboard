@@ -14,6 +14,7 @@ import { jwtDecode } from "jwt-decode";
 import { useToast } from "@/app/utills/ToastProvider";
 import { Cardio } from 'ldrs/react';
 import 'ldrs/react/Cardio.css'
+import WhiteboardTour from "@/app/components/WhiteboardTour";
 /**
  * WhiteboardPage Component
  * 
@@ -153,7 +154,69 @@ const WhiteboardPage: React.FC = () => {
    * 
    * @param isValid - Whether the invite validation succeeded
    * @param email - The validated email from the invite flow
-   */
+   * 
+   * 
+   * 
+
+
+
+  */
+
+
+  const [runTour, setRunTour] = useState(false);
+  const [hasMounted, setHasMounted] = useState(false);
+
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []); // Empty dependency array ensures this runs only once on mount
+
+  // This useEffect now perfectly synchronizes the tour with the canvas rendering
+  useEffect(() => {
+    // Only check localStorage after component has mounted
+    if (!hasMounted) return;
+
+    // Define the condition that determines if the main UI is ready
+    const isUiReady = !isLoading && (!inviteToken || isInviteValidated) && !isUnauthorizedAttempt;
+
+    // Only proceed if the UI is actually visible
+    if (isUiReady) {
+      const hasSeenTour = localStorage.getItem('hasSeenWhiteboardTour');
+      // Check for both null and 'false' to ensure the tour runs when needed
+      if (!hasSeenTour || hasSeenTour === 'false') {
+        const timer = setTimeout(() => {
+          setRunTour(true);
+        }, 500); // Increased delay to ensure DOM is fully ready
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [hasMounted, isLoading, isInviteValidated, isUnauthorizedAttempt, inviteToken]);
+
+ const handleTourEnd = async () => {
+  setRunTour(false);
+
+  try {
+    const res = await axios.post('/api/user/approveOnboarding', {}, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    if (res.status === 200) {
+      showToast('🎉 Onboarding complete! You’re all set to use your whiteboard.', 'success');
+      localStorage.setItem('hasSeenWhiteboardTour', 'true');
+    } else {
+      showToast('Something went wrong while saving your onboarding status.', 'error');
+    }
+  } catch (err) {
+    console.error(err);
+    showToast('⚠️ Failed to update onboarding status. Please try again.', 'error');
+  }
+};
+
+
+
+
   const handleInviteValidation = useCallback((isValid: boolean, email?: string) => {
     console.log("🔐 Invite validation result:", isValid, email);
 
@@ -336,29 +399,31 @@ const WhiteboardPage: React.FC = () => {
         </div>
       )}
 
-   {isSesssionExpired && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-purple-900 via-purple-950 to-black backdrop-blur-xl">
-    <div className="flex flex-col items-center gap-4 px-8 py-6 rounded-2xl bg-white/10 backdrop-blur-md border border-purple-500 shadow-2xl max-w-sm text-center">
-      {/* this is the commit */}
-      <svg xmlns="http://www.w3.org/2000/svg" className="w-10 h-10 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z" />
-      </svg>
 
-      <h2 className="text-lg font-semibold text-purple-100">Session Expired</h2>
 
-      <p className="text-sm text-zinc-300">
-        Your session has ended. Please log in again to continue.
-      </p>
+      {isSesssionExpired && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-purple-900 via-purple-950 to-black backdrop-blur-xl">
+          <div className="flex flex-col items-center gap-4 px-8 py-6 rounded-2xl bg-white/10 backdrop-blur-md border border-purple-500 shadow-2xl max-w-sm text-center">
+            {/* this is the commit */}
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-10 h-10 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z" />
+            </svg>
 
-      <button
-        onClick={() => router.push("/")} // define this function
-        className="mt-4 px-5 py-2 text-sm font-medium text-white bg-purple-600 rounded-full hover:bg-purple-700 transition-all"
-      >
-        Log In Again
-      </button>
-    </div>
-  </div>
-)}
+            <h2 className="text-lg font-semibold text-purple-100">Session Expired</h2>
+
+            <p className="text-sm text-zinc-300">
+              Your session has ended. Please log in again to continue.
+            </p>
+
+            <button
+              onClick={() => router.push("/")} // define this function
+              className="mt-4 px-5 py-2 text-sm font-medium text-white bg-purple-600 rounded-full hover:bg-purple-700 transition-all"
+            >
+              Log In Again
+            </button>
+          </div>
+        </div>
+      )}
 
 
 
@@ -401,7 +466,9 @@ const WhiteboardPage: React.FC = () => {
       {/* Only render if not loading and invite validation passed (if required) */}
       {!isLoading && (!inviteToken || isInviteValidated) && !isUnauthorizedAttempt && (
         <>
+          <WhiteboardTour run={runTour} onTourEnd={handleTourEnd} />
           <Sidebar
+           
             setColor={setStrokeColor}
             setLineWidth={setLineWidth}
             setTool={handleToolChange}
@@ -429,6 +496,7 @@ const WhiteboardPage: React.FC = () => {
           />
           <main className="flex-1 overflow-hidden relative">
             <Canvas
+           
               key={canvasKey}
               strokeColor={strokeColor}
               lineWidth={lineWidth}

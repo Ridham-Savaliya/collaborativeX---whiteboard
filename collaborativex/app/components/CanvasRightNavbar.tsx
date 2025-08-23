@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { User, Home, Save, Download, ScreenShare, Copy, Link } from "lucide-react";
+import { User, Home, Save, Download, ScreenShare, Copy, Loader2 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import axios from "axios";
 import StyledQRCode from "./StyledQRCode";
@@ -31,8 +31,9 @@ const RightNavBar: React.FC<RightNavBarProps> = ({ saveWhiteboard, exportAsPDF, 
   const params = useParams();
   const [isDirty, setIsDirty] = useState(true);
   const router = useRouter();
-const username  = useRef(null)
-  const {user} = useUser();
+  const username = useRef(null)
+  const { user } = useUser();
+  const [isSaving, setisSaving] = useState(false)
 
   // Mock user data - replace with your actual user context
   // const user: UserType = { name: "John Doe", email: "john@example.com" };
@@ -51,15 +52,24 @@ const username  = useRef(null)
     };
   }, [isDirty]);
 
-  const handleSave = () => {
-    saveWhiteboard();
-    setIsDirty(false);
+
+  const handleSave = async () => {
+    try {
+      setisSaving(true);
+      await saveWhiteboard(); // wait for save to complete
+      setIsDirty(false);
+    } catch (error) {
+      console.error("Save failed:", error);
+    } finally {
+      setisSaving(false);
+    }
   };
+
 
   const generateShareLink = async () => {
     setIsGeneratingLink(true);
-    const token:any = localStorage.getItem('token');
-    const decode:any = jwtDecode(token);
+    const token: any = localStorage.getItem('token');
+    const decode: any = jwtDecode(token);
     const email = decode.email;
     try {
       const response = await axios.post("/api/whiteboard/lnvitelink", {
@@ -158,50 +168,56 @@ const username  = useRef(null)
       )}
 
       {showInviteModel && (
-        <div className="absolute top-12 right-0 z-50 w-80 sm:w-72 p-4 rounded-xl shadow-2xl border border-purple-800 bg-gradient-to-br from-purple-500 via-purple-600 to-purple-700 transition-all duration-300 ease-out animate-in fade-in zoom-in">
-          <h1 className="text-white text-lg font-bold mb-3 text-center">🔗 Share Whiteboard</h1>
+        <div className="absolute top-12 right-[-] sm:right-0 z-50 w-64 sm:w-80 p-2 sm:p-4 rounded-lg sm:rounded-xl shadow-xl border border-purple-800 bg-gradient-to-br from-purple-500 via-purple-600 to-purple-700 transition-all duration-300 ease-out animate-in fade-in zoom-in max-h-[85vh] overflow-y-auto">
 
-          <div className="bg-white/10 rounded-lg backdrop-blur-sm p-3">
+          {/* Heading */}
+          <h1 className="text-white text-sm sm:text-lg font-semibold mb-2 sm:mb-3 text-center">
+            🔗 Share Whiteboard
+          </h1>
+
+          <div className="bg-white/10 rounded-md sm:rounded-lg backdrop-blur-sm p-2 sm:p-3">
             {isGeneratingLink ? (
-              <div className="flex items-center justify-center h-24">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+              <div className="flex items-center justify-center h-16 sm:h-20">
+                <div className="animate-spin rounded-full h-4 w-4 sm:h-6 sm:w-6 border-b-2 border-white"></div>
               </div>
             ) : inviteLink ? (
-              <div className="space-y-2">
+              <div className="space-y-2 sm:space-y-3">
+
+                {/* Input + Copy */}
                 <div className="flex items-center gap-1">
                   <input
                     type="text"
                     value={inviteLink}
                     readOnly
-                    className="flex-1 p-2 text-xs bg-white/20 text-white rounded border-0 outline-none font-mono truncate"
+                    className="flex-1 p-1.5 sm:p-2 text-[9px] sm:text-xs bg-white/20 text-white rounded border-0 outline-none font-mono truncate"
                   />
                   <button
                     onClick={copyToClipboard}
-                    className={`px-2 py-2 rounded transition-all duration-200 ${linkCopied
+                    className={`px-1.5 py-1 rounded transition-all duration-200 text-[10px] sm:text-xs ${linkCopied
                         ? 'bg-green-500 text-white'
                         : 'bg-white/20 text-white hover:bg-white/30'
                       }`}
                     title="Copy link"
                   >
-                    {linkCopied ? '✓' : <Copy className="w-3 h-3" />}
+                    {linkCopied ? '✓' : <Copy className="w-3 h-3 sm:w-4 sm:h-4" />}
                   </button>
                 </div>
 
-                <div className="flex justify-center items-center w-full py-2">
-                  <div className="w-full max-w-[200px] h-auto">
+                {/* QR Code */}
+                <div className="flex justify-center items-center w-full py-1 sm:py-2">
+                  <div className="w-[90px] sm:w-[180px] h-auto">
                     <StyledQRCode invitelink={inviteLink} />
                   </div>
                 </div>
 
-
-                <p className="text-white/70 text-xs text-center">
+                <p className="text-white/70 text-[9px] sm:text-xs text-center">
                   Scan QR code or share the link above
                 </p>
               </div>
             ) : (
               <button
                 onClick={generateShareLink}
-                className="w-full bg-white/20 border border-white text-white font-semibold py-2 px-3 text-sm rounded-md transition-all duration-300 ease-in-out hover:scale-105 hover:shadow-xl hover:bg-white/30 backdrop-blur-md"
+                className="w-full bg-white/20 border border-white text-white font-medium py-1.5 px-2 sm:py-2 sm:px-3 text-[10px] sm:text-sm rounded-md transition-all duration-300 ease-in-out hover:scale-105 hover:shadow-md hover:bg-white/30 backdrop-blur-md"
               >
                 Generate Share Link
               </button>
@@ -209,6 +225,7 @@ const username  = useRef(null)
           </div>
         </div>
       )}
+
 
       <button
         onClick={handleShareClick}
@@ -225,7 +242,13 @@ const username  = useRef(null)
         title="Save Whiteboard"
         aria-label="Save Whiteboard"
       >
-        <Save size={20} />
+
+        {isSaving ? (
+          <Loader2 className="animate-spin w-5 h-5" />
+        ) : (
+          <Save className="w-5 h-6" />
+        )}
+        {/* {isSaving ? "Saving..." : "Save"} */}
       </button>
 
       <button
@@ -260,7 +283,7 @@ const username  = useRef(null)
           <div className="absolute right-0 mt-2 w-48 bg-gray-800/90 backdrop-blur-xl text-white rounded-md shadow-lg border border-purple-500/20">
             <div className="p-4">
               <p className="text-sm font-medium">User Name</p>
-              <p className="text-xs text-gray-300">{user?.name}</p>
+              <p className="text-xs text-gray-300">  {user?.name || "Guest"}</p>
             </div>
             <div className="border-t border-purple-500/20">
               <button
