@@ -4,7 +4,7 @@ You asked for a premium-looking, creative, and professional README documentation
 
 <!-- Banner Section -->
 <p align="center">
-  <img src="https://svgshare.com/i/16kA.svg" alt="CollaborativeX Logo" width="120" />
+  <img src="/logo2.png" alt="CollaborativeX Logo" width="120" />
 </p>
 <h1 align="center" style="color:#8200db; font-size:3rem; font-family: 'Segoe UI', 'Roboto', 'Arial', sans-serif;">
   CollaborativeX
@@ -175,3 +175,4 @@ You can use this SVG as your logo/banner (host it on your CDN or GitHub):
 ---
 
 Would you like a dark mode version, more screenshots, or a custom Figma banner? Let me know if you need further customization or additional sections!
+
