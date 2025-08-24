@@ -8,6 +8,7 @@ import { useToast } from "../utills/ToastProvider";
 import { useUser } from "../context/Usercontext";
 import Email from "next-auth/providers/email";
 import { jwtDecode } from "jwt-decode";
+import { decode } from "punycode";
 
 interface OAuthProvider {
   name: string;
@@ -110,7 +111,7 @@ const EnhancedAuthPage = () => {
 
   const { showToast } = useToast();
   const [otpDetails, setOtpDetails] = useState({
-    otp: "",
+    // otp: "",
     newPassword: "",
     confirmNewPassword: "",
   });
@@ -283,7 +284,7 @@ const EnhancedAuthPage = () => {
     setOauthVerified(false);
     setDetectedProvider(null);
     setFormData(prev => ({ ...prev, email: "" }));
-    setOtpDetails({ otp: "", newPassword: "", confirmNewPassword: "" });
+    setOtpDetails({ newPassword: "", confirmNewPassword: "" });
   };
 
   useEffect(() => {
@@ -477,15 +478,19 @@ const EnhancedAuthPage = () => {
           oauthVerified: oauthVerified
         });
 
-        showToast(res.data?.message || "OTP sent successfully!", "success");
-        setOtpId(res.data?.otpId);
+        showToast(res.data?.message || "Verfication has been done!", "success");
+        const token: any = localStorage.getItem('token');
+        if (token) {
+          const decoded: any = jwtDecode(token);
+          setOtpId(decoded?.userId);
+        }
         setStep(2);
       } else {
-        if (!otpDetails.otp.trim()) {
-          showToast("Please enter the OTP", "warning");
-          setIsLoading(false);
-          return;
-        }
+        // if (!otpDetails.otp.trim()) {
+        //   showToast("Please enter the OTP", "warning");
+        //   setIsLoading(false);
+        //   return;
+        // }
 
         if (otpDetails.newPassword !== otpDetails.confirmNewPassword) {
           showToast("Passwords do not match", "warning");
@@ -500,8 +505,8 @@ const EnhancedAuthPage = () => {
         }
 
         const res = await axios.post("/api/auth/verify-otp", {
-          otpId,
-          verificationCode: otpDetails.otp,
+          userId: otpId,
+          // verificationCode: otpDetails.otp,
           newPassword: otpDetails.newPassword,
           cPassword: otpDetails.confirmNewPassword,
         });
@@ -759,7 +764,7 @@ const EnhancedAuthPage = () => {
 
               {step === 2 && (
                 <>
-                  <input
+                  {/* <input
                     type="text"
                     name="otp"
                     value={otpDetails.otp}
@@ -768,7 +773,7 @@ const EnhancedAuthPage = () => {
                     className="w-full px-4 py-2.5 bg-white dark:bg-[#0f172a]/50 border border-gray-300 dark:border-gray-700 rounded-md text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#6366f1] dark:focus:ring-[#818cf8] focus:border-transparent text-center tracking-wider"
                     maxLength={6}
                     required
-                  />
+                  /> */}
 
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5" />

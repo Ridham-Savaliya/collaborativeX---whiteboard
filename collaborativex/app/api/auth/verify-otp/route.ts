@@ -8,23 +8,23 @@ import User from "../../models/User";
 export async function POST(req: NextRequest) {
   await connectDB();
 
-  const { otpId, verificationCode, newPassword, cPassword } = await req.json();
+  const { userId, newPassword, cPassword } = await req.json();
 
-  if (!otpId || !verificationCode || !newPassword || !cPassword) {
+  if (!userId || !newPassword || !cPassword) {
     return NextResponse.json({ success: false, message: "All fields are required." }, { status: 400 });
   }
 
-  const otpRecord = await OTP.findById(otpId);
-  if (!otpRecord) {
-    return NextResponse.json({ success: false, message: "Invalid or expired OTP." }, { status: 400 });
-  }
+  // const otpRecord = await OTP.findById(otpId);
+  // if (!otpRecord) {
+  //   return NextResponse.json({ success: false, message: "Invalid or expired OTP." }, { status: 400 });
+  // }
 
-  const isMatch = await bcrypt.compare(verificationCode, otpRecord.otp);
-  if (!isMatch) {
-    return NextResponse.json({ success: false, message: "Incorrect OTP." }, { status: 401 });
-  }
+  // const isMatch = await bcrypt.compare(verificationCode, otpRecord.otp);
+  // if (!isMatch) {
+  //   return NextResponse.json({ success: false, message: "Incorrect OTP." }, { status: 401 });
+  // }
 
-  const user = await User.findById(otpRecord.userId);
+  const user = await User.findById(userId);
   if (!user) {
     return NextResponse.json({ success: false, message: "User not found." }, { status: 404 });
   }
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
 
   user.password = await bcrypt.hash(newPassword, 10);
   await user.save();
-  await OTP.findByIdAndDelete(otpId);
+  // await OTP.findByIdAndDelete(otpId);
 
   return NextResponse.json({ success: true, message: "Password updated successfully." });
 }
