@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
 
   if (oauthDomains.includes(emailDomain) && !oauthVerified && !user.oauthVerified) {
     return NextResponse.json(
-      { message: "OAuth verification required for this email domain" },
+      { message: "OAuth verification required for this email domain!" },
       { status: 403 }
     );
   }

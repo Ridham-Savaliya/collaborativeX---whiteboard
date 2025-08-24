@@ -235,7 +235,7 @@ const EnhancedAuthPage = () => {
         if (event.data.type === 'OAUTH_VERIFICATION_SUCCESS') {
           popup?.close();
           window.removeEventListener('message', handleMessage);
-          showToast('Email verified successfully! Now sending OTP...', 'success');
+          // showToast('Email verified successfully! Now sending OTP...', 'success');
           setOauthVerified(true);
           setStep(2);
 
@@ -507,7 +507,6 @@ const EnhancedAuthPage = () => {
 
         const res = await axios.post("/api/auth/verify-otp", {
           userId: otpId,
-          // verificationCode: otpDetails.otp,
           newPassword: otpDetails.newPassword,
           cPassword: otpDetails.confirmNewPassword,
         });
