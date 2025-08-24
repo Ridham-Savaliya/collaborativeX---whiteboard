@@ -482,8 +482,9 @@ const EnhancedAuthPage = () => {
         // directly set otpId from response
         if (res.data?.userId) {
           setOtpId(res.data.userId);
+          localStorage.setItem("resetUserId", res.data.userId); // optional backup
         }
-         setStep(2);
+        setStep(2);
       } else {
         // if (!otpDetails.otp.trim()) {
         //   showToast("Please enter the OTP", "warning");
@@ -503,10 +504,16 @@ const EnhancedAuthPage = () => {
           return;
         }
 
-        console.log(otpId)
-
-        const res = await axios.post("/api/auth/verify-otp", {
+        console.log('this is otpid', otpId)
+        console.log("verify-otp payload:", {
           userId: otpId,
+          newPassword: otpDetails.newPassword,
+          cPassword: otpDetails.confirmNewPassword,
+        });
+
+        const userId = otpId || localStorage.getItem("resetUserId");
+        const res = await axios.post("/api/auth/verify-otp", {
+          userId: userId,
           newPassword: otpDetails.newPassword,
           cPassword: otpDetails.confirmNewPassword,
         });
