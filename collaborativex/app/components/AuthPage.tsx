@@ -242,7 +242,7 @@ const EnhancedAuthPage = () => {
           axios.post("/api/auth/forget-password", { email: formData.email, oauthVerified: true })
             .then((res) => {
               setOtpId(res.data?.otpId);
-              showToast(res.data?.message || 'OTP sent successfully!', 'success');
+              showToast(res.data?.message || 'User has been verified!', 'success');
               setIsLoading(false);
             })
             .catch((error) => {
@@ -479,12 +479,11 @@ const EnhancedAuthPage = () => {
         });
 
         showToast(res.data?.message || "Verfication has been done!", "success");
-        const token: any = localStorage.getItem('token');
-        if (token) {
-          const decoded: any = jwtDecode(token);
-          setOtpId(decoded?.userId);
+        // directly set otpId from response
+        if (res.data?.userId) {
+          setOtpId(res.data.userId);
         }
-        setStep(2);
+         setStep(2);
       } else {
         // if (!otpDetails.otp.trim()) {
         //   showToast("Please enter the OTP", "warning");
@@ -503,6 +502,8 @@ const EnhancedAuthPage = () => {
           setIsLoading(false);
           return;
         }
+
+        console.log(otpId)
 
         const res = await axios.post("/api/auth/verify-otp", {
           userId: otpId,
