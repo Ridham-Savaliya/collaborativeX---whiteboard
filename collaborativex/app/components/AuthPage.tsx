@@ -111,7 +111,7 @@ const EnhancedAuthPage = () => {
 
   const { showToast } = useToast();
   const [otpDetails, setOtpDetails] = useState({
-    // otp: "",
+    userId: "",
     newPassword: "",
     confirmNewPassword: "",
   });
@@ -473,7 +473,7 @@ const EnhancedAuthPage = () => {
           return;
         }
 
-        const res = await axios.post("/api/auth/send-otp", {
+        const res = await axios.post("/api/auth/forget-password", {
           email: formData.email,
           oauthVerified: oauthVerified
         });
@@ -482,6 +482,7 @@ const EnhancedAuthPage = () => {
         // directly set otpId from response
         if (res.data?.userId) {
           setOtpId(res.data.userId);
+          setOtpDetails({ userId: res.data.userId })
           localStorage.setItem("resetUserId", res.data.userId); // optional backup
         }
         console.log(otpId)
