@@ -975,33 +975,38 @@ export default function Kanban({ socket, boardId }: { socket: Socket, boardId: s
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
       {/* Header */}
-      <motion.div 
-        initial={{ opacity: 0, y: -20 }} 
-        animate={{ opacity: 1, y: 0 }} 
-        className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-purple-200 px-4 py-4"
-      >
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <h1 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-              Kanban Board
-            </h1>
-            <div className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full font-medium">
-              {totalTasks} tasks
-            </div>
-            <div className="text-xs text-gray-400 bg-gray-50 px-2 py-1 rounded-md font-mono">
-              Board: {boardId}
-            </div>
-          </div>
-          
-          <ConnectionStatus 
-            connectionStatus={connectionStatus}
-            saveStatus={saveStatus}
-            lastSaved={lastSaved}
-            lastError={lastError}
-            userCount={userCount}
-          />
-        </div>
-      </motion.div>
+   <motion.div
+  initial={{ opacity: 0, y: -20 }}
+  animate={{ opacity: 1, y: 0 }}
+  className="sticky top-0 z-50 w-full bg-white/90 backdrop-blur-md border-b border-purple-200 px-3 py-2"
+>
+  <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
+    {/* Left side */}
+    <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+      <h1 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+        Kanban
+      </h1>
+      <div className="text-xs sm:text-sm text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full font-medium">
+        {totalTasks} tasks
+      </div>
+      <div className="text-xs hidden sm:block text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded font-mono">
+        {boardId}
+      </div>
+    </div>
+
+    {/* Right side */}
+    <div className="flex-shrink-0">
+      <ConnectionStatus
+        connectionStatus={connectionStatus}
+        saveStatus={saveStatus}
+        lastSaved={lastSaved}
+        lastError={lastError}
+        userCount={userCount}
+      />
+    </div>
+  </div>
+</motion.div>
+
 
       {/* Main Board */}
       <div className="p-4 md:p-6 max-w-7xl mx-auto">

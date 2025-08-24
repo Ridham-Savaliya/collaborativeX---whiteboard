@@ -31,7 +31,9 @@ import {
   Brain,
   Sparkles,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Cloud,
+  Database
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import "reactflow/dist/style.css";
@@ -256,46 +258,62 @@ export default function Mindmaps({ socketRef, whiteboardId }: MindmapsProps) {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [isInitialized, setIsInitialized] = useState(false);
   const [showWelcome, setShowWelcome] = useState(true);
+  const [dataSource, setDataSource] = useState<'database' | 'demo' | 'none'>('none');
   
   // Auto-save timer
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const hasUnsavedChanges = useRef(false);
+  const isLoadingData = useRef(false);
 
   // Enhanced logging
   const log = (message: string, data?: any) => {
     console.log(`[Mindmap] ${message}`, data || '');
   };
 
-  // Enhanced save function with better UX
-  const debouncedSave = useCallback(() => {
+  // Database save function with proper status handling
+  const saveToDatabase = useCallback(() => {
+    if (!socketRef?.connected || !isInitialized || isLoadingData.current) return;
+    
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
     
     saveTimeoutRef.current = setTimeout(() => {
-      if (hasUnsavedChanges.current && (socketRef?.connected || !socketRef)) {
+      if (hasUnsavedChanges.current) {
         setSaveStatus('saving');
         setIsSaving(true);
         hasUnsavedChanges.current = false;
         
-        // Simulate save process
-        setTimeout(() => {
-          setIsSaving(false);
-          setSaveStatus('saved');
-          setLastSaved(new Date());
-          
-          // Reset status after 2 seconds
-          setTimeout(() => {
-            setSaveStatus('idle');
-          }, 2000);
-        }, 800);
+        // Get current state and save to database
+        setNodes((currentNodes) => {
+          setEdges((currentEdges) => {
+            if (socketRef?.connected) {
+              socketRef.emit("nodes-update", { nodes: currentNodes });
+              socketRef.emit("edges-update", { edges: currentEdges });
+              
+              // Simulate database save time
+              setTimeout(() => {
+                setIsSaving(false);
+                setSaveStatus('saved');
+                setLastSaved(new Date());
+                
+                // Reset status after 3 seconds
+                setTimeout(() => {
+                  setSaveStatus('idle');
+                }, 3000);
+              }, 500);
+            }
+            return currentEdges;
+          });
+          return currentNodes;
+        });
       }
-    }, 1500);
-  }, [socketRef]);
+    }, 1000); // Reduced debounce time for better responsiveness
+  }, [socketRef, isInitialized]);
 
   const onConnect = useCallback(
     (params: Edge | Connection) => {
-      if (!isInitialized) return;
+      if (!isInitialized || isLoadingData.current) return;
       
       setEdges((eds) => {
         if (!eds || !Array.isArray(eds)) return eds;
@@ -307,19 +325,16 @@ export default function Mindmaps({ socketRef, whiteboardId }: MindmapsProps) {
           style: { stroke: '#8b5cf6', strokeWidth: 2 }
         }, eds);
         
-        if (socketRef?.connected) {
-          socketRef.emit("edges-update", { edges: newEdges });
-          hasUnsavedChanges.current = true;
-          debouncedSave();
-        }
+        hasUnsavedChanges.current = true;
+        saveToDatabase();
         return newEdges;
       });
     },
-    [setEdges, socketRef, debouncedSave, isInitialized]
+    [setEdges, saveToDatabase, isInitialized]
   );
 
   const updateNodeLabel = useCallback((nodeId: string, newLabel: string) => {
-    if (!isInitialized) return;
+    if (!isInitialized || isLoadingData.current) return;
     
     setNodes((nds) => {
       if (!nds || !Array.isArray(nds)) return nds;
@@ -328,18 +343,14 @@ export default function Mindmaps({ socketRef, whiteboardId }: MindmapsProps) {
         n.id === nodeId ? { ...n, data: { ...n.data, label: newLabel } } : n
       );
       
-      if (socketRef?.connected) {
-        socketRef.emit("nodes-update", { nodes: updatedNodes });
-        hasUnsavedChanges.current = true;
-        debouncedSave();
-      }
-      
+      hasUnsavedChanges.current = true;
+      saveToDatabase();
       return updatedNodes;
     });
-  }, [setNodes, socketRef, debouncedSave, isInitialized]);
+  }, [setNodes, saveToDatabase, isInitialized]);
 
   const addNode = useCallback((sourceId: string) => {
-    if (!isInitialized) return;
+    if (!isInitialized || isLoadingData.current) return;
     
     setNodes((currentNodes) => {
       if (!currentNodes || !Array.isArray(currentNodes)) return currentNodes;
@@ -361,12 +372,8 @@ export default function Mindmaps({ socketRef, whiteboardId }: MindmapsProps) {
       };
 
       const newNodes = [...currentNodes, newNode];
-      
-      if (socketRef?.connected) {
-        socketRef.emit("nodes-update", { nodes: newNodes });
-        hasUnsavedChanges.current = true;
-        debouncedSave();
-      }
+      hasUnsavedChanges.current = true;
+      saveToDatabase();
       return newNodes;
     });
 
@@ -383,134 +390,97 @@ export default function Mindmaps({ socketRef, whiteboardId }: MindmapsProps) {
         style: { stroke: '#8b5cf6', strokeWidth: 2 }
       };
 
-      const newEdges = [...currentEdges, newEdge];
-      
-      if (socketRef?.connected) {
-        socketRef.emit("edges-update", { edges: newEdges });
-      }
-      return newEdges;
+      return [...currentEdges, newEdge];
     });
-  }, [setNodes, setEdges, socketRef, debouncedSave, isInitialized]);
+  }, [setNodes, setEdges, saveToDatabase, isInitialized]);
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
-      if (!isInitialized || !changes || !Array.isArray(changes)) return;
+      if (!isInitialized || !changes || !Array.isArray(changes) || isLoadingData.current) return;
       
       try {
         applyNodeChanges(changes);
-        
-        setNodes((currentNodes) => {
-          if (!currentNodes || !Array.isArray(currentNodes)) return currentNodes;
-          
-          if (socketRef?.connected) {
-            socketRef.emit("nodes-update", { nodes: currentNodes });
-            hasUnsavedChanges.current = true;
-            debouncedSave();
-          }
-          
-          return currentNodes;
-        });
+        hasUnsavedChanges.current = true;
+        saveToDatabase();
       } catch (error) {
         log('Error in onNodesChange', error);
       }
     },
-    [applyNodeChanges, socketRef, debouncedSave, setNodes, isInitialized]
+    [applyNodeChanges, saveToDatabase, isInitialized]
   );
 
   const onEdgesChange = useCallback(
     (changes: EdgeChange[]) => {
-      if (!isInitialized || !changes || !Array.isArray(changes)) return;
+      if (!isInitialized || !changes || !Array.isArray(changes) || isLoadingData.current) return;
       
       try {
         applyEdgeChanges(changes);
-        
-        setEdges((currentEdges) => {
-          if (!currentEdges || !Array.isArray(currentEdges)) return currentEdges;
-          
-          if (socketRef?.connected) {
-            socketRef.emit("edges-update", { edges: currentEdges });
-            hasUnsavedChanges.current = true;
-            debouncedSave();
-          }
-          
-          return currentEdges;
-        });
+        hasUnsavedChanges.current = true;
+        saveToDatabase();
       } catch (error) {
         log('Error in onEdgesChange', error);
       }
     },
-    [applyEdgeChanges, socketRef, debouncedSave, setEdges, isInitialized]
+    [applyEdgeChanges, saveToDatabase, isInitialized]
   );
 
   const deleteNode = useCallback((id: string) => {
-    if (!isInitialized || id === '1') return;
+    if (!isInitialized || id === '1' || isLoadingData.current) return;
     
     setNodes((nds) => {
       if (!nds || !Array.isArray(nds)) return nds;
       
       const newNodes = nds.filter((n) => n.id !== id);
-      
-      if (socketRef?.connected) {
-        socketRef.emit("nodes-update", { nodes: newNodes });
-        hasUnsavedChanges.current = true;
-        debouncedSave();
-      }
+      hasUnsavedChanges.current = true;
+      saveToDatabase();
       return newNodes;
     });
 
     setEdges((eds) => {
       if (!eds || !Array.isArray(eds)) return eds;
       
-      const newEdges = eds.filter((e) => e.source !== id && e.target !== id);
-      
-      if (socketRef?.connected) {
-        socketRef.emit("edges-update", { edges: newEdges });
-      }
-      return newEdges;
+      return eds.filter((e) => e.source !== id && e.target !== id);
     });
-  }, [setNodes, setEdges, socketRef, debouncedSave, isInitialized]);
+  }, [setNodes, setEdges, saveToDatabase, isInitialized]);
 
   // Manual save function
   const manualSave = useCallback(() => {
-    if (socketRef?.connected) {
-      setSaveStatus('saving');
-      setIsSaving(true);
-      socketRef.emit("manual-save", { whiteboardId });
-      hasUnsavedChanges.current = false;
-      
-      setTimeout(() => {
-        setIsSaving(false);
-        setSaveStatus('saved');
-        setLastSaved(new Date());
-        
-        setTimeout(() => {
-          setSaveStatus('idle');
-        }, 2000);
-      }, 500);
-    } else {
-      // Local save simulation
-      setSaveStatus('saving');
-      setIsSaving(true);
-      
-      setTimeout(() => {
-        setIsSaving(false);
-        setSaveStatus('saved');
-        setLastSaved(new Date());
-        hasUnsavedChanges.current = false;
-        
-        setTimeout(() => {
-          setSaveStatus('idle');
-        }, 2000);
-      }, 800);
-    }
-  }, [socketRef, whiteboardId]);
+    if (!socketRef?.connected) return;
 
-  // Load demo data or initialize
+    setSaveStatus('saving');
+    setIsSaving(true);
+    
+    setNodes((currentNodes) => {
+      setEdges((currentEdges) => {
+        socketRef.emit("nodes-update", { nodes: currentNodes });
+        socketRef.emit("edges-update", { edges: currentEdges });
+        
+        setTimeout(() => {
+          setIsSaving(false);
+          setSaveStatus('saved');
+          setLastSaved(new Date());
+          hasUnsavedChanges.current = false;
+          
+          setTimeout(() => {
+            setSaveStatus('idle');
+          }, 3000);
+        }, 300);
+        
+        return currentEdges;
+      });
+      return currentNodes;
+    });
+  }, [socketRef, setNodes, setEdges]);
+
+  // Load demo data as fallback
   const loadDemoData = useCallback(() => {
     log('Loading demo mindmap data');
+    isLoadingData.current = true;
+    
     setNodes(DEMO_NODES);
     setEdges(DEMO_EDGES);
     nodeId = 10; // Set counter to match demo data
+    setDataSource('demo');
     setIsLoading(false);
     setIsInitialized(true);
     
@@ -518,11 +488,15 @@ export default function Mindmaps({ socketRef, whiteboardId }: MindmapsProps) {
     setTimeout(() => {
       setShowWelcome(false);
     }, 5000);
+    
+    setTimeout(() => {
+      isLoadingData.current = false;
+    }, 1000);
   }, [setNodes, setEdges]);
 
-  // Initialize mindmap
+  // Initialize mindmap with enhanced data loading
   useEffect(() => {
-    log('Initializing mindmap component');
+    log('Initializing mindmap component', { whiteboardId, hasSocket: !!socketRef });
     
     if (!socketRef) {
       // No socket - load demo data immediately
@@ -533,18 +507,19 @@ export default function Mindmaps({ socketRef, whiteboardId }: MindmapsProps) {
     const socket = socketRef;
     setIsLoading(true);
     setIsInitialized(false);
+    isLoadingData.current = true;
 
     // Set loading timeout
     const timeout = setTimeout(() => {
       log('Loading timeout reached, loading demo data');
       loadDemoData();
-    }, 3000);
+    }, 5000); // Increased timeout to 5 seconds
 
     // Connection handlers
     const handleConnect = () => {
       log('Socket connected');
       setIsConnected(true);
-      socket.emit("join-whiteboard", { whiteboardId });
+      socket.emit("join_whiteboard", whiteboardId);
     };
 
     const handleDisconnect = () => {
@@ -552,10 +527,11 @@ export default function Mindmaps({ socketRef, whiteboardId }: MindmapsProps) {
       setIsConnected(false);
     };
 
-    // Data handlers
+    // Enhanced data handlers
     const handleNodesUpdate = (data: any) => {
       try {
-        if (data && data.nodes && Array.isArray(data.nodes)) {
+        if (!isLoadingData.current && data && data.nodes && Array.isArray(data.nodes)) {
+          log('Received nodes update from other user', { nodeCount: data.nodes.length });
           setNodes(data.nodes);
         }
       } catch (error) {
@@ -565,7 +541,8 @@ export default function Mindmaps({ socketRef, whiteboardId }: MindmapsProps) {
 
     const handleEdgesUpdate = (data: any) => {
       try {
-        if (data && data.edges && Array.isArray(data.edges)) {
+        if (!isLoadingData.current && data && data.edges && Array.isArray(data.edges)) {
+          log('Received edges update from other user', { edgeCount: data.edges.length });
           setEdges(data.edges);
         }
       } catch (error) {
@@ -576,26 +553,50 @@ export default function Mindmaps({ socketRef, whiteboardId }: MindmapsProps) {
     const handleInitialLoad = (data: any) => {
       try {
         clearTimeout(timeout);
+        log('Received initial mindmap data', data);
 
         if (data && data.nodes && Array.isArray(data.nodes) && data.nodes.length > 0) {
-          log('Loading existing mindmap data');
+          log('Loading saved mindmap from database', { 
+            nodeCount: data.nodes.length, 
+            edgeCount: data.edges?.length || 0 
+          });
+          
           setNodes(data.nodes);
           setEdges(data.edges || []);
+          setDataSource('database');
           
-          // Update nodeId counter
-          const maxId = Math.max(...data.nodes.map((n: any) => {
-            const match = n.id.match(/node_(\d+)/);
-            return match ? parseInt(match[1]) : 0;
-          }));
-          nodeId = Math.max(nodeId, maxId);
+          // Update nodeId counter based on existing nodes
+          const maxId = Math.max(
+            ...data.nodes.map((n: any) => {
+              const match = n.id.match(/node_(\d+)/);
+              return match ? parseInt(match[1]) : 0;
+            }),
+            10 // Ensure minimum of 10
+          );
+          nodeId = maxId;
+          
+          log('Updated nodeId counter to:', nodeId);
         } else {
-          log('No existing data, loading demo');
-          loadDemoData();
-          return;
+          log('No saved data found, loading demo');
+          setNodes(DEMO_NODES);
+          setEdges(DEMO_EDGES);
+          setDataSource('demo');
+          nodeId = 10;
         }
         
         setIsLoading(false);
         setIsInitialized(true);
+        
+        // Auto-hide welcome message after 5 seconds
+        setTimeout(() => {
+          setShowWelcome(false);
+        }, 5000);
+        
+        // Allow changes after a brief delay
+        setTimeout(() => {
+          isLoadingData.current = false;
+        }, 1000);
+        
       } catch (error) {
         log('Error handling initial load', error);
         loadDemoData();
@@ -656,10 +657,12 @@ export default function Mindmaps({ socketRef, whiteboardId }: MindmapsProps) {
             <Brain className="w-full h-full text-purple-600" />
           </motion.div>
           <h2 className="text-2xl font-bold text-gray-800 mb-2">Loading Your Mindmap</h2>
-          <p className="text-gray-600 mb-4">Preparing your creative workspace...</p>
+          <p className="text-gray-600 mb-4">
+            {socketRef ? 'Restoring your saved progress...' : 'Preparing your creative workspace...'}
+          </p>
           <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
             <Loader2 className="w-4 h-4 animate-spin" />
-            <span>Setting up your ideas</span>
+            <span>{socketRef ? 'Loading from database' : 'Setting up demo'}</span>
           </div>
         </motion.div>
       </div>
@@ -670,124 +673,136 @@ export default function Mindmaps({ socketRef, whiteboardId }: MindmapsProps) {
     <div className="w-full h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 relative overflow-hidden">
       
       {/* Welcome Message */}
-      <AnimatePresence>
-        {showWelcome && (
-          <motion.div
-            initial={{ opacity: 0, y: -50 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -50 }}
-            className="absolute top-6 left-1/2 transform -translate-x-1/2 z-50"
+  <AnimatePresence>
+  {showWelcome && (
+    <motion.div
+      initial={{ opacity: 0, y: -20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.25 }}
+      className="absolute z-50 left-1/2 top-[8rem] transform -translate-x-1/2 w-[90%] max-w-sm"
+    >
+      <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg px-4 py-3 border border-purple-200 sm:px-6 sm:py-4">
+        <div className="flex items-start gap-2 sm:gap-3">
+          <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600 flex-shrink-0" />
+          <div className="flex-1">
+            <h3 className="font-semibold text-gray-800 text-sm sm:text-base leading-snug">
+              {dataSource === "database"
+                ? "Welcome back to your Mindmap!"
+                : "Welcome to Your Mindmap!"}
+            </h3>
+            <p className="text-xs sm:text-sm text-gray-600 leading-snug">
+              {dataSource === "database"
+                ? "Your progress has been restored."
+                : "Tap a node to edit or hover for options."}
+            </p>
+          </div>
+          <button
+            onClick={() => setShowWelcome(false)}
+            className="ml-2 text-gray-400 hover:text-gray-600 text-lg leading-none sm:ml-4"
           >
-            <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl px-6 py-4 border border-purple-200">
-              <div className="flex items-center gap-3">
-                <Sparkles className="w-6 h-6 text-purple-600" />
-                <div>
-                  <h3 className="font-semibold text-gray-800">Welcome to Your Mindmap!</h3>
-                  <p className="text-sm text-gray-600">Click on any node to edit, or hover to see options</p>
-                </div>
-                <button
-                  onClick={() => setShowWelcome(false)}
-                  className="ml-4 text-gray-400 hover:text-gray-600"
-                >
-                  ×
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            ×
+          </button>
+        </div>
+      </div>
+    </motion.div>
+  )}
+</AnimatePresence>
+
+
 
       {/* Enhanced Status Bar */}
       <motion.div
         initial={{ opacity: 0, x: 50 }}
         animate={{ opacity: 1, x: 0 }}
-        className="absolute top-6 sm:left-16 z-50"
+        className="absolute top-6 z-10 right-2 sm:top-4 sm:right-6 z-50 w-auto max-w-[calc(100%-7rem)] sm:max-w-[calc(100%-1rem)] sm:w-auto"
       >
-        <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl px-6 py-4 border border-purple-200">
-          <div className="flex items-center gap-4">
+        <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl px-3 py-2 border border-purple-200">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
             
-            {/* Connection Status */}
-            <div className="flex items-center gap-2">
+            {/* Connection & Data Source Status */}
+            <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               {socketRef ? (
                 isConnected ? (
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    className="flex items-center gap-2"
-                  >
-                    <Wifi className="w-4 h-4 text-green-600" />
-                    <span className="text-sm font-medium text-green-700">Live</span>
+                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="flex items-center gap-1 sm:gap-2">
+                    <Database className="w-3 h-3 sm:w-4 sm:h-4 text-green-600" />
+                    <span className="text-green-700">
+                      {dataSource === 'database' ? 'Database' : 'Live'}
+                    </span>
                   </motion.div>
                 ) : (
-                  <div className="flex items-center gap-2">
-                    <WifiOff className="w-4 h-4 text-orange-600" />
-                    <span className="text-sm font-medium text-orange-700">Offline</span>
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    <WifiOff className="w-3 h-3 sm:w-4 sm:h-4 text-orange-600" />
+                    <span className="text-orange-700">Offline</span>
                   </div>
                 )
               ) : (
-                <div className="flex items-center gap-2">
-                  <Zap className="w-4 h-4 text-blue-600" />
-                  <span className="text-sm font-medium text-blue-700">Demo</span>
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <Zap className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600" />
+                  <span className="text-blue-700">Demo</span>
                 </div>
               )}
             </div>
 
             {/* Save Status */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               {saveStatus === 'saving' ? (
                 <motion.div
                   animate={{ rotate: 360 }}
                   transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                 >
-                  <Loader2 className="w-4 h-4 text-blue-600" />
+                  <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600" />
                 </motion.div>
               ) : saveStatus === 'saved' ? (
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                >
-                  <CheckCircle className="w-4 h-4 text-green-600" />
+                <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="flex items-center gap-1">
+                  <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-green-600" />
                 </motion.div>
               ) : saveStatus === 'error' ? (
-                <AlertCircle className="w-4 h-4 text-red-600" />
+                <AlertCircle className="w-3 h-3 sm:w-4 sm:h-4 text-red-600" />
               ) : (
-                <Save className="w-4 h-4 text-gray-600" />
+                <Save className="w-3 h-3 sm:w-4 sm:h-4 text-gray-600" />
               )}
-              
-              <span className="text-sm text-gray-700">
-                {saveStatus === 'saving' ? 'Saving...' : 
-                 saveStatus === 'saved' ? 'Saved!' :
-                 saveStatus === 'error' ? 'Error' :
-                 lastSaved ? `Saved ${lastSaved.toLocaleTimeString()}` : 'Ready'}
+              <span className="text-gray-700">
+                {saveStatus === 'saving'
+                  ? 'Saving to DB...'
+                  : saveStatus === 'saved'
+                  ? 'Saved to DB!'
+                  : saveStatus === 'error'
+                  ? 'Save Error'
+                  : lastSaved
+                  ? `Saved ${lastSaved.toLocaleTimeString()}`
+                  : dataSource === 'database'
+                  ? 'Loaded from DB'
+                  : 'Ready'}
               </span>
             </div>
 
             {/* Save Button */}
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={manualSave}
-              disabled={saveStatus === 'saving'}
-              className="px-4 py-2   bg-gradient-to-r from-purple-600 to-blue-600 text-white text-sm font-medium rounded-xl hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg transition-all duration-200"
-            >
-              {saveStatus === 'saving' ? (
-                <div className="flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Saving</span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <Save className="w-4 h-4" />
-                  <span>Save</span>
-                </div>
-              )}
-            </motion.button>
+            {socketRef && (
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={manualSave}
+                disabled={saveStatus === 'saving' || !isConnected}
+                className="px-3 py-1 sm:px-4 sm:py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white text-xs sm:text-sm font-medium rounded-xl hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg transition-all duration-200 flex items-center gap-1 sm:gap-2 justify-center"
+              >
+                {saveStatus === 'saving' ? (
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    <span>Saving</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    <Cloud className="w-3 h-3" />
+                    <span>Save</span>
+                  </div>
+                )}
+              </motion.button>
+            )}
+
           </div>
         </div>
       </motion.div>
-
-     
 
       {/* Main ReactFlow */}
       <ReactFlow
@@ -817,7 +832,7 @@ export default function Mindmaps({ socketRef, whiteboardId }: MindmapsProps) {
           className="!bg-white/95 !backdrop-blur-sm !border-purple-200 !rounded-xl !shadow-xl"
         />
         <MiniMap 
-          position="top-right"
+          position="bottom-right"
           className="!bg-white/95 !backdrop-blur-sm !border-purple-200 !rounded-xl !shadow-xl"
           nodeColor="#8b5cf6"
           maskColor="rgba(139, 92, 246, 0.1)"
