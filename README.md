@@ -4,7 +4,7 @@ You asked for a premium-looking, creative, and professional README documentation
 
 <!-- Banner Section -->
 <p align="center">
-  <img src="/logo2.png" alt="CollaborativeX Logo" width="120" />
+  <img src="https://res.cloudinary.com/dsqpc6sp6/image/upload/v1756021462/logo2_hmpyu2.png" alt="CollaborativeX Logo" width="120" />
 </p>
 <h1 align="center" style="color:#8200db; font-size:3rem; font-family: 'Segoe UI', 'Roboto', 'Arial', sans-serif;">
   CollaborativeX
@@ -103,7 +103,7 @@ Visit [http://localhost:3000](http://localhost:3000) to get started!
 ## 🖼️ Screenshots
 
 <p align="center">
-  <img src="https://placehold.co/900x400/8200db/fff?text=CollaborativeX+Dashboard" alt="Dashboard Screenshot" style="border-radius:12px; box-shadow:0 4px 24px #8200db33;" />
+  <img src="https://res.cloudinary.com/dsqpc6sp6/image/upload/v1756021543/Screenshot_2025-08-24_131521_judtjd.png" alt="Dashboard Screenshot" style="border-radius:12px; box-shadow:0 4px 24px #8200db33;" />
 </p>
 
 ---
@@ -175,4 +175,5 @@ You can use this SVG as your logo/banner (host it on your CDN or GitHub):
 ---
 
 Would you like a dark mode version, more screenshots, or a custom Figma banner? Let me know if you need further customization or additional sections!
+
 
