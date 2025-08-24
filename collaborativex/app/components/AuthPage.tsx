@@ -241,7 +241,7 @@ const EnhancedAuthPage = () => {
 
           axios.post("/api/auth/forget-password", { email: formData.email, oauthVerified: true })
             .then((res) => {
-              setOtpId(res.data?.otpId);
+              setOtpId(res.data.userId);
               showToast(res.data?.message || 'User has been verified!', 'success');
               setIsLoading(false);
             })
@@ -482,7 +482,7 @@ const EnhancedAuthPage = () => {
         // directly set otpId from response
         if (res.data?.userId) {
           setOtpId(res.data.userId);
-          setOtpDetails({ userId: res.data.userId })
+          // setOtpDetails({ userId: res.data.userId })
           localStorage.setItem("resetUserId", res.data.userId); // optional backup
         }
         console.log(otpId)
