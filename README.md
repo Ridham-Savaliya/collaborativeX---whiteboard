@@ -17,7 +17,13 @@
   <img src="https://img.shields.io/badge/React-19-8200db?style=for-the-badge&logo=react&logoColor=white" />
   <img src="https://img.shields.io/badge/TypeScript-5-8200db?style=for-the-badge&logo=typescript&logoColor=white" />
   <img src="https://img.shields.io/badge/License-MIT-8200db?style=for-the-badge" />
-[![Uptime Status](https://img.shields.io/uptimerobot/ratio/m801232361?style=for-the-badge&color=8200db&label=uptime)](https://stats.uptimerobot.com/B2elwuqnhE/801232361)
+<a href="https://stats.uptimerobot.com/B2elwuqnhE/801232361" target="_blank" rel="noopener noreferrer">
+  <img 
+    src="https://img.shields.io/uptimerobot/ratio/m801232361?style=for-the-badge&color=8200db&label=uptime" 
+    alt="Uptime Status" 
+  />
+</a>
+
 
 
 
@@ -180,6 +186,7 @@ You can use this SVG as your logo/banner (host it on your CDN or GitHub):
 ---
 
 Would you like a dark mode version, more screenshots, or a custom Figma banner? Let me know if you need further customization or additional sections!
+
 
 
 
