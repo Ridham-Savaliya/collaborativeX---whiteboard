@@ -8,7 +8,8 @@ import { ThemeProvider } from "./context/ThemeContext";
 import I18nProvider from "./components/I18nProvider";
 import { UserProvider } from "./context/Usercontext";
 import { ToastProvider } from "./utills/ToastProvider";
-import { Providers } from "./utills/Providers";
+// import { Providers } from "./utills/Providers";
+import PingKeeper from "./utills/PingKeeper";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -123,6 +124,8 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
 
+
+        <PingKeeper />
         <I18nProvider>
           <ThemeProvider>
             <LoaderProvider>
