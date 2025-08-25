@@ -1,30 +1,23 @@
+
+
 ---
 
 <!-- Banner Section -->
 <p align="center">
-  <img src="https://res.cloudinary.com/dsqpc6sp6/image/upload/v1756021462/logo2_hmpyu2.png" alt="CollaborativeX Logo"  />
+  <img src="https://res.cloudinary.com/dsqpc6sp6/image/upload/v1756021462/logo2_hmpyu2.png" alt="CollaborativeX Logo" width="120" />
 </p>
-
 <h1 align="center" style="color:#8200db; font-size:3rem; font-family: 'Segoe UI', 'Roboto', 'Arial', sans-serif;">
   CollaborativeX
 </h1>
-
 <p align="center">
   <b style="color:#8200db; font-size:1.2rem;">The Ultimate Real-Time Collaboration Platform</b>
 </p>
-
 <p align="center">
   <img src="https://img.shields.io/badge/Next.js-15.3.1-8200db?style=for-the-badge&logo=next.js&logoColor=white" />
   <img src="https://img.shields.io/badge/React-19-8200db?style=for-the-badge&logo=react&logoColor=white" />
   <img src="https://img.shields.io/badge/TypeScript-5-8200db?style=for-the-badge&logo=typescript&logoColor=white" />
   <img src="https://img.shields.io/badge/License-MIT-8200db?style=for-the-badge" />
-<a href="https://stats.uptimerobot.com/B2elwuqnhE/801232361" target="_blank">
-  <img src="https://img.shields.io/uptimerobot/ratio/m801232361?apikey=ur3084671-e52b83225c74024a3a9fd157&style=for-the-badge&color=8200db&label=uptime" alt="Uptime Status" />
-</a>
-
 </p>
-
-
 
 ---
 
@@ -182,17 +175,6 @@ You can use this SVG as your logo/banner (host it on your CDN or GitHub):
 ---
 
 Would you like a dark mode version, more screenshots, or a custom Figma banner? Let me know if you need further customization or additional sections!
-
-
-
-
-
-
-
-
-
-
-
 
 
 
