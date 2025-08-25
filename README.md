@@ -2,7 +2,7 @@
 
 <!-- Banner Section -->
 <p align="center">
-  <img src="https://res.cloudinary.com/dsqpc6sp6/image/upload/v1756021462/logo2_hmpyu2.png" alt="CollaborativeX Logo" width="120" />
+  <img src="https://res.cloudinary.com/dsqpc6sp6/image/upload/v1756021462/logo2_hmpyu2.png" alt="CollaborativeX Logo"  />
 </p>
 
 <h1 align="center" style="color:#8200db; font-size:3rem; font-family: 'Segoe UI', 'Roboto', 'Arial', sans-serif;">
@@ -182,6 +182,7 @@ You can use this SVG as your logo/banner (host it on your CDN or GitHub):
 ---
 
 Would you like a dark mode version, more screenshots, or a custom Figma banner? Let me know if you need further customization or additional sections!
+
 
 
 
