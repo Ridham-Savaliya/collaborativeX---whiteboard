@@ -4,7 +4,7 @@ import { useEffect } from "react";
 export default function PingKeeper() {
   useEffect(() => {
     const interval = setInterval(() => {
-      fetch("https://your-backend.onrender.com/api/healthcheck", {
+      fetch("https://collaborativex-api.onrender.com/healthcheck", {
         cache: "no-store",
       })
         .then(res => res.json())
