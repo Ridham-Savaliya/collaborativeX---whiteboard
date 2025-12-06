@@ -136,7 +136,13 @@ Visit [http://localhost:3000](http://localhost:3000) to get started!
 ## 🖼️ Screenshots
 
 <p align="center">
-  <img src="https://res.cloudinary.com/dsqpc6sp6/image/upload/v1756021543/Screenshot_2025-08-24_131521_judtjd.png" alt="Dashboard Screenshot" style="border-radius:12px; box-shadow:0 4px 24px #8200db33;" />
+  <img src="https://res.cloudinary.com/dsqpc6sp6/image/upload/v1765029092/Screenshot_2025-12-06_192113_yqzvpz.png" alt="Dashboard Screenshot" style="border-radius:12px; box-shadow:0 4px 24px #8200db33;" />
+    <img src="https://res.cloudinary.com/dsqpc6sp6/image/upload/v1765029000/Screenshot_2025-12-06_191717_qaqahi.png" alt="Dashboard Screenshot" style="border-radius:12px; box-shadow:0 4px 24px #8200db33;" />
+        <img src="https://res.cloudinary.com/dsqpc6sp6/image/upload/v1765029004/Screenshot_2025-12-06_191800_lixzoy.png" alt="Dashboard Screenshot" style="border-radius:12px; box-shadow:0 4px 24px #8200db33;" />
+            <img src="https://res.cloudinary.com/dsqpc6sp6/image/upload/v1765028960/Screenshot_2025-12-06_191815_hsljxh.png" alt="Dashboard Screenshot" style="border-radius:12px; box-shadow:0 4px 24px #8200db33;" />
+                <img src="https://res.cloudinary.com/dsqpc6sp6/image/upload/v1765028998/Screenshot_2025-12-06_185048_ukv6re.png" alt="Dashboard Screenshot" style="border-radius:12px; box-shadow:0 4px 24px #8200db33;" />
+                    <img src="https://res.cloudinary.com/dsqpc6sp6/image/upload/v1765029293/Screenshot_2025-12-06_192438_zsxjs0.png" alt="Dashboard Screenshot" style="border-radius:12px; box-shadow:0 4px 24px #8200db33;" />
+  
 </p>
 
 ---
@@ -208,6 +214,7 @@ You can use this SVG as your logo/banner (host it on your CDN or GitHub):
 ---
 
 Would you like a dark mode version, more screenshots, or a custom Figma banner? Let me know if you need further customization or additional sections!
+
 
 
 
