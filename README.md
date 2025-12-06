@@ -34,6 +34,32 @@
 
 ## 🎨 Features
 
+<div align="center">
+  <!-- LOGO -->
+  <img src="https://res.cloudinary.com/dsqpc6sp6/image/upload/v1765024967/formboost-favicon-color_af2opq.png" alt="Formboost Logo" width="120" style="margin-bottom:16px;" />
+
+  <!-- Title -->
+  <h1 style="font-weight:900; font-size:46px; margin-bottom:0;">Formboost</h1>
+
+  <!-- Subtitle -->
+  <p style="font-size:19px; font-weight:500; color:#5e5e5e; margin-top:6px;">
+    Smart Forms, Cleaner Insights.
+  </p>
+</div>
+
+
+
+
+### 🖼 Preview Highlights
+
+<p align="center">
+
+  <img src="https://res.cloudinary.com/dsqpc6sp6/image/upload/v1765024304/8_dbshoi.jpg" width="350" />  
+  <img src="https://res.cloudinary.com/dsqpc6sp6/image/upload/v1765024304/11_zlek1t.jpg" width="350" /> 
+    <img src="https://res.cloudinary.com/dsqpc6sp6/image/upload/v1765024304/7_rqqvyh.jpg" width="350" />  
+  <img src="https://res.cloudinary.com/dsqpc6sp6/image/upload/v1765024304/12_zc9rqv.jpg" width="350" />  
+</p>
+
 - **Real-Time Collaboration:** Work together on documents, mind maps, and diagrams with instant updates.
 - **Drag & Drop Interface:** Intuitive, modern UI powered by DnD Kit and XYFlow.
 - **AI-Powered Tools:** Leverage generative AI for content, brainstorming, and productivity.
@@ -180,6 +206,7 @@ You can use this SVG as your logo/banner (host it on your CDN or GitHub):
 ---
 
 Would you like a dark mode version, more screenshots, or a custom Figma banner? Let me know if you need further customization or additional sections!
+
 
 
 
