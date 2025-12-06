@@ -52,6 +52,9 @@
 
 ### 🖼 Preview Highlights
 
+[![Watch Demo](https://your-thumbnail-image-link.png)](https://res.cloudinary.com/dks6wcxq5/video/upload/v1765035336/ef_kosiay.mp4)
+
+
 <p align="center">
 
   <img src="https://res.cloudinary.com/dsqpc6sp6/image/upload/v1765028109/photo_2025-12-06_18-38-33_jfytms.jpg" width="350" />  
@@ -214,6 +217,7 @@ You can use this SVG as your logo/banner (host it on your CDN or GitHub):
 ---
 
 Would you like a dark mode version, more screenshots, or a custom Figma banner? Let me know if you need further customization or additional sections!
+
 
 
 
