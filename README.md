@@ -114,9 +114,8 @@ CLOUDINARY_URL=your_cloudinary_url
 npm run dev
 # or
 yarn dev
-```
-
-Visit [http://localhost:3000](http://localhost:3000) to get started!
+```
+visit :https://collaborativex-whiteboard.vercel.app to get started!
 
 ---
 
